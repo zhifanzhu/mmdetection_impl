@@ -109,3 +109,7 @@ mmdet/version.py
 data
 .vscode
 .idea
+
+.tags
+work_dirs/
+zoo/
