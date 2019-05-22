@@ -32,6 +32,7 @@ def build_dataloader(dataset,
         batch_size = num_gpus * imgs_per_gpu
         num_workers = num_gpus * workers_per_gpu
 
+    # dataset(165510) -> (data_loader)41378
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,
