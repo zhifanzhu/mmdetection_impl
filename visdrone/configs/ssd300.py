@@ -3,7 +3,7 @@ input_size = 300
 model = dict(
     type='SingleStageDetector',
     # pretrained='open-mmlab://vgg16_caffe',
-    pretrained=None,
+    pretrained='zoo/checkpoints/vgg16_caffe-292e1171.pth',
     backbone=dict(
         type='SSDVGG',
         input_size=input_size,
@@ -18,9 +18,9 @@ model = dict(
         type='SSDHead',
         input_size=input_size,
         in_channels=(512, 1024, 512, 256, 256, 256),
-        num_classes=81,
+        num_classes=11,
         anchor_strides=(8, 16, 32, 64, 100, 300),
-        basesize_ratio_range=(0.15, 0.9),
+        basesize_ratio_range=(0.2, 0.9),
         anchor_ratios=([2], [2, 3], [2, 3], [2, 3], [2], [2]),
         target_means=(.0, .0, .0, .0),
         target_stds=(0.1, 0.1, 0.2, 0.2)))
@@ -45,19 +45,19 @@ test_cfg = dict(
     max_per_img=200)
 # model training and testing settings
 # dataset settings
-dataset_type = 'CocoDataset'
-data_root = 'data/coco/'
+dataset_type = 'VisDroneDataset'
+data_root = 'data/VisDrone2019-DET/'
 img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 data = dict(
-    imgs_per_gpu=8,
-    workers_per_gpu=3,
+    imgs_per_gpu=4,
+    workers_per_gpu=2,
     train=dict(
         type='RepeatDataset',
-        times=5,
+        times=10,
         dataset=dict(
             type=dataset_type,
-            ann_file=data_root + 'annotations/instances_train2017.json',
-            img_prefix=data_root + 'train2017/',
+            ann_file=None,
+            img_prefix=data_root + 'VisDrone2018-DET-train/',
             img_scale=(300, 300),
             img_norm_cfg=img_norm_cfg,
             size_divisor=None,
@@ -81,8 +81,8 @@ data = dict(
             resize_keep_ratio=False)),
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'annotations/instances_val2017.json',
-        img_prefix=data_root + 'val2017/',
+        ann_file=None,
+        img_prefix=data_root + 'VisDrone2018-DET-val/',
         img_scale=(300, 300),
         img_norm_cfg=img_norm_cfg,
         size_divisor=None,
@@ -93,8 +93,8 @@ data = dict(
         resize_keep_ratio=False),
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'annotations/instances_val2017.json',
-        img_prefix=data_root + 'val2017/',
+        ann_file=None,
+        img_prefix=data_root + 'VisDrone2018-DET-test-challenge/',
         img_scale=(300, 300),
         img_norm_cfg=img_norm_cfg,
         size_divisor=None,
@@ -104,7 +104,7 @@ data = dict(
         test_mode=True,
         resize_keep_ratio=False))
 # optimizer
-optimizer = dict(type='SGD', lr=2e-3, momentum=0.9, weight_decay=5e-4)
+optimizer = dict(type='SGD', lr=1.25e-4, momentum=0.9, weight_decay=5e-4)  # Set lr properly for single GPU
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
@@ -112,7 +112,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[16, 22])
+    step=[16, 20])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -126,7 +126,7 @@ log_config = dict(
 total_epochs = 24
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/ssd300_coco'
+work_dir = './work_dirs/ssd300_visdrone'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
