@@ -63,6 +63,10 @@ class VisDroneDataset(CustomDataset):
         # <bbox_left>,<bbox_top>,<bbox_width>,<bbox_height>,<score>,<object_category>,<truncation>,<occlusion>
         for line in lines:
             x1, y1, w, h, sc, label, trun, occ = line
+            if label == 0 or label == 11:
+                # ignore ignore(0) and others(11)
+                continue
+            assert label > 0 and label < 11, 'Bad annotation label'
             x2, y2 = x1 + w, y1 + h
             # label is number, '0' is background
             bbox = [x1, y1, x2, y2]

@@ -1,5 +1,6 @@
 import os.path as osp
 
+import time
 import mmcv
 import numpy as np
 from mmcv.parallel import DataContainer as DC
@@ -55,7 +56,10 @@ class CustomDataset(Dataset):
         self.img_prefix = img_prefix
 
         # load annotations (and proposals)
+        begin_time = time.time()
         self.img_infos = self.load_annotations(ann_file)
+        print('load_annotations time: {:.1f}s from {}'
+              .format(time.time() - begin_time, ann_file))
         if proposal_file is not None:
             self.proposals = self.load_proposals(proposal_file)
         else:

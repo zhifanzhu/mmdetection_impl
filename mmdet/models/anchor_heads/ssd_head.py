@@ -138,9 +138,12 @@ class SSDHead(AnchorHead):
              img_metas,
              cfg,
              gt_bboxes_ignore=None):
+        # featmap_sizes: [[4, 44, 38, 38],..] -> [[38, 38],...]
         featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]
         assert len(featmap_sizes) == len(self.anchor_generators)
 
+        # anchor_list:
+        # list(batch) of list(featmap_sizes) of Tensor([38x38x4,4])
         anchor_list, valid_flag_list = self.get_anchors(
             featmap_sizes, img_metas)
         cls_reg_targets = anchor_target(
