@@ -6,7 +6,8 @@ conda install cython -y
 git clone https://github.com/open-mmlab/mmdetection.git
 cd mmdetection
 ./compile.sh
-pip install -e .  # "pip install ." for installation mode
+# mmcv will be installed here
+pip install -e .  # "pip install ." for installation mode,
 
 mkdir data
 # ln -s $COCO_ROOT data
