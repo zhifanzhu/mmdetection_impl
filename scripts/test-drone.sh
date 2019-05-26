@@ -1,6 +1,6 @@
 CONFIG_FILE=visdrone/configs/ssd300.py
 CHECKPOINT_FILE=work_dirs/ssd300_visdrone/latest.pth
-RESULT_FILE=result.pkl
+RESULT_FILE=work_dirs/ssd300_visdrone/result.pkl
 EVAL_METRICS=bbox
 
 # single-gpu testing

@@ -1,5 +1,6 @@
 from __future__ import division
 
+import os
 import argparse
 from mmcv import Config
 
@@ -49,6 +50,8 @@ def main():
     # update configs according to CLI args
     if args.work_dir is not None:
         cfg.work_dir = args.work_dir
+    if not os.path.exists(args.resume_from):
+        args.resume_from = None
     if args.resume_from is not None:
         cfg.resume_from = args.resume_from
     cfg.gpus = args.gpus
