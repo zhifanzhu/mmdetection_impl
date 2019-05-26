@@ -1,4 +1,4 @@
-CONFIG_FILE=./configs/pascal_voc/ssd300_voc.py
+CONFIG_FILE=./configs/ssd300_coco.py
 CHECKPOINT_FILE=zoo/vgg16_caffe-292e1171.pth
 RESULT_FILE=result.pkl
 EVAL_METRICS=bbox

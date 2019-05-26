@@ -1,7 +1,8 @@
 conda create -n open-mmlab python=3.7 -y
 source activate open-mmlab
 
-conda install -c pytorch pytorch torchvision -y
+# conda install -c pytorch pytorch torchvision -y
+conda install pytorch torchvision cudatoolkit=9.0 -c pytorch
 conda install cython -y
 git clone https://github.com/open-mmlab/mmdetection.git
 cd mmdetection
@@ -11,3 +12,6 @@ pip install -e .  # "pip install ." for installation mode,
 
 mkdir data
 # ln -s $COCO_ROOT data
+
+ln -sfn /path/to/work_dirs word_dirs
+ln -sfn /path/to/zoo zoo
