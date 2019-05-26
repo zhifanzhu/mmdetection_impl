@@ -28,9 +28,13 @@ class VisDroneDataset(CustomDataset):
         super(VisDroneDataset, self).__init__(**kwargs)
 
     def load_annotations(self, ann_file=None):
+        # TODO remove unnecss. two selfs.
         assert ann_file is None, 'ann_file should be None: we read from diretory.'
+        self.cat_ids = list(range(1, 11))
         img_infos = []
         all_images = osp.join(self.img_prefix, 'images')
+        # self.img_dis is for use in coco eval
+        self.img_ids = [v.split('.')[0] for v in os.listdir(all_images)]
         for img_name in os.listdir(all_images):
             img_id = img_name.split('.')[0]
             full_path = osp.join(all_images, img_name)
