@@ -104,7 +104,7 @@ data = dict(
         test_mode=True,
         resize_keep_ratio=False))
 # optimizer
-optimizer = dict(type='SGD', lr=1.25e-4, momentum=0.9, weight_decay=5e-4)  # Set lr properly for single GPU
+optimizer = dict(type='SGD', lr=1e-3, momentum=0.9, weight_decay=5e-4)  # Set lr properly for single GPU
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
@@ -129,5 +129,5 @@ log_level = 'INFO'
 work_dir = './work_dirs/ssd300_visdrone'
 load_from = None
 resume_from = None
-workflow = [('train', 1)]
-# workflow = [('train', 1), ('val', 1)]  Not possifle, only one phase allowed
+workflow = [('train', 1), ('val', 1)]
+# workflow = [('train', 1)]
