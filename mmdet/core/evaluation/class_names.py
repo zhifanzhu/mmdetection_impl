@@ -78,11 +78,19 @@ def coco_classes():
     ]
 
 
+def visdrone_classes():
+    return [
+        'pedestrian', 'people', 'bicycle', 'car', 'van', 'truck',
+        'tricycle', 'awning-tricycle', 'bus', 'motor'
+    ]
+
+
 dataset_aliases = {
     'voc': ['voc', 'pascal_voc', 'voc07', 'voc12'],
     'imagenet_det': ['det', 'imagenet_det', 'ilsvrc_det'],
     'imagenet_vid': ['vid', 'imagenet_vid', 'ilsvrc_vid'],
-    'coco': ['coco', 'mscoco', 'ms_coco']
+    'coco': ['coco', 'mscoco', 'ms_coco'],
+    'visdrone': ['visdrone', 'VisDrone'],
 }
 
 

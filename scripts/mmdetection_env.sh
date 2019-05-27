@@ -12,14 +12,25 @@ cd mmdetection
 pip install -e .  # "pip install ." for installation mode,
 
 # Step two: install local mmcv
-cd /path/to/mmcv  # cd ../mmcv
+cd /path/to/parent
 git clone zhuzhifan@202.119.84.34:~/repositories/mmcv.git
+cd mmcv
 git checkout -b dev origin/dev
 pip install -e .
-cd /path/to/mmdetection
+cd mmdetection
 
 # Step three: link datasets
 mkdir data
 # ln -s $COCO_ROOT data
 ln -sfn /path/to/work_dirs word_dirs
 ln -sfn /path/to/zoo zoo
+
+
+# NOTE BEFORE YOU RUN
+# check following fields:
+#   pretrained,
+#   imgs_per_gpu
+#   learing-rate,
+#   interval,
+#   work_dir,
+#   workflow
