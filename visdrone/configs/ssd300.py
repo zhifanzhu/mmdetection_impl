@@ -49,11 +49,11 @@ dataset_type = 'VisDroneDataset'
 data_root = 'data/VisDrone2019-DET/'
 img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 data = dict(
-    imgs_per_gpu=4,
+    imgs_per_gpu=8,
     workers_per_gpu=2,
     train=dict(
         type='RepeatDataset',
-        times=10,
+        times=1,
         dataset=dict(
             type=dataset_type,
             ann_file=data_root + 'VisDrone2018-DET-train/annotations_train.json',
@@ -104,7 +104,7 @@ data = dict(
         test_mode=True,
         resize_keep_ratio=False))
 # optimizer
-optimizer = dict(type='SGD', lr=1e-3, momentum=0.9, weight_decay=5e-4)  # Set lr properly for single GPU
+optimizer = dict(type='SGD', lr=1e-4, momentum=0.9, weight_decay=5e-4)  # Set lr properly for single GPU
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
