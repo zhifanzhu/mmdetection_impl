@@ -48,8 +48,8 @@ dataset_type = 'VisDroneDataset'
 data_root = 'data/VisDrone2019-DET/'
 img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 data = dict(
-    imgs_per_gpu=4,
-    workers_per_gpu=2,
+    imgs_per_gpu=16,
+    workers_per_gpu=3,
     train=dict(
         type='RepeatDataset',
         times=5,
@@ -115,7 +115,7 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=50,
+    interval=100,
     hooks=[
         dict(type='TextLoggerHook'),
         # dict(type='TensorboardLoggerHook')
@@ -125,7 +125,7 @@ log_config = dict(
 total_epochs = 24
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/ssd300_visdrone'
+work_dir = './work_dirs/ssd512coco_visdrone'
 load_from = None
 resume_from = None
 workflow = [('train', 1), ('val', 1)]
