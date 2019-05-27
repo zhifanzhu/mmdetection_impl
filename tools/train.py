@@ -50,10 +50,9 @@ def main():
     # update configs according to CLI args
     if args.work_dir is not None:
         cfg.work_dir = args.work_dir
-    if not os.path.exists(args.resume_from):
-        args.resume_from = None
     if args.resume_from is not None:
-        cfg.resume_from = args.resume_from
+        if os.path.exists(args.resume_from):
+            cfg.resume_from = args.resume_from
     cfg.gpus = args.gpus
     if cfg.checkpoint_config is not None:
         # save mmdet version in checkpoints as meta data
@@ -80,9 +79,10 @@ def main():
         cfg.model, train_cfg=cfg.train_cfg, test_cfg=cfg.test_cfg)
 
     train_dataset = get_dataset(cfg.data.train)
+    val_dataset = get_dataset(cfg.data.val)
     train_detector(
         model,
-        train_dataset,
+        [train_dataset, val_dataset],
         cfg,
         distributed=distributed,
         validate=args.validate,
