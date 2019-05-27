@@ -42,7 +42,7 @@ test_cfg = dict(
     nms=dict(type='nms', iou_thr=0.45),
     min_bbox_size=0,
     score_thr=0.02,
-    max_per_img=200)
+    max_per_img=500)
 # model training and testing settings
 # dataset settings
 dataset_type = 'VisDroneDataset'

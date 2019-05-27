@@ -94,10 +94,9 @@ def parse_txt(img_prefix, ann_dir='annotations', img_dir='images'):
                 # ignore ignore(0) and others(11)
                 continue
             assert label > 0 and label < 11, 'Bad annotation label'
-            x2, y2 = x1 + w, y1 + h
             w, h = int(w), int(h)
             # label is number, '0' is background
-            bbox = np.asarray([x1, y1, x2, y2]).tolist()
+            bbox = np.asarray([x1, y1, w, h]).tolist()
             id = str(stem) + str(bbox)
             id = int(hashlib.sha256(id.encode('utf8')).hexdigest(), 16) % (10 ** 12)
 
