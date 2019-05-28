@@ -79,10 +79,14 @@ def main():
         cfg.model, train_cfg=cfg.train_cfg, test_cfg=cfg.test_cfg)
 
     train_dataset = get_dataset(cfg.data.train)
-    val_dataset = get_dataset(cfg.data.val)
+    if len(cfg.workflow) == 2:
+        val_dataset = get_dataset(cfg.data.val)
+        dataset = [train_dataset, val_dataset]
+    else:
+        dataset = train_dataset
     train_detector(
         model,
-        [train_dataset, val_dataset],
+        dataset,
         cfg,
         distributed=distributed,
         validate=args.validate,

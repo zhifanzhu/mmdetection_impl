@@ -28,7 +28,7 @@ ln -sfn /path/to/zoo zoo
 
 # NOTE BEFORE YOU RUN
 # check following fields:
-#   pretrained,
+#   pretrained/loaded_from, NOTE:  for trained backbone, use pretrained; for trained detector, use loaded_from, distinguish between this two!!!
 #   imgs_per_gpu
 #   learing-rate,
 #   interval,
