@@ -36,3 +36,4 @@ ln -sfn /path/to/zoo zoo
 #   workflow
 #   test_cfg.max_per_img
 #   dataset and ann files
+#  test_mode : 'train' False by default, 'val' and 'test' : True
