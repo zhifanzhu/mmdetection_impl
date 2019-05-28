@@ -1,7 +1,8 @@
 # model settings
 model = dict(
     type='FasterRCNN',
-    pretrained='modelzoo://resnet101',
+    # pretrained='modelzoo://resnet101',
+    pretrained='zoo/faster_rcnn_r101_fpn_1x_20181129-d1468807.pth',
     backbone=dict(
         type='ResNet',
         depth=101,
@@ -153,4 +154,4 @@ log_level = 'INFO'
 work_dir = './work_dirs/faster_rcnn_r101_fpn_1x'
 load_from = None
 resume_from = None
-workflow = [('train', 1)]
+workflow = [('train', 1), ('val', 1)]
