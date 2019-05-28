@@ -51,6 +51,10 @@ def parse_args():
 
 def main():
     args = parse_args()
+    print('config: ', args.config)
+    print('checkpoint: ', args.checkpoint)
+    print('img_prefix: ', args.img_prefix)
+    print('out_dir: ', args.out_dir)
 
     cfg = mmcv.Config.fromfile(args.config)
     model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
