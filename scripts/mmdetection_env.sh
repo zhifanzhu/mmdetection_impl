@@ -34,4 +34,5 @@ ln -sfn /path/to/zoo zoo
 #   interval,
 #   work_dir,
 #   workflow
-# test_cfg.max_per_img
+#   test_cfg.max_per_img
+#   dataset and ann files
