@@ -26,7 +26,7 @@ def weighted_binary_cross_entropy(pred, label, weight, avg_factor=None):
     if avg_factor is None:
         avg_factor = max(torch.sum(weight > 0).float().item(), 1.)
     return F.binary_cross_entropy_with_logits(
-        pred, label.float(), weight.float(),
+        pred.squeeze(), label.float(), weight.float(),
         reduction='sum')[None] / avg_factor
 
 
