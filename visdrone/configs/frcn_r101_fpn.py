@@ -1,8 +1,7 @@
 # model settings
 model = dict(
     type='FasterRCNN',
-    # pretrained='modelzoo://resnet101',
-    pretrained='zoo/faster_rcnn_r101_fpn_1x_20181129-d1468807.pth',
+    pretrained=None,
     backbone=dict(
         type='ResNet',
         depth=101,
@@ -36,7 +35,7 @@ model = dict(
         in_channels=256,
         fc_out_channels=1024,
         roi_feat_size=7,
-        num_classes=81,
+        num_classes=11,
         target_means=[0., 0., 0., 0.],
         target_stds=[0.1, 0.1, 0.2, 0.2],
         reg_class_agnostic=False))
@@ -93,7 +92,7 @@ data_root = 'data/VisDrone2019-DET/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
-    imgs_per_gpu=2,
+    imgs_per_gpu=1,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
@@ -152,6 +151,6 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/faster_rcnn_r101_fpn_1x'
-load_from = None
+load_from = 'zoo/faster_rcnn_r101_fpn_1x_20181129-d1468807.pth'
 resume_from = None
 workflow = [('train', 1), ('val', 1)]

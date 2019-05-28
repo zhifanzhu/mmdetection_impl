@@ -2,7 +2,7 @@
 input_size = 512
 model = dict(
     type='SingleStageDetector',
-    pretrained='zoo/ssd512_coco_vgg16_caffe_120e_20181221-d48b0be8.pth',
+    pretrained=None,
     backbone=dict(
         type='SSDVGG',
         input_size=input_size,
@@ -48,7 +48,7 @@ dataset_type = 'VisDroneDataset'
 data_root = 'data/VisDrone2019-DET/'
 img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 data = dict(
-    imgs_per_gpu=16,
+    imgs_per_gpu=8,
     workers_per_gpu=3,
     train=dict(
         type='RepeatDataset',
@@ -126,6 +126,6 @@ total_epochs = 24
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/ssd512coco_visdrone'
-load_from = None
+load_from = 'zoo/ssd512_coco_vgg16_caffe_120e_20181221-d48b0be8.pth'
 resume_from = None
 workflow = [('train', 1), ('val', 1)]
