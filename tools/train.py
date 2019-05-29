@@ -54,10 +54,6 @@ def main():
         if os.path.exists(args.resume_from):
             cfg.resume_from = args.resume_from
     cfg.gpus = args.gpus
-    if cfg.checkpoint_config is not None:
-        # save mmdet version in checkpoints as meta data
-        cfg.checkpoint_config.meta = dict(
-            mmdet_version=__version__, config=cfg.text)
 
     # init distributed env first, since logger depends on the dist info.
     if args.launcher == 'none':
@@ -84,6 +80,17 @@ def main():
         dataset = [train_dataset, val_dataset]
     else:
         dataset = train_dataset
+
+    if cfg.checkpoint_config is not None:
+        # save mmdet version, config file content and class names in
+        # checkpoints as meta data
+        cfg.checkpoint_config.meta = dict(
+            mmdet_version=__version__,
+            config=cfg.text,
+            classes=train_dataset.CLASSES)
+    # add an attribute for visualization convenience
+    model.CLASSES = train_dataset.CLASSES
+
     train_detector(
         model,
         dataset,
