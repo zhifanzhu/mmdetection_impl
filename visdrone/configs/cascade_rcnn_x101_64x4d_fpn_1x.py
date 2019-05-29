@@ -2,7 +2,7 @@
 model = dict(
     type='CascadeRCNN',
     num_stages=3,
-    pretrain=None,
+    pretrained=None,
     backbone=dict(
         type='ResNeXt',
         depth=101,
