@@ -29,6 +29,7 @@ class SSDHead(AnchorHead):
         self.in_channels = in_channels
         self.cls_out_channels = num_classes
         num_anchors = [len(ratios) * 2 + 2 for ratios in anchor_ratios]
+        # num_anchors = [4, 6, 6, 6, 4, 4], (if 1 then 4, if 2 then 6)
         reg_convs = []
         cls_convs = []
         for i in range(len(in_channels)):
@@ -143,7 +144,7 @@ class SSDHead(AnchorHead):
         featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]
         assert len(featmap_sizes) == len(self.anchor_generators)
 
-        # anchor_list:
+        # anchor_list: (list for every level featmap)
         # list(batch) of list(featmap_sizes) of Tensor([38x38x4,4])
         anchor_list, valid_flag_list = self.get_anchors(
             featmap_sizes, img_metas)
