@@ -80,7 +80,7 @@ class SSDHead(AnchorHead):
             scales = [1., np.sqrt(max_sizes[k] / min_sizes[k])]
             ratios = [1.]
             for r in anchor_ratios[k]:
-                ratios += [1 / r, r]  # 4 or 6 ratio
+                ratios += [1 / r, r]
             anchor_generator = AnchorGenerator(
                 base_size, scales, ratios, scale_major=False, ctr=ctr)
             indices = list(range(len(ratios)))
