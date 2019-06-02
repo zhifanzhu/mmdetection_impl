@@ -7,6 +7,10 @@ from .recall import eval_recalls
 
 
 def coco_eval(result_file, result_types, coco, max_dets=(100, 300, 1000)):
+    """
+    Returns:
+        dict holding COCOEval.stats with 12 contents.
+    """
     for res_type in result_types:
         assert res_type in [
             'proposal', 'proposal_fast', 'bbox', 'segm', 'keypoints'
@@ -19,7 +23,7 @@ def coco_eval(result_file, result_types, coco, max_dets=(100, 300, 1000)):
     if result_types == ['proposal_fast']:
         ar = fast_eval_recall(result_file, coco, np.array(max_dets))
         for i, num in enumerate(max_dets):
-            print('AR@{}\t= {:.4f}'.format(num, ar[i]))
+            print('AR_{}\t= {:.4f}'.format(num, ar[i]))
         return
 
     assert result_file.endswith('.json')
@@ -36,6 +40,23 @@ def coco_eval(result_file, result_types, coco, max_dets=(100, 300, 1000)):
         cocoEval.evaluate()
         cocoEval.accumulate()
         cocoEval.summarize()
+
+    stats = cocoEval.stats
+    stats_dict = {
+        'Precision/mAP': stats[0],
+        'Precision/mAP_.50IOU': stats[1],
+        'Precision/mAP_.75IOU': stats[2],
+        'Precision/mAP_small': stats[3],
+        'Precision/mAP_medium': stats[4],
+        'Precision/mAP_large': stats[5],
+        'Recall/AR_1': stats[6],
+        'Recall/AR_10': stats[7],
+        'Recall/AR_100': stats[8],
+        'Recall/AR_100_small': stats[9],
+        'Recall/AR_100_medium': stats[10],
+        'Recall/AR_100_large': stats[11],
+    }
+    return stats_dict
 
 
 def fast_eval_recall(results,
