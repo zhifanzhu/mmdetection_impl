@@ -91,15 +91,22 @@ class Expand(object):
 
 class RandomCrop(object):
 
-    def __init__(self, min_ious=(0.1, 0.3, 0.5, 0.7, 0.9), min_crop_size=0.3):
+    def __init__(self, min_ious=(0.1, 0.3, 0.5, 0.7, 0.9), min_crop_size=0.3, ori_prob=-1.0):
         # 1: return ori img
-        self.sample_mode = (1, *min_ious, 0)
+        self.ori_prob = ori_prob
+        if self.ori_prob >= 0:
+            self.sample_mode = (*min_ious, 0)
+        else:
+            self.sample_mode = (1, *min_ious, 0)
         self.min_crop_size = min_crop_size
 
     def __call__(self, img, boxes, labels):
         h, w, c = img.shape
         while True:
             mode = random.choice(self.sample_mode)
+            ori_prob = self.ori_prob
+            if ori_prob >= 0:
+                mode = random.choid([1, mode], p=[ori_prob, 1 - ori_prob])
             if mode == 1:
                 return img, boxes, labels
 
