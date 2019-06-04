@@ -25,6 +25,9 @@ mkdir data
 ln -sfn /path/to/work_dirs word_dirs
 ln -sfn /path/to/zoo zoo
 
+# Tensorboard
+pip install tb-nightly future
+
 
 # NOTE BEFORE YOU RUN
 # check following fields:
@@ -37,3 +40,4 @@ ln -sfn /path/to/zoo zoo
 #   test_cfg.max_per_img
 #   dataset and ann files
 #  test_mode : 'train' False by default, 'val' and 'test' : True
+#  tensorboard
