@@ -106,7 +106,7 @@ class RandomCrop(object):
             mode = random.choice(self.sample_mode)
             ori_prob = self.ori_prob
             if ori_prob >= 0:
-                mode = random.choid([1, mode], p=[ori_prob, 1 - ori_prob])
+                mode = random.choice([1, mode], p=[ori_prob, 1 - ori_prob])
             if mode == 1:
                 return img, boxes, labels
 
