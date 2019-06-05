@@ -8,6 +8,16 @@ from mmcv.cnn import (VGG, xavier_init, constant_init, kaiming_init,
 from mmcv.runner import load_checkpoint
 from ..registry import BACKBONES
 
+'''
+    Total params: 23,501,376
+    Trainable params: 23,501,376
+    Non-trainable params: 0
+    ----------------------------------------------------------------
+    Input size (MB): 3.00
+    Forward/backward pass size (MB): 1195.50
+    Params size (MB): 89.65
+'''
+
 
 @BACKBONES.register_module
 class SSDVGG(VGG):
