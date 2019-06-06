@@ -32,6 +32,7 @@ If C3 is also in atrous mode:
     out_from=('layer3', '', '', '', '', '', ''),
     out_channels=(-1, 512, 512, 256, 256, 128, 128),
 
+ResNet-101:
 plain conv in extra layer:
     Forward/backward pass size (MB): 2460.58
     Params size (MB): 215.01
@@ -83,16 +84,16 @@ class SSDResNet(ResNet):
         assert len(out_channels) == len(out_from)
         if use_dilation_conv4:
             assert num_stages == 2 and use_dilation_conv5, \
-            'if use atrous on conv4_1, num_stages should be 2'
+                'if use atrous on conv4_1, num_stages should be 2'
             assert len(out_channels) == 7, \
-            'if use atrous on conv4_1, need to indicate one more feature map'
+                'if use atrous on conv4_1, need to indicate one more feature map'
         else:
             if use_dilation_conv5:
                 assert num_stages == 3, \
-                'if use atrous on conv5_1, num_stages should be 3'
+                    'if use atrous on conv5_1, num_stages should be 3'
             else:
                 assert num_stages == 4, \
-                'if not using atrous, num_stages should be 4'
+                    'if not using atrous, num_stages should be 4'
 
         self.use_resblock_in_extra = use_resblock_in_extra
         self.out_from = out_from
@@ -103,7 +104,7 @@ class SSDResNet(ResNet):
         if use_dilation_conv4:
             inplanes = self.feat_dim
             planes = 64 * 2 ** num_stages
-            num_blocks = 23  # see arch_setting
+            num_blocks = self.arch_settings[self.depth][1][num_stages]  # see arch_setting
             stride = 1
             dilation_first = 2
             dilation_other = 1
@@ -131,7 +132,7 @@ class SSDResNet(ResNet):
         if use_dilation_conv5:
             inplanes = self.feat_dim
             planes = 64 * 2 ** num_stages
-            num_blocks = 3  # see arch_setting
+            num_blocks = self.arch_settings[self.depth][1][num_stages]
             stride = 1
             dilation_first = 2
             dilation_other = 1

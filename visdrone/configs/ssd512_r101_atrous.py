@@ -129,7 +129,7 @@ log_config = dict(
 total_epochs = 48
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/ssd512res'
+work_dir = './work_dirs/ssd512_r101_atrous'
 load_from = None
 resume_from = None
 workflow = [('train', 1), ('val', 1)]
