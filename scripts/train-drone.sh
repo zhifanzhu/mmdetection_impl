@@ -2,7 +2,9 @@ MMDET=$HOME/Github/mmlab/mmdetection
 export PYTHONPATH=$PYTHONPATH:$MMDET
 
 CURDIR=`dirname "$0"`
-CURDIR=`realpath $CURDIR`
+cd $CURDIR
+# CURDIR=`realpath $CURDIR`
+CURDIR=$PWD
 CONFIG_FILE=`ls $CURDIR/*.py`
 LOGFILE=$CURDIR/log.txt
 WORK_DIR=$CURDIR
