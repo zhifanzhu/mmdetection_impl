@@ -12,10 +12,10 @@ import argparse
 
 import os
 import os.path as osp
+import torch
 import mmcv
 
-from mmdet.apis import inference_detector
-from mmdet.models import build_detector
+from mmdet.apis import init_detector, inference_detector
 
 
 def write_result_into_txt(result, txt_file):
@@ -57,16 +57,18 @@ def main():
     print('out_dir: ', args.out_dir)
 
     cfg = mmcv.Config.fromfile(args.config)
-    model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
-    mmcv.runner.load_checkpoint(model, args.checkpoint)
+    model = init_detector(cfg, args.checkpoint)
 
     all_images = osp.join(args.img_prefix, 'images')
-    for img_name in os.listdir(all_images):
+    for i, img_name in enumerate(os.listdir(all_images)):
         img_full_name = osp.join(all_images, img_name)
-        result = inference_detector(model, img_full_name, cfg, device='cuda')
+        with torch.no_grad():
+            result = inference_detector(model, img_full_name)
         txt_file = '{}.txt'.format(img_name.split('.')[0])
         txt_file = osp.join(args.out_dir, txt_file)
         write_result_into_txt(result, txt_file)
+        if i % 100 == 0:
+            print('{}/{}'.format(i, len(os.listdir(all_images))))
 
 
 if __name__ == '__main__':

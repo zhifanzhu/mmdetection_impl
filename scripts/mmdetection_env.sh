@@ -34,6 +34,7 @@ pip install tb-nightly future
 #   pretrained/loaded_from, NOTE:  for trained backbone, use pretrained; for trained detector, use loaded_from, distinguish between this two!!!
 #   imgs_per_gpu
 #   learing-rate,
+#   num_classes
 #   interval,
 #   work_dir,
 #   workflow
