@@ -1,26 +1,33 @@
+''' use stride 8 but NO DIALTION '''
 # model settings
 input_size = 512
 model = dict(
     type='SingleStageDetector',
-    pretrained=None,
+    pretrained='modelzoo://resnet50',
     backbone=dict(
-        type='SSDVGG_VOLATILE',
-        input_size=input_size,
-        depth=16,
-        with_last_pool=False,
-        ceil_mode=True,
-        out_indices=(3, 4),
-        out_feature_indices=(15, 22, 34),
-        l2_norm_scale=20),
+        type='SSDResNet_VOLATILE',
+        depth=50,
+        num_stages=2,
+        out_from=('layer3', '', '', '', '', '', ''),
+        out_channels=(-1, 512, 512, 256, 256, 128, 128),
+        use_dilation_conv4=True,
+        fake_dilation_conv4=True,
+        use_dilation_conv5=True,
+        fake_dilation_conv5=True,
+        use_resblock_in_extra=False,
+        style='pytorch',
+        frozen_stages=-1,
+        norm_cfg=dict(type='BN', requires_grad=True),
+        norm_eval=False),
     neck=None,
     bbox_head=dict(
         type='SSDHead',
         input_size=input_size,
-        in_channels=(256, 512, 1024, 512, 256, 256, 256),
+        in_channels=(1024, 512, 512, 256, 256, 128, 128),
         num_classes=11,
-        anchor_strides=(4, 8, 16, 32, 64, 128, 256),
+        anchor_strides=(8, 16, 32, 64, 128, 256, 512),
         basesize_ratio_range=(0.1, 0.9),
-        anchor_ratios=([2], [2, 3], [2, 3], [2, 3], [2, 3], [2], [2]),
+        anchor_ratios=([2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2], [2]),
         target_means=(.0, .0, .0, .0),
         target_stds=(0.1, 0.1, 0.2, 0.2)))
 cudnn_benchmark = True
@@ -103,7 +110,7 @@ data = dict(
         test_mode=True,
         resize_keep_ratio=False))
 # optimizer
-optimizer = dict(type='SGD', lr=2e-3, momentum=0.9, weight_decay=5e-4)
+optimizer = dict(type='SGD', lr=0.25e-3, momentum=0.9, weight_decay=5e-4)
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
@@ -122,10 +129,10 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 24
+total_epochs = 48
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/ssd512_vgg_vola1'
-load_from = 'zoo/ssd512_coco_vgg16_caffe_120e_20181221-d48b0be8.pth'
+work_dir = './work_dirs/ssd512_r50_fakeatrous'
+load_from = None
 resume_from = None
 workflow = [('train', 1), ('val', 1)]
