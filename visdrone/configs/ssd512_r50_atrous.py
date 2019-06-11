@@ -133,4 +133,3 @@ work_dir = './work_dirs/ssd512_r50_atrous'
 load_from = None
 resume_from = None
 workflow = [('train', 1), ('val', 1)]
-orkflow = [('train', 1), ('val', 1)]

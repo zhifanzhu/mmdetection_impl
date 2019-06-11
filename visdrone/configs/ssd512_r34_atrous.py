@@ -15,7 +15,7 @@ model = dict(
         style='pytorch',
         frozen_stages=-1,
         norm_cfg=dict(type='BN', requires_grad=True),
-        norm_eval=False),
+        norm_eval=True),
     neck=None,
     bbox_head=dict(
         type='SSDHead',
@@ -133,4 +133,3 @@ work_dir = './work_dirs/ssd512_r34_atrous'
 load_from = None
 resume_from = None
 workflow = [('train', 1), ('val', 1)]
-orkflow = [('train', 1), ('val', 1)]
