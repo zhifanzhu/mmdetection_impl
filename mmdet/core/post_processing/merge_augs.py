@@ -50,6 +50,7 @@ def merge_aug_bboxes(aug_bboxes, aug_scores, img_metas, rcnn_test_cfg):
     Returns:
         tuple: (bboxes, scores)
     """
+    # ktw361: rcnn_test_cfg is unused.
     recovered_bboxes = []
     for bboxes, img_info in zip(aug_bboxes, img_metas):
         img_shape = img_info[0]['img_shape']
