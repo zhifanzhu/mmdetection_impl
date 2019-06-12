@@ -59,7 +59,7 @@ class SSDResNet_VOLATILE(ResNet):
             strides=STAGES_DEFAULT[:num_stages],
             dilations=DILATIONS_DEFAULT[:num_stages],
             out_indices=OUT_INDICES_DEFAULT[:num_stages],
-            stype=style,
+            style=style,
             frozen_stages=frozen_stages,
             conv_cfg=conv_cfg,
             norm_cfg=norm_cfg,
