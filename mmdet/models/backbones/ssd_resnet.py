@@ -27,7 +27,7 @@ With 512 input, output feature map shape:
      torch.Size([1, 256, 4, 4]),
      torch.Size([1, 256, 2, 2]),
      torch.Size([1, 128, 1, 1])]
-     
+
 If C3 is also in atrous mode:
     out_from=('layer3', '', '', '', '', '', ''),
     out_channels=(-1, 512, 512, 256, 256, 128, 128),
@@ -66,20 +66,20 @@ class SSDResNet(ResNet):
                  with_cp=False,
                  zero_init_residual=True):
         super(SSDResNet, self).__init__(
-            depth,
-            num_stages,
-            STAGES_DEFAULT[:num_stages],
-            DILATIONS_DEFAULT[:num_stages],
-            OUT_INDICES_DEFAULT[:num_stages],
-            style,
-            frozen_stages,
-            conv_cfg,
-            norm_cfg,
-            norm_eval,
-            dcn,
-            STAGE_WITH_DCN_DEFAULT[:num_stages],
-            with_cp,
-            zero_init_residual)
+            depth=depth,
+            num_stages=num_stages,
+            strides=STAGES_DEFAULT[:num_stages],
+            dilations=DILATIONS_DEFAULT[:num_stages],
+            out_indices=OUT_INDICES_DEFAULT[:num_stages],
+            stype=style,
+            frozen_stages=frozen_stages,
+            conv_cfg=conv_cfg,
+            norm_cfg=norm_cfg,
+            norm_eval=norm_eval,
+            dcn=dcn,
+            stage_with_dcn=STAGE_WITH_DCN_DEFAULT[:num_stages],
+            with_cp=with_cp,
+            zero_init_residual=zero_init_residual)
 
         assert len(out_channels) == len(out_from)
         if use_dilation_conv4:

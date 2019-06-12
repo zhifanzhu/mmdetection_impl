@@ -54,20 +54,20 @@ class SSDResNet_VOLATILE(ResNet):
                  with_cp=False,
                  zero_init_residual=True):
         super(SSDResNet_VOLATILE, self).__init__(
-            depth,
-            num_stages,
-            STAGES_DEFAULT[:num_stages],
-            DILATIONS_DEFAULT[:num_stages],
-            OUT_INDICES_DEFAULT[:num_stages],
-            style,
-            frozen_stages,
-            conv_cfg,
-            norm_cfg,
-            norm_eval,
-            dcn,
-            STAGE_WITH_DCN_DEFAULT[:num_stages],
-            with_cp,
-            zero_init_residual)
+            depth=depth,
+            num_stages=num_stages,
+            strides=STAGES_DEFAULT[:num_stages],
+            dilations=DILATIONS_DEFAULT[:num_stages],
+            out_indices=OUT_INDICES_DEFAULT[:num_stages],
+            stype=style,
+            frozen_stages=frozen_stages,
+            conv_cfg=conv_cfg,
+            norm_cfg=norm_cfg,
+            norm_eval=norm_eval,
+            dcn=dcn,
+            stage_with_dcn=STAGE_WITH_DCN_DEFAULT[:num_stages],
+            with_cp=with_cp,
+            zero_init_residual=zero_init_residual)
 
         assert len(out_channels) == len(out_from)
         if use_dilation_conv4:
