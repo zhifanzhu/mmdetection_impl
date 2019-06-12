@@ -110,6 +110,10 @@ data
 .vscode
 .idea
 
+# custom
+*.pkl
+*.pkl.json
+*.log.json
 .tags
 Untitled.ipynb
 zoo
