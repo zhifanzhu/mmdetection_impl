@@ -1,4 +1,4 @@
-MMDET=/home/damon/Github/mmlab/mmdetection
+MMDET=$HOME/Github/mmlab/mmdetection
 export PYTHONPATH=$PYTHONPATH:$MMDET
 
 CURDIR=`dirname "$0"`
