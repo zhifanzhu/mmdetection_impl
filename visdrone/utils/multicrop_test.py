@@ -15,6 +15,7 @@ from mmcv.runner import get_dist_info
 from mmdet.apis import init_detector, inference_detector
 from mmdet.core import results2json, coco_eval
 from mmdet.datasets import build_dataloader, get_dataset
+from mmdet.ops.nms import nms_wrapper
 
 from visdrone.utils import test_augs
 from visdrone.utils.output_to_txt import write_result_into_txt
@@ -57,6 +58,10 @@ def single_gpu_test(model, data_loader, show=False):
 
         # step 4. post-processing result of single image.
         # TODO(ktw361)
+        import functools
+        nms_func = functools.partial(nms_wrapper.nms)
+        per_cls_bboxes = transform_results_by_nms(per_cls_bboxes,
+                                                  nms_func)
 
         # step 5. (opt), save per crop result?
         img_name = img_info['filename'].split('.')[0]
@@ -71,6 +76,15 @@ def single_gpu_test(model, data_loader, show=False):
         results.append(result)
         prog_bar.update()  # only one img
 
+    return results
+
+
+def transform_results_by_nms(results, nms_func, iou_thr = 0.5):
+    for idx, res in enumerate(results):
+        for i, c_res in enumerate(res):
+            bb, ind = nms_func(c_res.astype(np.float32), iou_thr)
+            res[i] = bb
+    results[idx] = res
     return results
 
 
