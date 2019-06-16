@@ -63,14 +63,14 @@ def single_gpu_test(model, data_loader, show=False):
         per_cls_bboxes = transform_results_by_nms(per_cls_bboxes,
                                                   nms_func)
 
-        # step 5. (opt), save per crop result?
-        img_name = img_info['filename'].split('.')[0]
-        img_name = img_name.split('/')[-1]
-        for i, sin_res in enumerate(single_results):
-            txt_file = '{}_{}.txt'.format(img_name, i)
-            out_dir = '/tmp/fuckyoudir'
-            txt_file = osp.join(out_dir, txt_file)
-            write_result_into_txt(sin_res, txt_file)
+        # # step 5. (opt), save per crop result?
+        # img_name = img_info['filename'].split('.')[0]
+        # img_name = img_name.split('/')[-1]
+        # for i, sin_res in enumerate(single_results):
+        #     txt_file = '{}_{}.txt'.format(img_name, i)
+        #     out_dir = '/tmp/fuckyoudir'
+        #     txt_file = osp.join(out_dir, txt_file)
+        #     write_result_into_txt(sin_res, txt_file)
 
         result = per_cls_bboxes
         results.append(result)
@@ -79,13 +79,11 @@ def single_gpu_test(model, data_loader, show=False):
     return results
 
 
-def transform_results_by_nms(results, nms_func, iou_thr = 0.5):
-    for idx, res in enumerate(results):
-        for i, c_res in enumerate(res):
+def transform_results_by_nms(res, nms_func, iou_thr = 0.5):
+    for i, c_res in enumerate(res):
             bb, ind = nms_func(c_res.astype(np.float32), iou_thr)
             res[i] = bb
-    results[idx] = res
-    return results
+    return res
 
 
 def parse_args():
