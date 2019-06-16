@@ -225,7 +225,7 @@ class CocoNonDistEvalmAPHook(NonDistEvalHook):
             iou_type = res_type
             cocoEval = COCOeval(cocoGt, cocoDt, iou_type)
             cocoEval.params.imgIds = imgIds
-            cocoEval.params.maxDets = [1, 10, 100, 500]  # (TODO)Set for visdrone
+            # cocoEval.params.maxDets = [1, 10, 100, 500]  # (TODO)Set for visdrone
             cocoEval.evaluate()
             cocoEval.accumulate()
             cocoEval.summarize()
