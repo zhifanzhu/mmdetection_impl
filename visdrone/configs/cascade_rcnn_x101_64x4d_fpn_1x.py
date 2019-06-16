@@ -242,4 +242,4 @@ log_level = 'INFO'
 work_dir = './work_dirs/cascade_rcnn_x101_64x4d_fpn_1x'
 load_from = 'zoo/cascade_rcnn_x101_64x4d_fpn_1x_20181218-e2dc376a.pth'
 resume_from = None
-workflow = [('train', 1), ('val', 1)]
+workflow = [('train', 1)]

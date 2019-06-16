@@ -166,4 +166,4 @@ log_level = 'INFO'
 work_dir = './work_dirs/faster_rcnn_r101_fpn_1x'
 load_from = 'zoo/faster_rcnn_r101_fpn_1x_20181129-d1468807.pth'
 resume_from = None
-workflow = [('train', 1), ('val', 1)]
+workflow = [('train', 1)]

@@ -128,5 +128,4 @@ log_level = 'INFO'
 work_dir = './work_dirs/ssd300_visdrone'
 load_from = None
 resume_from = None
-workflow = [('train', 1), ('val', 1)]
-# workflow = [('train', 1)]
+workflow = [('train', 1)]

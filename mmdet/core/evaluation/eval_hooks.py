@@ -150,7 +150,91 @@ class CocoDistEvalmAPHook(DistEvalHook):
             cocoEval.evaluate()
             cocoEval.accumulate()
             cocoEval.summarize()
-            metrics = ['mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m', 'mAP_l']
+            # metrics = ['mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m', 'mAP_l']
+            metrics = [
+                'Precision/mAP', 'Precision/mAP_.50IOU', 'Precision/mAP_.75IOU',
+                'Precision/mAP_small', 'Precision/mAP_medium', 'Precision/mAP_large',
+                'Recall/AR_1', 'Recall/AR_10', 'Recall/AR_100', 'Recall/AR_100_small',
+                'Recall/AR_100_medium', 'Recall/AR_100_large']
+            for i in range(len(metrics)):
+                key = '{}_{}'.format(res_type, metrics[i])
+                val = float('{:.3f}'.format(cocoEval.stats[i]))
+                runner.log_buffer.output[key] = val
+            runner.log_buffer.output['{}_mAP_copypaste'.format(res_type)] = (
+                '{ap[0]:.3f} {ap[1]:.3f} {ap[2]:.3f} {ap[3]:.3f} '
+                '{ap[4]:.3f} {ap[5]:.3f}').format(ap=cocoEval.stats[:6])
+        runner.log_buffer.ready = True
+        os.remove(tmp_file)
+
+
+class NonDistEvalHook(Hook):
+
+    def __init__(self, dataset, cfg=None, interval=1):
+        if isinstance(dataset, Dataset):
+            self.dataset = dataset
+        elif isinstance(dataset, dict):
+            self.dataset = obj_from_dict(dataset, datasets,
+                                         {'test_mode': True})
+        else:
+            raise TypeError(
+                'dataset must be a Dataset object or a dict, not {}'.format(
+                    type(dataset)))
+        self.interval = interval
+        self.data_loader = datasets.build_dataloader(
+            self.dataset,
+            imgs_per_gpu=1,
+            workers_per_gpu=cfg.data.workers_per_gpu,
+            dist=False,
+            shuffle=False)
+
+    def after_train_epoch(self, runner):
+        if not self.every_n_epochs(runner, self.interval):
+            return
+        runner.model.eval()
+        results = []
+        # results = [None for _ in range(len(self.dataset))]
+        prog_bar = mmcv.ProgressBar(len(self.dataset))
+        for i, data in enumerate(self.data_loader):
+            with torch.no_grad():
+                result = runner.model(
+                    return_loss=False, rescale=True, **data)
+            results.append(result)
+
+            batch_size = data['img'][0].size(0)
+            for _ in range(batch_size):
+                prog_bar.update()
+
+        self.evaluate(runner, results)
+
+    def evaluate(self):
+        raise NotImplementedError
+
+
+class CocoNonDistEvalmAPHook(NonDistEvalHook):
+
+    def evaluate(self, runner, results):
+        tmp_file = osp.join(runner.work_dir, 'temp_0.json')
+        results2json(self.dataset, results, tmp_file)
+
+        res_types = ['bbox',
+                     'segm'] if runner.model.module.with_mask else ['bbox']
+        cocoGt = self.dataset.coco
+        cocoDt = cocoGt.loadRes(tmp_file)
+        imgIds = cocoGt.getImgIds()
+        for res_type in res_types:
+            iou_type = res_type
+            cocoEval = COCOeval(cocoGt, cocoDt, iou_type)
+            cocoEval.params.imgIds = imgIds
+            cocoEval.params.maxDets = [1, 10, 100, 500]  # (TODO)Set for visdrone
+            cocoEval.evaluate()
+            cocoEval.accumulate()
+            cocoEval.summarize()
+            # metrics = ['mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m', 'mAP_l']
+            metrics = [
+                'Precision/mAP', 'Precision/mAP_.50IOU', 'Precision/mAP_.75IOU',
+                'Precision/mAP_small', 'Precision/mAP_medium', 'Precision/mAP_large',
+                'Recall/AR_1', 'Recall/AR_10', 'Recall/AR_100', 'Recall/AR_100_small',
+                'Recall/AR_100_medium', 'Recall/AR_100_large']
             for i in range(len(metrics)):
                 key = '{}_{}'.format(res_type, metrics[i])
                 val = float('{:.3f}'.format(cocoEval.stats[i]))

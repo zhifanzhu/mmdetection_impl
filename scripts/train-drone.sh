@@ -15,10 +15,12 @@ if [ -f "$CHECKPOINT_FILE" ]; then
     cd $MMDET
     python $MMDET/tools/train.py ${CONFIG_FILE} \
         --work_dir $WORK_DIR \
-        --resume_from $CHECKPOINT_FILE 2>&1 | tee -a $LOGFILE
+        --resume_from $CHECKPOINT_FILE \
+        --validate 2>&1 | tee -a $LOGFILE
 else
     echo "train-drone.sh: No checkpoint, fresh start"
     cd $MMDET
     python $MMDET/tools/train.py ${CONFIG_FILE} \
-        --work_dir $WORK_DIR 2>&1 | tee -a $LOGFILE
+        --work_dir $WORK_DIR \
+        --validate 2>&1 | tee -a $LOGFILE
 fi

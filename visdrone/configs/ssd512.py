@@ -128,4 +128,4 @@ log_level = 'INFO'
 work_dir = './work_dirs/ssd512coco_visdrone'
 load_from = 'zoo/ssd512_coco_vgg16_caffe_120e_20181221-d48b0be8.pth'
 resume_from = None
-workflow = [('train', 1), ('val', 1)]
+workflow = [('train', 1)]
