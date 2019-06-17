@@ -91,22 +91,15 @@ class Expand(object):
 
 class RandomCrop(object):
 
-    def __init__(self, min_ious=(0.1, 0.3, 0.5, 0.7, 0.9), min_crop_size=0.3, ori_prob=-1.0):
+    def __init__(self, min_ious=(0.1, 0.3, 0.5, 0.7, 0.9), min_crop_size=0.3):
         # 1: return ori img
-        self.ori_prob = ori_prob
-        if self.ori_prob >= 0:
-            self.sample_mode = (*min_ious, 0)
-        else:
-            self.sample_mode = (1, *min_ious, 0)
+        self.sample_mode = (1, *min_ious, 0)
         self.min_crop_size = min_crop_size
 
     def __call__(self, img, boxes, labels):
         h, w, c = img.shape
         while True:
             mode = random.choice(self.sample_mode)
-            ori_prob = self.ori_prob
-            if ori_prob >= 0:
-                mode = random.choice([1, mode], p=[ori_prob, 1 - ori_prob])
             if mode == 1:
                 return img, boxes, labels
 
@@ -132,8 +125,8 @@ class RandomCrop(object):
                 # center of boxes should inside the crop img
                 center = (boxes[:, :2] + boxes[:, 2:]) / 2
                 mask = (center[:, 0] > patch[0]) * (
-                    center[:, 1] > patch[1]) * (center[:, 0] < patch[2]) * (
-                        center[:, 1] < patch[3])
+                        center[:, 1] > patch[1]) * (center[:, 0] < patch[2]) * (
+                               center[:, 1] < patch[3])
                 if not mask.any():
                     continue
                 boxes = boxes[mask]
@@ -148,12 +141,100 @@ class RandomCrop(object):
                 return img, boxes, labels
 
 
+class RandomPatch(object):
+
+    def __init__(self,
+                 patch_size=(0.5, 0.5),
+                 pad_border=(0.1, 0.1),
+                 overlap_thresh=0.3,
+                 ori_prob=0.0):
+        """ Return a random patch of image
+        :param patch_size: (height, width) ratio of original size
+        :param pad_border: allow patch to start crop from [-pad_border, patch_w],
+            then use the [0, patch_w] part.
+        :param overlap_thresh: Minimum overlap threshold of cropped boxes to keep
+            in new image. If the ratio between a cropped bounding box and the
+            original is less than this value, it is removed from the new image.
+            Like min_ious in ssd crop.
+        :param ori_prob: Probability of keeping the original image.
+        """
+        self.patch_size = patch_size
+        self.pad_border = pad_border
+        self.ori_prob = ori_prob
+        self.overlap_thresh = overlap_thresh
+
+    def __call__(self, img, gt_boxes, gt_labels):
+        ori_prob = self.ori_prob
+        use_ori = random.choice([True, False], p=[ori_prob, 1 - ori_prob])
+        if use_ori:
+            return img, gt_boxes, gt_labels
+
+        h, w, c = img.shape
+        # pad border
+        patch_h = h * self.patch_size[0]
+        patch_w = w * self.patch_size[1]
+        h_start = 0 - h * self.pad_border[0]
+        w_start = 0 - w * self.pad_border[1]
+        h_end = h + h * self.pad_border[0]
+        w_end = w + w * self.pad_border[1]
+        for i in range(50):
+            boxes = gt_boxes
+            labels = gt_labels
+            left = random.uniform(w_start, w_end - patch_w)
+            top = random.uniform(h_start, h_end - patch_h)
+
+            right = left + patch_w
+            bottom = top + patch_h
+            left = np.maximum(left, 0)
+            top = np.maximum(top, 0)
+            right = np.minimum(right, w)
+            bottom = np.minimum(bottom, h)
+
+            # h / w in [0.5, 2]
+            if patch_h / patch_w < 0.5 or patch_h / patch_w > 2:
+                continue
+
+            patch = np.array((int(left), int(top), int(right), int(bottom)))
+            overlaps = bbox_overlaps(
+                boxes.reshape(-1, 4),
+                patch.reshape(-1, 4),
+                mode='iof').reshape(-1)  # note: use 'iof' and swap b1 b2 here.
+
+            # Prune boxes outside image
+            keep_inds = (overlaps > self.overlap_thresh).nonzero()
+            if len(keep_inds) == 0:
+                continue
+            boxes = boxes[keep_inds]
+            labels = labels[keep_inds]
+
+            # center of boxes should inside the crop img
+            center = (boxes[:, :2] + boxes[:, 2:]) / 2
+            mask = (center[:, 0] > patch[0]) * (
+                    center[:, 1] > patch[1]) * (center[:, 0] < patch[2]) * (
+                           center[:, 1] < patch[3])
+            if not mask.any():
+                continue
+            boxes = boxes[mask]
+            labels = labels[mask]
+
+            # adjust boxes
+            img = img[patch[1]:patch[3], patch[0]:patch[2]]
+            boxes[:, 2:] = boxes[:, 2:].clip(max=patch[2:])
+            boxes[:, :2] = boxes[:, :2].clip(min=patch[:2])
+            boxes -= np.tile(patch[:2], 2)
+
+            return img, boxes, labels
+        # fall through, use original
+        return img, gt_boxes, gt_labels
+
+
 class ExtraAugmentation(object):
 
     def __init__(self,
                  photo_metric_distortion=None,
                  expand=None,
-                 random_crop=None):
+                 random_crop=None,
+                 random_patch=None):
         self.transforms = []
         if photo_metric_distortion is not None:
             self.transforms.append(
@@ -162,6 +243,8 @@ class ExtraAugmentation(object):
             self.transforms.append(Expand(**expand))
         if random_crop is not None:
             self.transforms.append(RandomCrop(**random_crop))
+        if random_patch is not None:
+            self.transforms.append(RandomPatch(**random_patch))
 
     def __call__(self, img, boxes, labels):
         img = img.astype(np.float32)
