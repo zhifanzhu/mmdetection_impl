@@ -149,7 +149,7 @@ class RandomPatch(object):
                  overlap_thresh=0.3,
                  ori_prob=0.0):
         """ Return a random patch of image
-        :param patch_size: (height, width) ratio of original size
+        :param patch_size: (height, width) ratio/pixels of original size
         :param pad_border: allow patch to start crop from [-pad_border, patch_w],
             then use the [0, patch_w] part.
         :param overlap_thresh: Minimum overlap threshold of cropped boxes to keep
@@ -170,9 +170,15 @@ class RandomPatch(object):
             return img, gt_boxes, gt_labels
 
         h, w, c = img.shape
+        if self.patch_size[0] < 1.0 and self.patch_size[1] < 1.0:
+            patch_h = h * self.patch_size[0]
+            patch_w = w * self.patch_size[1]
+        elif self.patch_size[0] > 1 and self.patch_size[1] > 1:
+            patch_h = int(self.patch_size[0])
+            patch_w = int(self.patch_size[1])
+        else:
+            raise ValueError("patch_size should be both float ratio or pixels")
         # pad border
-        patch_h = h * self.patch_size[0]
-        patch_w = w * self.patch_size[1]
         h_start = 0 - h * self.pad_border[0]
         w_start = 0 - w * self.pad_border[1]
         h_end = h + h * self.pad_border[0]
