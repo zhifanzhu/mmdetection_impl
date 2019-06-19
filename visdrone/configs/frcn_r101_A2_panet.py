@@ -3,10 +3,8 @@ model = dict(
     type='FasterRCNN',
     pretrained=None,
     backbone=dict(
-        type='ResNeXt',
+        type='ResNet',
         depth=101,
-        groups=64,
-        base_width=4,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
@@ -15,6 +13,7 @@ model = dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
+        bottom_up_panet=True,
         num_outs=4),
     rpn_head=dict(
         type='RPNHead',
@@ -29,7 +28,7 @@ model = dict(
             type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
         loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
     bbox_roi_extractor=dict(
-        type='SingleRoIExtractor',
+        type='MultiRoIExtractor',
         roi_layer=dict(type='RoIAlign', out_size=7, sample_num=2),
         out_channels=256,
         featmap_strides=[4, 8, 16, 32]),
@@ -63,6 +62,7 @@ train_cfg = dict(
             add_gt_as_proposals=False),
         allowed_border=0,
         pos_weight=-1,
+        smoothl1_beta=1 / 9.0,
         debug=False),
     rpn_proposal=dict(
         nms_across_levels=False,
@@ -105,7 +105,7 @@ data_root = 'data/VisDrone2019-DET/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
-    imgs_per_gpu=2,
+    imgs_per_gpu=2, # V100-2 # 2
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
@@ -155,7 +155,7 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=50,
+    interval=100,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
@@ -165,7 +165,7 @@ log_config = dict(
 total_epochs = 24
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = None
-load_from = 'zoo/faster_rcnn_x101_64x4d_fpn_2x_20181218-fe94f9b8.pth'
+work_dir = 'work_dirs/A2_panet'
+load_from = 'zoo/faster_rcnn_r101_fpn_1x_20181129-d1468807.pth'
 resume_from = None
 workflow = [('train', 1)]

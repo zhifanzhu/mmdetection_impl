@@ -16,6 +16,7 @@ class FPN(nn.Module):
                  start_level=0,
                  end_level=-1,
                  add_extra_convs=False,
+                 bottom_up_panet=False,
                  extra_convs_on_inputs=True,
                  relu_before_extra_convs=False,
                  conv_cfg=None,
@@ -45,6 +46,10 @@ class FPN(nn.Module):
 
         self.lateral_convs = nn.ModuleList()
         self.fpn_convs = nn.ModuleList()
+        self.bottom_up_panet = bottom_up_panet
+        if bottom_up_panet:
+            self.bottom_convs = nn.ModuleList()  # panet
+            self.aug_convs = nn.ModuleList()
 
         for i in range(self.start_level, self.backbone_end_level):
             l_conv = ConvModule(
@@ -67,6 +72,22 @@ class FPN(nn.Module):
 
             self.lateral_convs.append(l_conv)
             self.fpn_convs.append(fpn_conv)
+
+            if bottom_up_panet:
+                bottom_conv = nn.Conv2d(
+                    out_channels,
+                    out_channels,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1)
+                aug_conv = nn.Conv2d(
+                    out_channels,
+                    out_channels,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1)
+                self.bottom_convs.append(bottom_conv)
+                self.aug_convs.append(aug_conv)
 
         # add extra conv layers (e.g., RetinaNet)
         extra_levels = num_outs - self.backbone_end_level + self.start_level
@@ -110,10 +131,24 @@ class FPN(nn.Module):
                 laterals[i], scale_factor=2, mode='nearest')
 
         # build outputs
-        # part 1: from original levels
-        outs = [
+        fpn_maps = [
             self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels)
         ]
+        # [0, 1, 2, 3] Corresponds to paper [P2(N2), P3, P4, P5]
+        if self.bottom_up_panet:
+            outs = [fpn_maps[0]]  # P2=N2
+            for i, bottom_conv, aug_conv in zip(
+                    range(self.start_level + 1, self.backbone_end_level),  # range(1, 4)
+                    self.bottom_convs,
+                    self.aug_convs):
+                bottom = fpn_maps[i - 1]
+                bottom = F.relu(bottom_conv(bottom))
+                aug = fpn_maps[i] + bottom
+                aug = F.relu(aug_conv(aug))
+                outs.append(aug)
+        else:
+            outs = fpn_maps
+
         # part 2: add extra levels
         if self.num_outs > len(outs):
             # use max pool to get more levels on top of outputs
@@ -134,3 +169,4 @@ class FPN(nn.Module):
                     else:
                         outs.append(self.fpn_convs[i](outs[-1]))
         return tuple(outs)
+
