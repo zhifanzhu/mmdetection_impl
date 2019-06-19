@@ -140,7 +140,7 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin,
         if self.with_bbox:
             if self.neck.bottom_up_panet:
                 loss_cls_tmp, loss_bbox_tmp = 0, 0
-                for i in range(x[0].shape[0]):  # range(num_outs)
+                for i in range(len(x)):  # range(num_outs)
                     rois = bbox2roi([res.bboxes for res in sampling_results])
                     bbox_feats = self.bbox_roi_extractor(
                         x[i].unsqueeze(0), rois)
