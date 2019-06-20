@@ -8,32 +8,19 @@ model = dict(
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
-        dcn=dict(
-            modulated=False,
-            groups=1,
-            deformable_groups=1,
-            fallback_on_stride=False),
-        stage_with_dcn=(False, True, True, True)),
-    neck=[
-        dict(
-            type='FPN',
-            in_channels=[256, 512, 1024, 2048],
-            out_channels=256,
-            num_outs=4),
-        dict(
-            type='BFP',
-            in_channels=256,
-            num_levels=4,
-            refine_level=2,
-            refine_type='non_local')
-    ],
+        style='pytorch'),
+    neck=dict(
+        type='FPN',
+        in_channels=[256, 512, 1024, 2048],
+        out_channels=256,
+        num_outs=4),
     rpn_head=dict(
         type='RPNHead',
         in_channels=256,
         feat_channels=256,
         anchor_scales=[8],
         anchor_ratios=[0.5, 1.0, 2.0],
-        anchor_strides=[4, 8, 16, 32],  # no 64
+        anchor_strides=[4, 8, 16, 32],
         target_means=[.0, .0, .0, .0],
         target_stds=[1.0, 1.0, 1.0, 1.0],
         loss_cls=dict(
@@ -56,12 +43,7 @@ model = dict(
         reg_class_agnostic=False,
         loss_cls=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-        loss_bbox=dict(
-            type='BalancedL1Loss',
-            alpha=0.5,
-            gamma=1.5,
-            beta=1.0,
-            loss_weight=1.0)))
+        loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0)))
 # model training and testing settings
 train_cfg = dict(
     rpn=dict(
@@ -75,10 +57,11 @@ train_cfg = dict(
             type='RandomSampler',
             num=256,
             pos_fraction=0.5,
-            neg_pos_ub=5,
+            neg_pos_ub=-1,
             add_gt_as_proposals=False),
-        allowed_border=-1,
+        allowed_border=0,
         pos_weight=-1,
+        smoothl1_beta=1 / 9.0,
         debug=False),
     rpn_proposal=dict(
         nms_across_levels=False,
@@ -95,24 +78,19 @@ train_cfg = dict(
             min_pos_iou=0.5,
             ignore_iof_thr=-1),
         sampler=dict(
-            type='CombinedSampler',
+            type='OHEMSampler',
             num=512,
             pos_fraction=0.25,
-            add_gt_as_proposals=True,
-            pos_sampler=dict(type='InstanceBalancedPosSampler'),
-            neg_sampler=dict(
-                type='IoUBalancedNegSampler',
-                floor_thr=-1,
-                floor_fraction=0,
-                num_bins=3)),
+            neg_pos_ub=-1,
+            add_gt_as_proposals=True),
         pos_weight=-1,
         debug=False))
 test_cfg = dict(
     rpn=dict(
         nms_across_levels=False,
-        nms_pre=1000,
-        nms_post=1000,
-        max_num=1000,
+        nms_pre=2000,
+        nms_post=2000,
+        max_num=2000,
         nms_thr=0.7,
         min_bbox_size=0),
     rcnn=dict(
@@ -132,8 +110,7 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'VisDrone2018-DET-train/annotations_train.json',
         img_prefix=data_root + 'VisDrone2018-DET-train/',
-        # img_scale=(1333, 800),
-        img_scale=(300, 300),
+        img_scale=(1333, 800),
         img_norm_cfg=img_norm_cfg,
         size_divisor=32,
         flip_ratio=0.5,
@@ -162,9 +139,10 @@ data = dict(
         flip_ratio=0,
         with_mask=False,
         with_label=False,
+        resize_keep_ratio=True,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.0025, momentum=0.9, weight_decay=0.0001)  # 0.2
+optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -183,10 +161,10 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 12
+total_epochs = 24
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/libra_faster_rcnn_r101_fpn_1x'
+work_dir = None
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
