@@ -37,6 +37,8 @@ class BBoxTestMixin(object):
         rois = bbox2roi(proposals)
         roi_feats = self.bbox_roi_extractor(
             x[:len(self.bbox_roi_extractor.featmap_strides)], rois)
+        if self.neck.bottom_up_panet:  # assert len(x) == 1
+            rois = rois.repeat(len(self.bbox_roi_extractor.featmap_strides), 1)
         if self.with_shared_head:
             roi_feats = self.shared_head(roi_feats)
         cls_score, bbox_pred = self.bbox_head(roi_feats)
