@@ -17,10 +17,18 @@ class RPNTestMixin(object):
             proposal_list = self.simple_test_rpn(x, img_meta, rpn_test_cfg)
             for i, proposals in enumerate(proposal_list):
                 aug_proposals[i].append(proposals)
+        # reorganize the order of 'img_metas' to match the dimensions
+        # of 'aug_proposals'
+        aug_img_metas = []
+        for i in range(imgs_per_gpu):
+            aug_img_meta = []
+            for j in range(len(img_metas)):
+                aug_img_meta.append(img_metas[j][i])
+            aug_img_metas.append(aug_img_meta)
         # after merging, proposals will be rescaled to the original image size
         merged_proposals = [
-            merge_aug_proposals(proposals, img_meta, rpn_test_cfg)
-            for proposals, img_meta in zip(aug_proposals, img_metas)
+            merge_aug_proposals(proposals, aug_img_meta, rpn_test_cfg)
+            for proposals, aug_img_meta in zip(aug_proposals, aug_img_metas)
         ]
         return merged_proposals
 
@@ -37,8 +45,6 @@ class BBoxTestMixin(object):
         rois = bbox2roi(proposals)
         roi_feats = self.bbox_roi_extractor(
             x[:len(self.bbox_roi_extractor.featmap_strides)], rois)
-        if self.neck.bottom_up_panet:  # assert len(x) == 1
-            rois = rois.repeat(len(self.bbox_roi_extractor.featmap_strides), 1)
         if self.with_shared_head:
             roi_feats = self.shared_head(roi_feats)
         cls_score, bbox_pred = self.bbox_head(roi_feats)

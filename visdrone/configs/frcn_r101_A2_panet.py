@@ -1,3 +1,4 @@
+''' DEPRECATED !!! '''
 # model settings
 model = dict(
     type='FasterRCNN',

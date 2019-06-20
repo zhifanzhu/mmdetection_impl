@@ -138,39 +138,19 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin,
 
         # bbox head forward and loss
         if self.with_bbox:
-            if self.neck.bottom_up_panet:
-                loss_cls_tmp, loss_bbox_tmp = 0, 0
-                for i in range(len(x)):  # range(num_outs)
-                    rois = bbox2roi([res.bboxes for res in sampling_results])
-                    bbox_feats = self.bbox_roi_extractor(
-                        x[i].unsqueeze(0), rois)
-                    if self.with_shared_head:
-                        bbox_feats = self.shared_head(bbox_feats)
-                    cls_score, bbox_pred = self.bbox_head(bbox_feats)
+            rois = bbox2roi([res.bboxes for res in sampling_results])
+            # TODO: a more flexible way to decide which feature maps to use
+            bbox_feats = self.bbox_roi_extractor(
+                x[:self.bbox_roi_extractor.num_inputs], rois)
+            if self.with_shared_head:
+                bbox_feats = self.shared_head(bbox_feats)
+            cls_score, bbox_pred = self.bbox_head(bbox_feats)
 
-                    bbox_targets = self.bbox_head.get_target(
-                        sampling_results, gt_bboxes, gt_labels, self.train_cfg.rcnn)
-                    loss_bbox = self.bbox_head.loss(cls_score, bbox_pred,
-                                                    *bbox_targets)
-                    loss_cls_tmp += loss_bbox['loss_cls']
-                    loss_bbox_tmp += loss_bbox['loss_bbox']
-                losses.update(dict(
-                    loss_cls=loss_cls_tmp, loss_bbox=loss_bbox_tmp
-                ))
-            else:
-                rois = bbox2roi([res.bboxes for res in sampling_results])
-                # TODO: a more flexible way to decide which feature maps to use
-                bbox_feats = self.bbox_roi_extractor(
-                    x[:self.bbox_roi_extractor.num_inputs], rois)
-                if self.with_shared_head:
-                    bbox_feats = self.shared_head(bbox_feats)
-                cls_score, bbox_pred = self.bbox_head(bbox_feats)
-
-                bbox_targets = self.bbox_head.get_target(
-                    sampling_results, gt_bboxes, gt_labels, self.train_cfg.rcnn)
-                loss_bbox = self.bbox_head.loss(cls_score, bbox_pred,
-                                                *bbox_targets)
-                losses.update(loss_bbox)
+            bbox_targets = self.bbox_head.get_target(
+                sampling_results, gt_bboxes, gt_labels, self.train_cfg.rcnn)
+            loss_bbox = self.bbox_head.loss(cls_score, bbox_pred,
+                                            *bbox_targets)
+            losses.update(loss_bbox)
 
         # mask head forward and loss
         if self.with_mask:
