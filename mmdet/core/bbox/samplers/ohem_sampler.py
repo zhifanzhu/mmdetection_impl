@@ -29,6 +29,11 @@ class OHEMSampler(BaseSampler):
             bbox_feats = self.bbox_roi_extractor(
                 feats[:self.bbox_roi_extractor.num_inputs], rois)
             cls_score, _ = self.bbox_head(bbox_feats)
+            # Save the f**k bound class parameter
+            cls_reduction_old = self.bbox_head.loss_cls.reduction
+            bbox_reduction_old = self.bbox_head.loss_bbox.reduction
+            self.bbox_head.loss_bbox.reduction = 'none'
+            self.bbox_head.loss_cls.reduction = 'none'
             loss = self.bbox_head.loss(
                 cls_score=cls_score,
                 bbox_pred=None,
@@ -38,6 +43,9 @@ class OHEMSampler(BaseSampler):
                 bbox_weights=None,
                 reduce=False)['loss_cls']
             _, topk_loss_inds = loss.topk(num_expected)
+            # Restore that f**k
+            self.bbox_head.loss_cls.reduction = cls_reduction_old
+            self.bbox_head.loss_bbox.reduction = bbox_reduction_old
         return inds[topk_loss_inds]
 
     def _sample_pos(self,

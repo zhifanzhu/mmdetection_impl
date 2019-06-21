@@ -176,7 +176,7 @@ test_cfg = dict(
     rcnn=dict(
         score_thr=0.001,
         nms=dict(type='nms', iou_thr=0.5),
-        max_per_img=100),
+        max_per_img=500),
     keep_all_stages=False)
 # dataset settings
 dataset_type = 'VisDroneDataset'

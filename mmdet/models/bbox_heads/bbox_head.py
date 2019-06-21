@@ -100,7 +100,10 @@ class BBoxHead(nn.Module):
              reduce=True):
         losses = dict()
         if cls_score is not None:
-            avg_factor = max(torch.sum(label_weights > 0).float().item(), 1.)
+            if reduce is True:
+                avg_factor = max(torch.sum(label_weights > 0).float().item(), 1.)
+            else:
+                avg_factor = None
             losses['loss_cls'] = self.loss_cls(
                 cls_score, labels, label_weights, avg_factor=avg_factor)
             losses['acc'] = accuracy(cls_score, labels)
