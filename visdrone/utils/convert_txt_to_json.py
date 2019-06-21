@@ -100,13 +100,16 @@ def parse_txt(img_prefix, ann_dir='annotations', img_dir='images'):
             id = str(stem) + str(bbox)
             id = int(hashlib.sha256(id.encode('utf8')).hexdigest(), 16) % (10 ** 12)
 
+            # add iscrowd
+            iscrowd = 1 if int(occ) > 0 else 0
+
             _annotations = dict(
                 image_id=image_id,
                 bbox=bbox,
                 category_id=label,
                 id=id,
                 area=w*h,
-                iscrowd=0,
+                iscrowd=iscrowd,
             )
             annotations.append(_annotations)
 

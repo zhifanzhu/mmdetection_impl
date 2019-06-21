@@ -1,7 +1,7 @@
 # model settings
 model = dict(
     type='FasterRCNN',
-    pretrained='zoo/resnet101-5d3b4d8f.pth',
+    pretrained=None,
     backbone=dict(
         type='ResNet',
         depth=101,
@@ -186,6 +186,6 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/libra_faster_rcnn_r101_fpn_1x'
-load_from = None
+load_from = 'zoo/libra_faster_rcnn_r101_fpn_1x_20190525-94e94051.pth'
 resume_from = None
 workflow = [('train', 1)]
