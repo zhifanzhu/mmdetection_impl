@@ -510,6 +510,9 @@ class ResNet(nn.Module):
         x = self.relu(x)
         x = self.maxpool(x)
         outs = []
+        if -1 in self.out_indices:
+            outs.append(x)
+
         for i, layer_name in enumerate(self.res_layers):
             res_layer = getattr(self, layer_name)
             x = res_layer(x)
