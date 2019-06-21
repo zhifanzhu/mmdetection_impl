@@ -21,7 +21,8 @@ class HybridTaskCascade(CascadeRCNN):
                  mask_info_flow=True,
                  **kwargs):
         super(HybridTaskCascade, self).__init__(num_stages, backbone, **kwargs)
-        assert self.with_bbox and self.with_mask
+        # assert self.with_bbox and self.with_mask
+        assert self.with_bbox
         assert not self.with_shared_head  # shared head not supported
         if semantic_head is not None:
             self.semantic_roi_extractor = builder.build_roi_extractor(
