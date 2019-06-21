@@ -193,8 +193,8 @@ class RandomPatch(object):
             bottom = top + patch_h
             left = np.maximum(left, 0)
             top = np.maximum(top, 0)
-            right = np.minimum(right, w)
-            bottom = np.minimum(bottom, h)
+            right = np.minimum(right, w - 1)
+            bottom = np.minimum(bottom, h - 1)
 
             # h / w in [0.5, 2]
             if patch_h / patch_w < 0.5 or patch_h / patch_w > 2:
