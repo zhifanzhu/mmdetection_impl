@@ -18,14 +18,14 @@ model = dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
-        num_outs=5),
+        num_outs=4),
     rpn_head=dict(
         type='RPNHead',
         in_channels=256,
         feat_channels=256,
         anchor_scales=[8],
         anchor_ratios=[0.5, 1.0, 2.0],
-        anchor_strides=[4, 8, 16, 32, 64],
+        anchor_strides=[4, 8, 16, 32],
         target_means=[.0, .0, .0, .0],
         target_stds=[1.0, 1.0, 1.0, 1.0],
         loss_cls=dict(
@@ -168,9 +168,9 @@ train_cfg = dict(
 test_cfg = dict(
     rpn=dict(
         nms_across_levels=False,
-        nms_pre=2000,
-        nms_post=2000,
-        max_num=2000,
+        nms_pre=1000,
+        nms_post=1000,
+        max_num=1000,
         nms_thr=0.7,
         min_bbox_size=0),
     rcnn=dict(
@@ -188,8 +188,6 @@ data = dict(
     workers_per_gpu=1,
     train=dict(
         type=dataset_type,
-            ann_file='/tmp/visdrone-debug/annotations_debug.json',
-            img_prefix='/tmp/visdrone-debug/',
         ann_file=data_root + 'VisDrone2018-DET-train/annotations_train.json',
         img_prefix=data_root + 'VisDrone2018-DET-train/',
         img_scale=(1333, 800),
@@ -225,7 +223,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.0025, momentum=0.9, weight_decay=0.0001)  # 0.02
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -248,6 +246,6 @@ total_epochs = 20
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/htc_x101_4fpn'
-load_from = 'zoo/htc_x101_64x4d_fpn_20e_20190408-497f2561.pth'
+load_from = None
 resume_from = None
 workflow = [('train', 1)]
