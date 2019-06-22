@@ -127,8 +127,10 @@ class FPN(nn.Module):
         # build top-down path
         used_backbone_levels = len(laterals)
         for i in range(used_backbone_levels - 1, 0, -1):
+            # scale_factor not always 2
+            scale_factor = laterals[i - 1].size(-1) // laterals[i].size(-1)
             laterals[i - 1] += F.interpolate(
-                laterals[i], scale_factor=2, mode='nearest')
+                laterals[i], scale_factor=scale_factor, mode='nearest')
 
         # build outputs
         fpn_maps = [
