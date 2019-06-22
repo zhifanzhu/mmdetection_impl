@@ -505,13 +505,15 @@ class ResNet(nn.Module):
             raise TypeError('pretrained must be a str or None')
 
     def forward(self, x):
+        outs = []
         x = self.conv1(x)
         x = self.norm1(x)
         x = self.relu(x)
+        if -2 in self.out_indices:
+            outs.append(x)  # stride 2
         x = self.maxpool(x)
-        outs = []
         if -1 in self.out_indices:
-            outs.append(x)
+            outs.append(x)  # stride 4, note C2_out stride 4 as well
 
         for i, layer_name in enumerate(self.res_layers):
             res_layer = getattr(self, layer_name)
