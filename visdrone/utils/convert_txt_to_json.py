@@ -46,6 +46,7 @@ def create_categories():
 
 def _parse_txt_from_name(img_name, all_images, all_annos, img_dir):
     """
+    :param img_dir: should be 'images'
     :return: (dict of img, list of dict of anno)
     """
     stem = img_name.split('.')[0]
