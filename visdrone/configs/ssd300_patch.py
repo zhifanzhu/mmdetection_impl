@@ -79,7 +79,11 @@ data = dict(
                     min_ious=(0.1, 0.3, 0.5, 0.7, 0.9), min_crop_size=0.3),
                 random_patch=dict(
                     patch_size=(0.5, 0.5), pad_border=(0.1, 0.1),
-                    overlap_thresh=0.3, ori_prob=0.2)),
+                    overlap_thresh=0.3, ori_prob=0.2),
+                random_uniform_patch=dict(
+                    patch_sizes=(640, 896, 1024), gap=128,
+                    overlap_thresh=0.3, ori_prob=0.2)
+            ),
             resize_keep_ratio=False)),
     val=dict(
         type=dataset_type,

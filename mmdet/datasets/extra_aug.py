@@ -234,13 +234,112 @@ class RandomPatch(object):
         return img, gt_boxes, gt_labels
 
 
+class RandomUniformPatch(object):
+    """
+        Generate patch sample from uniformly spreaded over image.
+        This allow multiples sizes.
+    """
+
+    def __init__(self,
+                 patch_sizes=(640, 896, 1024),
+                 gap=128,
+                 overlap_thresh=0.3,
+                 ori_prob=0.0):
+        """ Return a random patch of image
+        :param patch_sizes: size sampled patch
+        :param gap: overlap between adjacent patches
+        :param overlap_thresh: Minimum overlap threshold of cropped boxes to keep
+            in new image. If the ratio between a cropped bounding box and the
+            original is less than this value, it is removed from the new image.
+            Like min_ious in ssd crop.
+        :param ori_prob: Probability of keeping the original image.
+        """
+        self.patch_sizes = patch_sizes
+        self.gap = gap
+        self.ori_prob = ori_prob
+        self.overlap_thresh = overlap_thresh
+
+    def __call__(self, img, gt_boxes, gt_labels):
+        ori_prob = self.ori_prob
+        use_ori = random.choice([True, False], p=[ori_prob, 1 - ori_prob])
+        if use_ori:
+            return img, gt_boxes, gt_labels
+
+        h, w, c = img.shape
+        patch_size = random.choice(self.patch_sizes)
+        slide = patch_size - self.gap
+        # calculate split coors
+        coors = []
+        left, up = 0, 0
+        while left < w:
+            if left + patch_size >= w:
+                left = max(w - patch_size, 0)
+            up = 0
+            while up < h:
+                if up + patch_size >= h:
+                    up = max(h - patch_size, 0)
+                right = min(left + patch_size, w - 1)
+                down = min(up + patch_size, h - 1)
+                coors.append((left, up, right, down))
+                if up + patch_size >= h:
+                    break
+                else:
+                    up = up + slide
+            if left + patch_size >= w:
+                break
+            else:
+                left = left + slide
+
+        for i in range(30):
+            boxes = gt_boxes
+            labels = gt_labels
+
+            rand_ind = random.choice(len(coors))
+            coor = coors[rand_ind]
+            left, top, right, bottom = coor
+
+            patch = np.array((int(left), int(top), int(right), int(bottom)))
+            overlaps = bbox_overlaps(
+                boxes.reshape(-1, 4),
+                patch.reshape(-1, 4),
+                mode='iof').reshape(-1)  # note: use 'iof' and swap b1 b2 here.
+
+            # Prune boxes outside image
+            keep_inds = (overlaps > self.overlap_thresh).nonzero()
+            if len(keep_inds) == 0:
+                continue
+            boxes = boxes[keep_inds]
+            labels = labels[keep_inds]
+
+            # center of boxes should inside the crop img
+            center = (boxes[:, :2] + boxes[:, 2:]) / 2
+            mask = (center[:, 0] > patch[0]) * (
+                    center[:, 1] > patch[1]) * (center[:, 0] < patch[2]) * (
+                           center[:, 1] < patch[3])
+            if not mask.any():
+                continue
+            boxes = boxes[mask]
+            labels = labels[mask]
+
+            # adjust boxes
+            img = img[patch[1]:patch[3], patch[0]:patch[2]]
+            boxes[:, 2:] = boxes[:, 2:].clip(max=patch[2:])
+            boxes[:, :2] = boxes[:, :2].clip(min=patch[:2])
+            boxes -= np.tile(patch[:2], 2)
+
+            return img, boxes, labels
+        # fall through, use original
+        return img, gt_boxes, gt_labels
+
+
 class ExtraAugmentation(object):
 
     def __init__(self,
                  photo_metric_distortion=None,
                  expand=None,
                  random_crop=None,
-                 random_patch=None):
+                 random_patch=None,
+                 random_uniform_patch=None):
         self.transforms = []
         if photo_metric_distortion is not None:
             self.transforms.append(
@@ -251,6 +350,8 @@ class ExtraAugmentation(object):
             self.transforms.append(RandomCrop(**random_crop))
         if random_patch is not None:
             self.transforms.append(RandomPatch(**random_patch))
+        if random_uniform_patch is not None:
+            self.transforms.append(RandomUniformPatch(**random_uniform_patch))
 
     def __call__(self, img, boxes, labels):
         img = img.astype(np.float32)
