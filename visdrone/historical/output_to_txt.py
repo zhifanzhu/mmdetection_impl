@@ -18,25 +18,6 @@ import mmcv
 from mmdet.apis import init_detector, inference_detector
 
 
-def write_result_into_txt(result, txt_file):
-    """ write mmdetection result to txt_file
-
-    Args:
-        result: list of np array with [N, 5] of [x1, y1, x2, y2, score]
-        txt_file: str specify output filename
-    """
-    with open(txt_file, 'w') as fid:
-        for i, res in enumerate(result):
-            cat_id = i + 1
-            if len(res) == 0:
-                continue
-            for det in res:
-                x1, y1, x2, y2, sc = det
-                w = x2 - x1
-                h = y2 - y1
-                fid.writelines('%d,%d,%d,%d,%.4f,%d,-1,-1\n' % (
-                    x1, y1, w, h, sc, cat_id
-                ))
 
 
 def parse_args():

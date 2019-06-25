@@ -6,7 +6,7 @@ import os.path as osp
 import numpy as np
 
 from mmdet import ops
-from visdrone.utils import output_to_txt, multicrop_test
+from visdrone.utils import result_utils, multicrop_test
 
 
 def merge_patch(dataset, results):
@@ -72,4 +72,4 @@ def save_merged_det(merged_result, save_dir, ext='.txt'):
     for fstem, result in merged_result.items():
         save_txt = fstem + ext
         save_txt = osp.join(save_dir, save_txt)
-        output_to_txt.write_result_into_txt(result, save_txt)
+        result_utils.single_det2txt(result, save_txt)
