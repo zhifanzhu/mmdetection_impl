@@ -1,6 +1,10 @@
 import mmcv
 
 
+def wider_face_classes():
+    return ['face']
+
+
 def voc_classes():
     return [
         'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat',
@@ -91,6 +95,7 @@ dataset_aliases = {
     'imagenet_vid': ['vid', 'imagenet_vid', 'ilsvrc_vid'],
     'coco': ['coco', 'mscoco', 'ms_coco'],
     'visdrone': ['visdrone', 'VisDrone'],
+    'wider_face': ['WIDERFaceDataset', 'wider_face', 'WDIERFace']
 }
 
 

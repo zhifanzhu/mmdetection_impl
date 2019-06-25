@@ -41,7 +41,7 @@ class OHEMSampler(BaseSampler):
                 label_weights=cls_score.new_ones(cls_score.size(0)),
                 bbox_targets=None,
                 bbox_weights=None,
-                reduce=False)['loss_cls']
+                reduction_override='none')['loss_cls']
             _, topk_loss_inds = loss.topk(num_expected)
             # Restore that f**k
             self.bbox_head.loss_cls.reduction = cls_reduction_old

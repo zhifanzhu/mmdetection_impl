@@ -2,7 +2,11 @@ from .custom import CustomDataset
 from .xml_style import XMLDataset
 from .coco import CocoDataset
 from .voc import VOCDataset
+<<<<<<< HEAD
 from .visdrone_dataset import VisDroneDataset
+=======
+from .wider_face import WIDERFaceDataset
+>>>>>>> master
 from .loader import GroupSampler, DistributedGroupSampler, build_dataloader
 from .utils import to_tensor, random_scale, show_ann, get_dataset
 from .concat_dataset import ConcatDataset
@@ -13,6 +17,6 @@ __all__ = [
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'VOCDataset', 'GroupSampler',
     'DistributedGroupSampler', 'build_dataloader', 'to_tensor', 'random_scale',
     'show_ann', 'get_dataset', 'ConcatDataset', 'RepeatDataset',
-    'ExtraAugmentation',
+    'ExtraAugmentation', 'WIDERFaceDataset',
     'VisDroneDataset'
 ]

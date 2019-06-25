@@ -1,10 +1,12 @@
 # model settings
 model = dict(
-    type='MaskRCNN',
-    pretrained='modelzoo://resnet50',
+    type='GridRCNN',
+    pretrained='open-mmlab://resnext101_32x4d',
     backbone=dict(
-        type='ResNet',
-        depth=50,
+        type='ResNeXt',
+        depth=101,
+        groups=32,
+        base_width=4,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
@@ -33,6 +35,7 @@ model = dict(
         featmap_strides=[4, 8, 16, 32]),
     bbox_head=dict(
         type='SharedFCBBoxHead',
+        with_reg=False,
         num_fcs=2,
         in_channels=256,
         fc_out_channels=1024,
@@ -40,23 +43,21 @@ model = dict(
         num_classes=81,
         target_means=[0., 0., 0., 0.],
         target_stds=[0.1, 0.1, 0.2, 0.2],
-        reg_class_agnostic=False,
-        loss_cls=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-        loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0)),
-    mask_roi_extractor=dict(
+        reg_class_agnostic=False),
+    grid_roi_extractor=dict(
         type='SingleRoIExtractor',
         roi_layer=dict(type='RoIAlign', out_size=14, sample_num=2),
         out_channels=256,
         featmap_strides=[4, 8, 16, 32]),
-    mask_head=dict(
-        type='FCNMaskHead',
-        num_convs=4,
+    grid_head=dict(
+        type='GridHead',
+        grid_points=9,
+        num_convs=8,
         in_channels=256,
-        conv_out_channels=256,
-        num_classes=81,
-        loss_mask=dict(
-            type='CrossEntropyLoss', use_mask=True, loss_weight=1.0)))
+        point_feat_channels=64,
+        norm_cfg=dict(type='GN', num_groups=36),
+        loss_grid=dict(
+            type='CrossEntropyLoss', use_sigmoid=True, loss_weight=15)))
 # model training and testing settings
 train_cfg = dict(
     rpn=dict(
@@ -95,8 +96,9 @@ train_cfg = dict(
             pos_fraction=0.25,
             neg_pos_ub=-1,
             add_gt_as_proposals=True),
-        mask_size=28,
+        pos_radius=1,
         pos_weight=-1,
+        max_num_grid=192,
         debug=False))
 test_cfg = dict(
     rpn=dict(
@@ -107,10 +109,7 @@ test_cfg = dict(
         nms_thr=0.7,
         min_bbox_size=0),
     rcnn=dict(
-        score_thr=0.05,
-        nms=dict(type='nms', iou_thr=0.5),
-        max_per_img=100,
-        mask_thr_binary=0.5))
+        score_thr=0.03, nms=dict(type='nms', iou_thr=0.3), max_per_img=100))
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -154,14 +153,14 @@ data = dict(
         test_mode=True))
 # optimizer
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
-optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
+optimizer_config = dict(grad_clip=None)
 # learning policy
 lr_config = dict(
     policy='step',
     warmup='linear',
-    warmup_iters=500,
-    warmup_ratio=1.0 / 3,
-    step=[8, 11])
+    warmup_iters=3665,
+    warmup_ratio=1.0 / 80,
+    step=[17, 23])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -171,12 +170,11 @@ log_config = dict(
         # dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=1)
 # runtime settings
-total_epochs = 12
+total_epochs = 25
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/mask_rcnn_r50_fpn_1x'
+work_dir = './work_dirs/grid_rcnn_gn_head_x101_32x4d_fpn_2x'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

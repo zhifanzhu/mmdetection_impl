@@ -97,7 +97,7 @@ class BBoxHead(nn.Module):
              label_weights,
              bbox_targets,
              bbox_weights,
-             reduce=True):
+             reduction_override=None):
         losses = dict()
         if cls_score is not None:
             if reduce is True:
@@ -105,7 +105,11 @@ class BBoxHead(nn.Module):
             else:
                 avg_factor = None
             losses['loss_cls'] = self.loss_cls(
-                cls_score, labels, label_weights, avg_factor=avg_factor)
+                cls_score,
+                labels,
+                label_weights,
+                avg_factor=avg_factor,
+                reduction_override=reduction_override)
             losses['acc'] = accuracy(cls_score, labels)
         if bbox_pred is not None:
             pos_inds = labels > 0
@@ -118,7 +122,8 @@ class BBoxHead(nn.Module):
                 pos_bbox_pred,
                 bbox_targets[pos_inds],
                 bbox_weights[pos_inds],
-                avg_factor=bbox_targets.size(0))
+                avg_factor=bbox_targets.size(0),
+                reduction_override=reduction_override)
         return losses
 
     def get_det_bboxes(self,
@@ -137,8 +142,10 @@ class BBoxHead(nn.Module):
             bboxes = delta2bbox(rois[:, 1:], bbox_pred, self.target_means,
                                 self.target_stds, img_shape)
         else:
-            bboxes = rois[:, 1:]
-            # TODO: add clip here
+            bboxes = rois[:, 1:].clone()
+            if img_shape is not None:
+                bboxes[:, [0, 2]].clamp_(min=0, max=img_shape[1] - 1)
+                bboxes[:, [1, 3]].clamp_(min=0, max=img_shape[0] - 1)
 
         if rescale:
             bboxes /= scale_factor
