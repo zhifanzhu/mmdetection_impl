@@ -18,7 +18,6 @@ from mmdet.datasets import build_dataloader, get_dataset
 from mmdet.ops.nms import nms_wrapper
 
 from visdrone.utils import test_augs
-from visdrone.utils.output_to_txt import write_result_into_txt
 
 
 def single_gpu_test(model, data_loader, show=False):
