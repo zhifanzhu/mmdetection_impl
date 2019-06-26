@@ -66,7 +66,6 @@ while use_dilation_conv5 controls the PRESENCE of C5.
 STAGES_DEFAULT = (1, 2, 2, 2)
 DILATIONS_DEFAULT = (1, 1, 1, 1)
 OUT_INDICES_DEFAULT = (0, 1, 2, 3)
-STAGE_WITH_DCN_DEFAULT = (False, False, False, False)
 
 @BACKBONES.register_module
 class SSDResNet(ResNet):
@@ -86,6 +85,7 @@ class SSDResNet(ResNet):
                  norm_cfg=dict(type='BN', requires_grad=True),
                  norm_eval=True,
                  dcn=None,
+                 stage_with_dcn=(False, False, False, False),
                  with_cp=False,
                  zero_init_residual=True):
         '''
@@ -124,7 +124,7 @@ class SSDResNet(ResNet):
             norm_cfg=norm_cfg,
             norm_eval=norm_eval,
             dcn=dcn,
-            stage_with_dcn=STAGE_WITH_DCN_DEFAULT[:num_stages],
+            stage_with_dcn=stage_with_dcn[:num_stages],
             with_cp=with_cp,
             zero_init_residual=zero_init_residual)
 
