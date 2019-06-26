@@ -166,7 +166,8 @@ class CocoDistEvalmAPHook(DistEvalHook):
                 '{ap[0]:.3f} {ap[1]:.3f} {ap[2]:.3f} {ap[3]:.3f} '
                 '{ap[4]:.3f} {ap[5]:.3f}').format(ap=cocoEval.stats[:6])
         runner.log_buffer.ready = True
-        os.remove(tmp_file)
+        for res_type in res_types:
+            os.remove(result_files[res_type])
 
 
 class NonDistEvalHook(Hook):
