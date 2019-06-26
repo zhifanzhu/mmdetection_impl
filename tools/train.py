@@ -1,6 +1,5 @@
 from __future__ import division
 
-import os
 import argparse
 import os
 from mmcv import Config
@@ -54,8 +53,7 @@ def main():
     if args.work_dir is not None:
         cfg.work_dir = args.work_dir
     if args.resume_from is not None:
-        if os.path.exists(args.resume_from):
-            cfg.resume_from = args.resume_from
+        cfg.resume_from = args.resume_from
     cfg.gpus = args.gpus
 
     # init distributed env first, since logger depends on the dist info.
@@ -78,12 +76,6 @@ def main():
         cfg.model, train_cfg=cfg.train_cfg, test_cfg=cfg.test_cfg)
 
     train_dataset = get_dataset(cfg.data.train)
-    if len(cfg.workflow) == 2:
-        val_dataset = get_dataset(cfg.data.val)
-        dataset = [train_dataset, val_dataset]
-    else:
-        dataset = train_dataset
-
     if cfg.checkpoint_config is not None:
         # save mmdet version, config file content and class names in
         # checkpoints as meta data
@@ -93,10 +85,9 @@ def main():
             CLASSES=train_dataset.CLASSES)
     # add an attribute for visualization convenience
     model.CLASSES = train_dataset.CLASSES
-
     train_detector(
         model,
-        dataset,
+        train_dataset,
         cfg,
         distributed=distributed,
         validate=args.validate,

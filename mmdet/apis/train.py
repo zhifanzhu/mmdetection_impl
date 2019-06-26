@@ -178,35 +178,14 @@ def _dist_train(model, dataset, cfg, validate=False):
 
 def _non_dist_train(model, dataset, cfg, validate=False):
     # prepare data loaders
-    # In runner.run(), they access current workflow's dataloader by dataloaders[i].
-    # Thus dataloaders have to be list.
-    if len(dataset) == 2:
-        data_loaders = []
-        for i, ds in enumerate(dataset):
-            build_kwargs = dict(
-                dataset=ds,
-                workers_per_gpu=cfg.data.workers_per_gpu,
-                num_gpus=1,  # we are in _non_dist_train
-                dist=False
-            )
-            if i == 0:
-                # train args
-                build_kwargs['imgs_per_gpu'] = cfg.data.imgs_per_gpu
-            else:
-                # val args
-                build_kwargs['imgs_per_gpu'] = 1
-                build_kwargs['shuffle'] = False
-            data_loader = build_dataloader(**build_kwargs)
-            data_loaders.append(data_loader)
-    else:
-        data_loaders = [
-            build_dataloader(
-                dataset,
-                cfg.data.imgs_per_gpu,
-                cfg.data.workers_per_gpu,
-                num_gpus=1,
-                dist=False)
-        ]
+    data_loaders = [
+        build_dataloader(
+            dataset,
+            cfg.data.imgs_per_gpu,
+            cfg.data.workers_per_gpu,
+            cfg.gpus,
+            dist=False)
+    ]
 
     # put model on gpus
     model = MMDataParallel(model, device_ids=range(cfg.gpus)).cuda()
