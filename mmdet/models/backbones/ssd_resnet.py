@@ -132,8 +132,8 @@ class SSDResNet(ResNet):
         if use_dilation_conv4:
             assert num_stages == 2, \
                 'if use atrous on conv4_1, num_stages should be 2'
-            assert len(out_channels) == 7, \
-                'if use atrous on conv4_1, need to indicate one more feature map'
+            # assert len(out_channels) == 7, \
+            #     'if use atrous on conv4_1, need to indicate one more feature map'
         else:
             if use_dilation_conv5:
                 assert num_stages == 3, \
@@ -233,11 +233,15 @@ class SSDResNet(ResNet):
                 truncated_normal_init(m, mean=0, std=0.03)
 
     def forward(self, x):
+        outs = []
         x = self.conv1(x)
         x = self.norm1(x)
         x = self.relu(x)
+        if -2 in self.out_from:
+            outs.append(x)
         x = self.maxpool(x)
-        outs = []
+        if -1 in self.out_from:
+            outs.append(x)
         for i, layer_name in enumerate(self.res_layers):
             res_layer = getattr(self, layer_name)
             x = res_layer(x)
