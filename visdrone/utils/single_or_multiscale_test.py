@@ -152,7 +152,7 @@ def main():
     if args.patch:
         print('\nINFO: merging patch...')
         # output is Dict
-        outputs = result_utils.merge_patch(dataset, outputs, iou_thr=0.5, max_per_img)
+        outputs = result_utils.merge_patch(dataset, outputs, iou_thr=0.5, max_per_img=max_per_img)
 
     # Phase 4. generate txt
     save_dir = args.txtout
