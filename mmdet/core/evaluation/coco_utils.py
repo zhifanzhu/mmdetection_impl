@@ -6,7 +6,7 @@ from pycocotools.cocoeval import COCOeval
 from .recall import eval_recalls
 
 
-def coco_eval(result_file, result_types, coco, max_dets=(100, 300, 1000)):
+def coco_eval(result_files, result_types, coco, max_dets=(100, 300, 1000)):
     """
     Returns:
         dict holding COCOEval.stats with 12 contents.
