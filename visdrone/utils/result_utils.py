@@ -2,8 +2,6 @@ import numpy as np
 import os.path as osp
 from mmdet import ops
 
-from mmdet.core.evaluation import coco_utils
-
 
 def single_det2txt(result, txt_file):
     """ write mmdetection result to txt_file

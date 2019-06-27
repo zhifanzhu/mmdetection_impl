@@ -1,7 +1,7 @@
 # model settings
 model = dict(
     type='FasterRCNN',
-    pretrained=None,
+    pretrained='zoo/resnet101-5d3b4d8f.pth',
     backbone=dict(
         type='ResNet',
         depth=101,
@@ -100,7 +100,9 @@ test_cfg = dict(
 )
 # dataset settings
 dataset_type = 'VisDroneDataset'
-data_root = 'data/VisDrone2019-VID/'
+# data_root = 'data/VisDrone2019-VID/'
+data_root = '/home/damon/volatile/VisDrone2019-VID/'
+img_scale = (300, 300)  #
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
@@ -110,7 +112,7 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'VisDrone2018-VID-train/annotations_train.json',
         img_prefix=data_root + 'VisDrone2018-VID-train/',
-        img_scale=(1333, 800),
+        img_scale=img_scale,
         img_norm_cfg=img_norm_cfg,
         size_divisor=32,
         flip_ratio=0.5,
@@ -121,7 +123,7 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'VisDrone2018-VID-val/annotations_val.json',
         img_prefix=data_root + 'VisDrone2018-VID-val/',
-        img_scale=(1333, 800),
+        img_scale=img_scale,
         img_norm_cfg=img_norm_cfg,
         size_divisor=32,
         flip_ratio=0,
@@ -133,7 +135,7 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'VisDrone2018-VID-val/annotations_val.json',
         img_prefix=data_root + 'VisDrone2018-VID-val/',
-        img_scale=(1333, 800),
+        img_scale=img_scale,
         img_norm_cfg=img_norm_cfg,
         size_divisor=32,
         flip_ratio=0,
@@ -154,7 +156,7 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=100,
+    interval=100,  #
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
@@ -164,7 +166,7 @@ log_config = dict(
 total_epochs = 24
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = None
-load_from =
+work_dir = 'work_dirs/vid/frcnA2' #
+load_from = None  #
 resume_from = None
 workflow = [('train', 1)]
