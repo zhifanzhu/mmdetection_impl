@@ -148,11 +148,11 @@ def main():
                         coco_eval(result_file, eval_types, dataset.coco)
 
     # Phase 3b. merge patches
-    max_per_img = 500
+    max_det = 500
     if args.patch:
         print('\nINFO: merging patch...')
         # output is Dict
-        outputs = result_utils.merge_patch(dataset, outputs, iou_thr=0.5, max_per_img=max_per_img)
+        outputs = result_utils.merge_patch(dataset, outputs, iou_thr=0.5, max_det=max_det)
 
     # Phase 4. generate txt
     save_dir = args.txtout

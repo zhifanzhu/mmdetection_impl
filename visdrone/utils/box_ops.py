@@ -9,16 +9,15 @@ import numpy as np
 import torch
 
 from mmdet.core.evaluation.bbox_overlaps import bbox_overlaps
-from mmdet.ops.nms import nms_wrapper
+from mmdet import ops
 
-non_max_suppression = nms_wrapper.nms
+non_max_suppression = ops.nms
 
 
 def refine_boxes_multi_class(pool_boxes,
                              num_classes,
-                             nms_iou_thresh,
-                             nms_max_detections,
-                             voting_iou_thresh=0.5,
+                             nms_iou_thr,
+                             voting_iou_thr=0.5,
                              device_id=None):
     """Refines a pool of boxes using non max suppression and box voting.
 
@@ -29,9 +28,8 @@ def refine_boxes_multi_class(pool_boxes,
             each entry of pool_boxes must have a rank 1 'scores' column, each
             entry represents one class.
         num_classes: (int scalar) Number of classes.
-        nms_iou_thresh: (float scalar) iou threshold for non max suppression (NMS).
-        nms_max_detections: (int scalar) maximum output size for NMS.
-        voting_iou_thresh: (float scalar) iou threshold for box voting.
+        nms_iou_thr: (float scalar) iou threshold for non max suppression (NMS).
+        voting_iou_thr: (float scalar) iou threshold for box voting.
         device_id (int, optional): when `dets` is a numpy array, if `device_id`
             is None, then cpu nms is used, otherwise gpu_nms will be used.
 
@@ -44,34 +42,33 @@ def refine_boxes_multi_class(pool_boxes,
         b) pool_boxes does not have a scores column.
     """
     if not len(pool_boxes) == num_classes:
-            raise ValueError('num_classes must be equal to len(pool_boxes)')
-    if not 0.0 <= nms_iou_thresh <= 1.0:
-        raise ValueError('nms_iou_thresh must be between 0 and 1')
-    if not 0.0 <= voting_iou_thresh <= 1.0:
-        raise ValueError('voting_iou_thresh must be between 0 and 1')
+        raise ValueError('num_classes must be equal to len(pool_boxes)')
+    if not 0.0 <= nms_iou_thr <= 1.0:
+        raise ValueError('nms_iou_thr must be between 0 and 1')
+    if not 0.0 <= voting_iou_thr <= 1.0:
+        raise ValueError('voting_iou_thr must be between 0 and 1')
 
     refined_boxes = []
     for i in range(num_classes):
         boxes_class = pool_boxes[i]
-        refined_boxes_class = refine_boxes(boxes_class, nms_iou_thresh,
-                                           nms_max_detections, voting_iou_thresh)
+        refined_boxes_class, _ = refine_boxes(boxes_class, nms_iou_thr,
+                                              voting_iou_thr,
+                                              device_id)
         refined_boxes.append(refined_boxes_class)
     return refined_boxes
 
 
 def refine_boxes(pool_boxes,
-                 nms_iou_thresh,
-                 nms_max_detections,
-                 voting_iou_thresh=0.5,
+                 nms_iou_thr,
+                 voting_iou_thr=0.5,
                  device_id=None):
     """Refines a pool of boxes using non max suppression and box voting.
 
     Args:
         pool_boxes: [N, 5] boxes, A collection of boxes to be refined. pool_boxes
             must have a 'scores' column.
-        nms_iou_thresh: (float scalar) iou threshold for non max suppression (NMS).
-        nms_max_detections: (int scalar) maximum output size for NMS.
-        voting_iou_thresh: (float scalar) iou threshold for box voting.
+        nms_iou_thr: (float scalar) iou threshold for non max suppression (NMS).
+        voting_iou_thr: (float scalar) iou threshold for box voting.
         device_id (int, optional): when `dets` is a numpy array, if `device_id`
             is None, then cpu nms is used, otherwise gpu_nms will be used.
 
@@ -83,17 +80,32 @@ def refine_boxes(pool_boxes,
         a) nms_iou_thresh or voting_iou_thresh is not in [0, 1].
         b) pool_boxes does not have a scores column.
     """
-    if not 0.0 <= nms_iou_thresh <= 1.0:
-        raise ValueError('nms_iou_thresh must be between 0 and 1')
-    if not 0.0 <= voting_iou_thresh <= 1.0:
-        raise ValueError('voting_iou_thresh must be between 0 and 1')
+    if not 0.0 <= nms_iou_thr <= 1.0:
+        raise ValueError('nms_iou_thr must be between 0 and 1')
+    if not 0.0 <= voting_iou_thr <= 1.0:
+        raise ValueError('voting_iou_thr must be between 0 and 1')
     if not pool_boxes.shape[1] == 5:
         raise ValueError('pool_boxes must have a \'scores\' column')
 
-    nms_boxes, _ = non_max_suppression(
-            pool_boxes, nms_iou_thresh, device_id)
-    nms_boxes = nms_boxes[:nms_max_detections, ...]
-    return box_voting(nms_boxes, pool_boxes, voting_iou_thresh, device_id)
+    sel_boxes, sel_inds = non_max_suppression(
+            pool_boxes, nms_iou_thr, device_id)  # GPU or CPU
+    if isinstance(pool_boxes, torch.Tensor):
+        is_tensor = True
+        sel_boxes_np = sel_boxes.detach().cpu().numpy()
+        pool_boxes_np = pool_boxes.detach().cpu().numpy()
+    else:
+        is_tensor = False
+        sel_boxes_np = sel_boxes
+        pool_boxes_np = pool_boxes
+
+    avg_boxes = box_voting(sel_boxes_np, pool_boxes_np, voting_iou_thr, device_id)
+
+    if is_tensor:
+        pool_device = pool_boxes.device
+        return torch.from_numpy(avg_boxes).to(pool_device), \
+               torch.tensor(sel_inds, dtype=torch.long).to(pool_device)
+    else:
+        return avg_boxes.astype(np.float32), sel_inds.astype(np.int64)
 
 
 def box_voting(selected_boxes, pool_boxes, iou_thresh=0.5, device_id=None):
@@ -141,16 +153,16 @@ def box_voting(selected_boxes, pool_boxes, iou_thresh=0.5, device_id=None):
                 type(selected_boxes)))
 
 
-def box_voting_numpy(selected_boxes, pool_boxes, iou_thresh=0.5):
+def box_voting_numpy(selected_boxes, pool_boxes, iou_thr=0.5):
     """ Real box-voting for numpy.ndarray
     """
-    if not 0.0 <= iou_thresh <= 1.0:
-        raise ValueError('iou_thresh must be between 0 and 1')
+    if not 0.0 <= iou_thr <= 1.0:
+        raise ValueError('iou_thr must be between 0 and 1')
     if not pool_boxes.shape[1] == 5:
         raise ValueError('pool_boxes must have a \'scores\' column')
 
     iou_ = bbox_overlaps(selected_boxes[:, :4], pool_boxes[:, :4])
-    match_indicator = iou_ > iou_thresh
+    match_indicator = (iou_ > iou_thr).astype(np.float32)
     num_matches = np.sum(match_indicator, 1)
     # TODO(kbanoop): Handle the case where some boxes in selected_boxes do not
     # match to any boxes in pool_boxes. For such boxes without any matches, we
