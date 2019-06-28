@@ -170,7 +170,10 @@ class RandomPatch(object):
             return img, gt_boxes, gt_labels
 
         h, w, c = img.shape
-        patch_size = random.choice(self.patch_size)
+        if isinstance(self.patch_size, tuple) or isinstance(self.patch_size, list):
+            patch_size = random.choice(self.patch_size)
+        else:
+            patch_size = self.patch_size
         patch_w = patch_size
         patch_h = patch_size
         # pad border
@@ -178,11 +181,12 @@ class RandomPatch(object):
         w_start = 0 - w * self.pad_border[1]
         h_end = h + h * self.pad_border[0]
         w_end = w + w * self.pad_border[1]
+
         for i in range(50):
             boxes = gt_boxes
             labels = gt_labels
-            left = random.uniform(w_start, w_end - patch_w)
-            top = random.uniform(h_start, h_end - patch_h)
+            left = int(random.uniform(w_start, w_end - patch_w))
+            top = int(random.uniform(h_start, h_end - patch_h))
 
             right = left + patch_w
             bottom = top + patch_h
@@ -190,10 +194,6 @@ class RandomPatch(object):
             top = np.maximum(top, 0)
             right = np.minimum(right, w - 1)
             bottom = np.minimum(bottom, h - 1)
-
-            # h / w in [0.5, 2]
-            if patch_h / patch_w < 0.5 or patch_h / patch_w > 2:
-                continue
 
             patch = np.array((int(left), int(top), int(right), int(bottom)))
             overlaps = bbox_overlaps(
@@ -238,11 +238,14 @@ class RandomUniformPatch(object):
     def __init__(self,
                  patch_sizes=(640, 896, 1024),
                  gap=128,
+                 pad_border=(0.02, 0.02),
                  overlap_thresh=0.3,
                  ori_prob=0.0):
         """ Return a random patch of image
         :param patch_sizes: size sampled patch
         :param gap: overlap between adjacent patches
+        :param pad_border: allow patch to start crop from [-pad_border, patch_w],
+            then use the [0, patch_w] part.
         :param overlap_thresh: Minimum overlap threshold of cropped boxes to keep
             in new image. If the ratio between a cropped bounding box and the
             original is less than this value, it is removed from the new image.
@@ -251,6 +254,7 @@ class RandomUniformPatch(object):
         """
         self.patch_sizes = patch_sizes
         self.gap = gap
+        self.pad_border=pad_border
         self.ori_prob = ori_prob
         self.overlap_thresh = overlap_thresh
 
@@ -261,31 +265,33 @@ class RandomUniformPatch(object):
             return img, gt_boxes, gt_labels
 
         h, w, c = img.shape
-        patch_size = random.choice(self.patch_sizes)
+        if isinstance(self.patch_sizes, tuple) or isinstance(self.patch_sizes, list):
+            patch_size = random.choice(self.patch_sizes)
+        else:
+            patch_size = self.patch_sizes
+
         slide = patch_size - self.gap
+        # pad border
+        h_start = int(0 - h * self.pad_border[0])
+        w_start = int(0 - w * self.pad_border[1])
+        h_end = int(h + h * self.pad_border[0])
+        w_end = int(w + w * self.pad_border[1])
+
         # calculate split coors
         coors = []
-        left, up = 0, 0
-        while left < w:
-            if left + patch_size >= w:
-                left = max(w - patch_size, 0)
-            up = 0
-            while up < h:
-                if up + patch_size >= h:
-                    up = max(h - patch_size, 0)
+        for left in range(w_start, w_end, slide):
+            for top in range(h_start, h_end, slide):
                 right = min(left + patch_size, w - 1)
-                down = min(up + patch_size, h - 1)
-                coors.append((left, up, right, down))
-                if up + patch_size >= h:
-                    break
-                else:
-                    up = up + slide
-            if left + patch_size >= w:
-                break
-            else:
-                left = left + slide
+                bottom = min(top + patch_size, h - 1)
+                if right - left < patch_size:
+                    left = right - patch_size
+                if bottom - top < patch_size:
+                    top = bottom - patch_size
+                left = max(left, 0)
+                top = max(top, 0)
+                coors.append((left, top, right, bottom))
 
-        for i in range(30):
+        for i in range(50):
             boxes = gt_boxes
             labels = gt_labels
 
@@ -343,13 +349,19 @@ class ExtraAugmentation(object):
             self.transforms.append(Expand(**expand))
         if random_crop is not None:
             self.transforms.append(RandomCrop(**random_crop))
+
+        self.splits = []
         if random_patch is not None:
-            self.transforms.append(RandomPatch(**random_patch))
+            self.splits.append(RandomPatch(**random_patch))
         if random_uniform_patch is not None:
-            self.transforms.append(RandomUniformPatch(**random_uniform_patch))
+            self.splits.append(RandomUniformPatch(**random_uniform_patch))
 
     def __call__(self, img, boxes, labels):
         img = img.astype(np.float32)
         for transform in self.transforms:
             img, boxes, labels = transform(img, boxes, labels)
+        if len(self.splits) != 0:
+            split_method = random.choice(self.splits)
+            img, boxes, labels = split_method(img, boxes, labels)
+
         return img, boxes, labels
