@@ -18,6 +18,7 @@ from mmdet.datasets import build_dataloader, get_dataset
 from mmdet.ops.nms import nms_wrapper
 
 from visdrone.utils import test_augs
+from visdrone.utils import result_utils
 
 
 def single_gpu_test(model, data_loader, show=False):
@@ -78,7 +79,7 @@ def single_gpu_test(model, data_loader, show=False):
     return results
 
 
-def transform_results_by_nms(res, nms_func, iou_thr = 0.5):
+def transform_results_by_nms(res, nms_func, iou_thr=0.5):
     for i, c_res in enumerate(res):
             bb, ind = nms_func(c_res.astype(np.float32), iou_thr)
             res[i] = bb
@@ -90,6 +91,7 @@ def parse_args():
     parser.add_argument('config', help='test config file path')
     parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument('--out', help='output result file')
+    parser.add_argument('--txtout', help='outputdir for txtfile')
     parser.add_argument(
         '--eval',
         type=str,
@@ -162,6 +164,10 @@ def main():
                         result_files = results2json(dataset, outputs_,
                                                     result_file)
                         coco_eval(result_files, eval_types, dataset.coco)
+
+    save_dir = args.txtout
+    mmcv.mkdir_or_exist(save_dir)
+    result_utils.many_det2txt(dataset, outputs, save_dir)
 
 
 if __name__ == '__main__':

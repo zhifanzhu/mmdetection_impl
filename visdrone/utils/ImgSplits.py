@@ -20,6 +20,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Split VisDrone annotations and convert to mmdetection format')
     parser.add_argument('--root', help='visdrone img root path')
+    parser.add_argument('--size', type=int, default=None, help='if specified, only generate this size')
     parser.add_argument('--mode', help='train, val or test')
     parser.add_argument('--num-process', help='num process')
     args = parser.parse_args()
@@ -274,8 +275,8 @@ def split_multi_sizes(basepath,
 
 def split_mode_then_convert_to_json(root,
                                     mode,
+                                    size=None,
                                     num_process=3,
-                                    save_ext='-patch',
                                     json_prefix='annotations_'):
     assert mode in ['train', 'val', 'test']
     out_file = json_prefix + mode + '.json'
@@ -289,9 +290,15 @@ def split_mode_then_convert_to_json(root,
         raise KeyError('mode incorrect')
 
     basepath = osp.expanduser(osp.join(root, mode))
-    patchpath = basepath + save_ext
     # Do split
-    split_multi_sizes(basepath, patchpath, num_process=num_process)
+    if size is None:
+        subsizes = (512, 640, 768, 896, 1024)
+        save_ext = '-patch'
+    else:
+        subsizes=(size, )
+        save_ext = '-' + str(size)
+    patchpath = basepath + save_ext
+    split_multi_sizes(basepath, patchpath, num_process, subsizes)
 
     # Now that patchpath is not empty, we can do conversion.
     print('Converting to json...')
@@ -309,4 +316,6 @@ def split_mode_then_convert_to_json(root,
 
 if __name__ == '__main__':
     args = parse_args()
-    split_mode_then_convert_to_json(args.root, args.mode, int(args.num_process))
+    split_mode_then_convert_to_json(args.root, args.mode,
+                                    size=args.size,
+                                    num_process=int(args.num_process))
