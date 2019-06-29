@@ -134,7 +134,7 @@ def concat_1n(bboxes, nms_param):
         return np.concatenate(bboxes, 0)
     else:
         bboxes = np.concatenate(bboxes, 0)
-        bboxes = ops.nms(bboxes, iou_thr=nms_param['iou_thr'])
+        bboxes, _ = ops.nms(bboxes, iou_thr=nms_param['iou_thr'])
         bboxes = bboxes[:nms_param['max_det'], ...]
         return bboxes
 
@@ -170,7 +170,7 @@ def concat_001n(bboxes, nms_param):
         # for c, bb_c in enumerate(bb_c):
         #     dets = np.concatenate(bb_c)
         #     if nms_param is not None:
-        #         dets = ops.nms(dets, iou_thr=nms_param['iou_thr'])
+        #         dets, _ = ops.nms(dets, iou_thr=nms_param['iou_thr'])
         #         ret[i][c] = dets[:nms_param['max_det'], ...]
         #     else:
         #         ret[i][c] = dets
