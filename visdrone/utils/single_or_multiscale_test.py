@@ -161,34 +161,34 @@ def main():
         # output is Dict
         outputs = result_utils.merge_patch(dataset, outputs, iou_thr=0.5, max_det=max_det)
 
-        # Phase 3c. eval merge on coco
-        # manipulate ann_file and img_prefix
-        def _remove_extra(string):
-            string = string.replace('-patch', '')
-            return string.replace('-1024', '').replace('-640', '')
-        cfg.data.test.ann_file = _remove_extra(cfg.data.test.ann_file)
-        cfg.data.test.img_prefix = _remove_extra(cfg.data.test.img_prefix)
-        dataset = get_dataset(cfg.data.test)
-        print('\nwriting results to {}'.format(args.out))
-        mmcv.dump(outputs, args.out)
-        eval_types = args.eval
-        if eval_types:
-            print('Starting evaluate {}'.format(' and '.join(eval_types)))
-            if eval_types == ['proposal_fast']:
-                result_file = args.out
-                coco_eval(result_file, eval_types, dataset.coco)
-            else:
-                if not isinstance(outputs[0], dict):
-                    result_files = results2json(dataset, outputs, args.out)
-                    coco_eval(result_files, eval_types, dataset.coco)
-                else:
-                    for name in outputs[0]:
-                        print('\nEvaluating {}'.format(name))
-                        outputs_ = [out[name] for out in outputs]
-                        result_file = args.out + '.{}'.format(name)
-                        result_files = results2json(dataset, outputs_,
-                                                    result_file)
-                        coco_eval(result_files, eval_types, dataset.coco)
+        # # Phase 3c. eval merge on coco
+        # # manipulate ann_file and img_prefix
+        # def _remove_extra(string):
+        #     string = string.replace('-patch', '')
+        #     return string.replace('-1024', '').replace('-640', '')
+        # cfg.data.test.ann_file = _remove_extra(cfg.data.test.ann_file)
+        # cfg.data.test.img_prefix = _remove_extra(cfg.data.test.img_prefix)
+        # dataset = get_dataset(cfg.data.test)
+        # print('\nwriting results to {}'.format(args.out))
+        # mmcv.dump(outputs, args.out)
+        # eval_types = args.eval
+        # if eval_types:
+        #     print('Starting evaluate {}'.format(' and '.join(eval_types)))
+        #     if eval_types == ['proposal_fast']:
+        #         result_file = args.out
+        #         coco_eval(result_file, eval_types, dataset.coco)
+        #     else:
+        #         if not isinstance(outputs[0], dict):
+        #             result_files = results2json(dataset, outputs, args.out)
+        #             coco_eval(result_files, eval_types, dataset.coco)
+        #         else:
+        #             for name in outputs[0]:
+        #                 print('\nEvaluating {}'.format(name))
+        #                 outputs_ = [out[name] for out in outputs]
+        #                 result_file = args.out + '.{}'.format(name)
+        #                 result_files = results2json(dataset, outputs_,
+        #                                             result_file)
+        #                 coco_eval(result_files, eval_types, dataset.coco)
 
     # Phase 4. generate txt
     save_dir = args.txtout
