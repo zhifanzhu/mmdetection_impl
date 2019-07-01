@@ -77,8 +77,16 @@ def main():
     # Phase 1. generate multiscale outputs
     # scales = ((1333, 800), (1500, 1500))  # move to args
     scales = cfg.data.test.img_scale
-    if isinstance(scales[0], int):
-        scales = (scales, )
+    if isinstance(scales, list):
+        # list is for two_stage aug test
+        scales = [scales]
+    elif isinstance(scales, tuple):
+        if isinstance(scales[0], int):
+            # single scale
+            scales = (scales, )
+    else:
+        raise ValueError('scales either list or tuple')
+    outputs_list = []
     outputs_list = []
     for scale in scales:
         print('\nINFO: evaluating :', scale)
