@@ -72,6 +72,37 @@ def single_txt2det(fid, num_classes=10):
     return dets
 
 
+def single_seq2det(fid):
+    """
+        Returns: dict from framd_idx to list of dets (no class agnostic)
+    """
+    lines = fid.readlines()
+    lines = [v.strip('\n') for v in lines]
+    lines = [v.split(',') for v in lines]
+    lines = np.asarray(lines)[:, :10].astype(np.int32)
+
+    dets = dict()
+    for line in lines:
+        frame_id, track_id, x1, y1, w, h, sc, label, trun, occ = line
+        frame_id = str(frame_id).zfill(7)
+        label = int(label)
+        w, h = int(w), int(h)
+        x2 = x1 + w
+        y2 = y1 + h
+        bbox = np.asarray([x1, y1, x2, y2]).tolist()
+        if frame_id not in dets:
+            dets = [bbox]
+        else:
+            dets.append(bbox)
+
+    for k, det in dets.items():
+        if len(det) == 0:
+            dets[k] = np.empty([0, 5])
+        else:
+            dets[k] = np.stack(det)
+    return dets
+
+
 # def pkl2txt(dataset, results, save_dir):
 #     """
 #     :param dataset: Dataset object with img_infos, img_ids
@@ -135,8 +166,20 @@ def concat_1n(bboxes, nms_param):
     else:
         bboxes = np.concatenate(bboxes, 0)
         bboxes, _ = ops.nms(bboxes, iou_thr=nms_param['iou_thr'])
-        bboxes = bboxes[:nms_param['max_det'], ...]
-        return bboxes
+        if 'score_thr' in nms_param:
+            inds = bboxes[:, -1] > nms_param['score_thr']
+            if len(inds) == 0:
+                return np.empty([0, 5], np.float32)
+            bboxes = bboxes[inds, :]
+        if nms_param['max_det'] < 0:
+            return bboxes
+        else:
+            max_det = nms_param['max_det']
+            if bboxes.shape[0] > max_det:
+                inds = np.argsort(bboxes[:, -1])[::-1]
+                inds = inds[:max_det]
+                bboxes = bboxes[inds, ...]
+            return bboxes
 
 
 def concat_01n(bboxes, nms_param):
@@ -152,6 +195,15 @@ def concat_01n(bboxes, nms_param):
     return ret
 
 
+def concat_10n(bboxes, nms_param):
+    num_classes = len(bboxes[0][0])
+    ret = [[] for _ in range(num_classes)]
+    for _, bb in enumerate(bboxes):
+        for c, bb_c in enumerate(bb):
+            ret[c].append(bb_c)
+    return concat_01n(ret, nms_param)
+
+
 def concat_001n(bboxes, nms_param):
     """
     :param bboxes: list(img) of list(cls) of list(to_concat) of [N,4]
@@ -160,20 +212,6 @@ def concat_001n(bboxes, nms_param):
     ret = []
     for bb in bboxes:
         ret.append(concat_01n(bb, nms_param))
-    # num_rank1 = len(bboxes)
-    # num_rank2 = len(bboxes[0])
-    # ret = [None for _ in range(num_rank1)]
-    # for i, bb1 in enumerate(bboxes):
-        # ret[i] = [[] for _ in range(num_rank2)]
-        # ret[i] = concat_01n(bb1, nms_param)
-        #
-        # for c, bb_c in enumerate(bb_c):
-        #     dets = np.concatenate(bb_c)
-        #     if nms_param is not None:
-        #         dets, _ = ops.nms(dets, iou_thr=nms_param['iou_thr'])
-        #         ret[i][c] = dets[:nms_param['max_det'], ...]
-        #     else:
-        #         ret[i][c] = dets
     return ret
 
 
@@ -204,6 +242,7 @@ def concat_100n(bboxes, nms_param=None):
 
 def merge_patch(dataset, results, iou_thr, max_det):
     """
+    For use in single_multiscale_test.py
         dataset.img_infos naming:
         fstem__H_W_x_y_w_h.jpg,
         Content:
@@ -250,6 +289,8 @@ def merge_patch(dataset, results, iou_thr, max_det):
                 x, y = coor[2], coor[3]
                 bb_cls = _rearrange_bbox(bb_cls, x, y)
                 merged_results[fstem][c].append(bb_cls)
+        # Suggest
+        # merged_results[fstem] = concat01n(merged_results[fstem])
         for c in range(num_classes):
             bb_pre = np.concatenate(merged_results[fstem][c], 0)
             # NMS
