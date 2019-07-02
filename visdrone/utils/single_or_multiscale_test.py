@@ -14,6 +14,7 @@ from mmdet.models import build_detector
 from tools import test as mmtest
 
 from visdrone.utils import result_utils
+from visdrone.utils import MergeTxt
 
 
 """
@@ -164,9 +165,10 @@ def main():
         mmcv.mkdir_or_exist(save_dir)
         result_utils.many_det2txt(dataset, outputs, save_dir)
 
-        save_dir = args.txtout
-        mmcv.mkdir_or_exist(save_dir)
-        result_utils.save_merge_patch_out(outputs, save_dir)
+        merge_dir = args.txtout
+        mmcv.mkdir_or_exist(merge_dir)
+        nms_param = dict(iou_thr=0.5, max_det=200, score_thr=0.01)
+        MergeTxt.read_txtdir_with_output(save_dir, merge_dir,nms_param)
     else:
         result_utils.many_det2txt(dataset, outputs, save_dir)
 
