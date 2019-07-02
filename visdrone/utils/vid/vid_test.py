@@ -87,7 +87,6 @@ def main():
     else:
         raise ValueError('scales either list or tuple')
     outputs_list = []
-    outputs_list = []
     for scale in scales:
         print('\nINFO: evaluating :', scale)
         cfg.data.test.img_scale = scale

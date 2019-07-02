@@ -24,6 +24,7 @@ class ConvFCBBoxHead(BBoxHead):
                  num_reg_fcs=0,
                  conv_out_channels=256,
                  fc_out_channels=1024,
+                 bottom_up_panet=False,
                  conv_cfg=None,
                  norm_cfg=None,
                  *args,
@@ -47,6 +48,10 @@ class ConvFCBBoxHead(BBoxHead):
         self.fc_out_channels = fc_out_channels
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
+
+        self.bottom_up_panet = bottom_up_panet
+        if bottom_up_panet:
+            assert num_shared_fcs == 2
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -138,9 +143,17 @@ class ConvFCBBoxHead(BBoxHead):
         if self.num_shared_fcs > 0:
             if self.with_avg_pool:
                 x = self.avg_pool(x)
-            x = x.view(x.size(0), -1)
-            for fc in self.shared_fcs:
-                x = self.relu(fc(x))
+            if self.bottom_up_panet:
+                x_from_feats = []
+                for xff in x:
+                    xff = xff.view(xff.size(0), -1)
+                    x_from_feats.append(self.relu(self.shared_fcs[0](xff)))
+                x = sum(x_from_feats)
+                x = self.relu(self.shared_fcs[-1](x))
+            else:
+                x = x.view(x.size(0), -1)
+                for fc in self.shared_fcs:
+                    x = self.relu(fc(x))
         # separate branches
         x_cls = x
         x_reg = x
