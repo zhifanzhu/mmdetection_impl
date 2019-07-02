@@ -76,52 +76,52 @@ def main():
     # TODO: support multiple images per gpu (only minor changes are needed)
     # Phase 1. generate multiscale outputs
     # scales = ((1333, 800), (1500, 1500))  # move to args
-    scales = cfg.data.test.img_scale
-    if isinstance(scales, list):
-        # list is for two_stage aug test
-        scales = [scales]
-    elif isinstance(scales, tuple):
-        if isinstance(scales[0], int):
-            # single scale
-            scales = (scales, )
+    # scales = cfg.data.test.img_scale
+    # if isinstance(scales, list):
+    #     # list is for two_stage aug test
+    #     scales = [scales]
+    # elif isinstance(scales, tuple):
+    #     if isinstance(scales[0], int):
+    #         # single scale
+    #         scales = (scales, )
+    # else:
+    #     raise ValueError('scales either list or tuple')
+    # outputs_list = []
+    # for scale in scales:
+        # print('\nINFO: evaluating :', scale)
+    cfg.data.test.img_scale = scale
+    dataset = get_dataset(cfg.data.test)
+    data_loader = build_dataloader(
+        dataset,
+        imgs_per_gpu=1,
+        workers_per_gpu=cfg.data.workers_per_gpu,
+        dist=distributed,
+        shuffle=False)
+
+    # build the model and load checkpoint
+    model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
+    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+    # old versions did not save class info in checkpoints, this walkaround is
+    # for backward compatibility
+    if 'CLASSES' in checkpoint['meta']:
+        model.CLASSES = checkpoint['meta']['CLASSES']
     else:
-        raise ValueError('scales either list or tuple')
-    outputs_list = []
-    for scale in scales:
-        print('\nINFO: evaluating :', scale)
-        cfg.data.test.img_scale = scale
-        dataset = get_dataset(cfg.data.test)
-        data_loader = build_dataloader(
-            dataset,
-            imgs_per_gpu=1,
-            workers_per_gpu=cfg.data.workers_per_gpu,
-            dist=distributed,
-            shuffle=False)
+        model.CLASSES = dataset.CLASSES
 
-        # build the model and load checkpoint
-        model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
-        checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
-        # old versions did not save class info in checkpoints, this walkaround is
-        # for backward compatibility
-        if 'CLASSES' in checkpoint['meta']:
-            model.CLASSES = checkpoint['meta']['CLASSES']
-        else:
-            model.CLASSES = dataset.CLASSES
-
-        if not distributed:
-            model = MMDataParallel(model, device_ids=[0])
-            outputs = mmtest.single_gpu_test(model, data_loader, args.show)
-        else:
-            model = MMDistributedDataParallel(model.cuda())
-            outputs = mmtest.multi_gpu_test(model, data_loader, args.tmpdir)
-        outputs_list.append(outputs)  # xyxy
+    if not distributed:
+        model = MMDataParallel(model, device_ids=[0])
+        outputs = mmtest.single_gpu_test(model, data_loader, args.show)
+    else:
+        model = MMDistributedDataParallel(model.cuda())
+        outputs = mmtest.multi_gpu_test(model, data_loader, args.tmpdir)
+        # outputs_list.append(outputs)  # xyxy
 
     # Phase 2. merge results
-    if len(scales) == 1:
-        outputs = outputs_list[0]
-    else:
-        # list(scales) of list(img) of list(cls) of [N, 4]
-        outputs = result_utils.concat_100n(outputs_list)
+    # if len(scales) == 1:
+    #     outputs = outputs_list[0]
+    # else:
+    #     # list(scales) of list(img) of list(cls) of [N, 4]
+    #     outputs = result_utils.concat_100n(outputs_list)
 
     # Phase 3a. eval coco
     rank, _ = get_dist_info()

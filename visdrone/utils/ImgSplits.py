@@ -277,15 +277,12 @@ def split_mode_then_convert_to_json(root,
                                     mode,
                                     size=None,
                                     num_process=3,
+                                    base_prefix='VisDrone2018-DET-',
                                     json_prefix='annotations_'):
     assert mode in ['train', 'val', 'test']
     out_file = json_prefix + mode + '.json'
-    if mode == 'train':
-        mode = 'VisDrone2018-DET-train'
-    elif mode == 'val':
-        mode = 'VisDrone2018-DET-val'
-    elif mode == 'test':
-        mode = 'VisDrone2018-DET-test-challenge'
+    if mode in ['train', 'val', 'test']:
+        mode = base_prefix + mode
     else:
         raise KeyError('mode incorrect')
 
