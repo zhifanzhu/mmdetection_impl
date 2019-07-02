@@ -15,6 +15,7 @@ from mmdet.models import build_detector
 from tools import test as mmtest
 
 from visdrone.utils import result_utils
+from visdrone.utils import MergeTxt
 
 
 """
@@ -32,6 +33,9 @@ def parse_args():
     parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument('--out', help='output result file')
     parser.add_argument('--txtout', help='outputdir for txtfile')
+    parser.add_argument('--convert', type=bool, help='whether to convert existed result from "images"')
+    parser.add_argument('--indir')   # for convert
+    parser.add_argument('--outdir')  # for convert
     parser.add_argument(
         '--eval',
         type=str,
@@ -54,6 +58,9 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if args.convert:
+        frames_dets2dict(args.indir, args.outdir)
+        return
 
     if args.out is not None and not args.out.endswith(('.pkl', '.pickle')):
         raise ValueError('The output file must be a pkl file.')
@@ -74,22 +81,6 @@ def main():
 
     # build the dataloader
     # TODO: support multiple images per gpu (only minor changes are needed)
-    # Phase 1. generate multiscale outputs
-    # scales = ((1333, 800), (1500, 1500))  # move to args
-    # scales = cfg.data.test.img_scale
-    # if isinstance(scales, list):
-    #     # list is for two_stage aug test
-    #     scales = [scales]
-    # elif isinstance(scales, tuple):
-    #     if isinstance(scales[0], int):
-    #         # single scale
-    #         scales = (scales, )
-    # else:
-    #     raise ValueError('scales either list or tuple')
-    # outputs_list = []
-    # for scale in scales:
-        # print('\nINFO: evaluating :', scale)
-    cfg.data.test.img_scale = scale
     dataset = get_dataset(cfg.data.test)
     data_loader = build_dataloader(
         dataset,
@@ -200,6 +191,27 @@ def save_seq_results(output_dict, save_dir, ext='.txt'):
                         fid.writelines('%d,-1,%d,%d,%d,%d,%.4f,%d,-1,-1\n' % (
                             frame_ind, x1, y1, w, h, sc, cat_id
                         ))
+
+
+def frames_dets2dict(in_dir):
+    frames_dict = MergeTxt.read_origin(in_dir)
+    seq_dict = dict()
+    for key, frame_det in frames_dict.items():
+        splited = key.split('_')
+        frame_ind = int(splited[-1])
+        seq_name = '_'.join(splited[:-1])
+        if seq_name not in seq_dict:
+            seq_dict[seq_name] = {frame_ind: frame_det}
+        else:
+            seq_dict[seq_name][frame_ind] = frame_det
+    return seq_dict
+
+
+def frames_dets2dict_then_output(in_dir, save_dir, ext='.txt'):
+    seq_dict = frames_dets2dict(in_dir)
+    mmcv.mkdir_or_exist(save_dir)
+    save_seq_results(seq_dict, save_dir, ext)
+
 
 if __name__ == '__main__':
     main()
