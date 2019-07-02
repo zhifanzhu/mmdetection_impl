@@ -59,7 +59,7 @@ def parse_args():
 def main():
     args = parse_args()
     if args.convert:
-        frames_dets2dict(args.indir, args.outdir)
+        frames_dets2dict_then_output(args.indir, args.outdir)
         return
 
     if args.out is not None and not args.out.endswith(('.pkl', '.pickle')):
