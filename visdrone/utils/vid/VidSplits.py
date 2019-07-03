@@ -100,8 +100,8 @@ def main():
         print('Done')
 
     if args.split:
-        patch_path = target_path + '-patch'
-        subsizes = (640, )
+        patch_path = target_path + '-' + args.split
+        subsizes = (int(args.split), )
         num_process = 8
         ImgSplits.split_multi_sizes(basepath=target_path,
                                     outpath=patch_path,
