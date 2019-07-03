@@ -1,6 +1,5 @@
 import argparse
 import os
-import os.path as osp
 
 import mmcv
 import torch
@@ -33,9 +32,6 @@ def parse_args():
     parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument('--out', help='output result file')
     parser.add_argument('--txtout', help='outputdir for txtfile')
-    parser.add_argument('--convert', type=bool, help='whether to convert existed result from "images"')
-    parser.add_argument('--indir')   # for convert
-    parser.add_argument('--outdir')  # for convert
     parser.add_argument(
         '--eval',
         type=str,
@@ -58,9 +54,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-    if args.convert:
-        frames_dets2dict_then_output(args.indir, args.outdir)
-        return
 
     if args.out is not None and not args.out.endswith(('.pkl', '.pickle')):
         raise ValueError('The output file must be a pkl file.')
@@ -107,13 +100,6 @@ def main():
         outputs = mmtest.multi_gpu_test(model, data_loader, args.tmpdir)
         # outputs_list.append(outputs)  # xyxy
 
-    # Phase 2. merge results
-    # if len(scales) == 1:
-    #     outputs = outputs_list[0]
-    # else:
-    #     # list(scales) of list(img) of list(cls) of [N, 4]
-    #     outputs = result_utils.concat_100n(outputs_list)
-
     # Phase 3a. eval coco
     rank, _ = get_dist_info()
     if args.out and rank == 0:
@@ -141,76 +127,9 @@ def main():
     # Phase 4. generate txt
     save_dir = args.txtout
     mmcv.mkdir_or_exist(save_dir)
-    seq_result_dict = assign_seq_results(dataset, outputs)
-    save_seq_results(seq_result_dict, save_dir)
+    seq_result_dict = MergeTxt.assign_seq_results(dataset, outputs)
+    MergeTxt.save_seq_results(seq_result_dict, save_dir)
 
-
-def assign_seq_results(dataset, results):
-    """
-        Content:
-        [{'license': 4,
-          'file_name': 'sequences/uavxxx/frame_idjpg',
-          'height': 641,
-          'width': 641,
-          'id': 64935149,
-          }, ... ]
-
-    :param dataset: Dataset object with img_infos, img_ids
-    :param results: list(frames) of list(class) of [N, 5]
-    :return: Dict from seq_name to its frame results,
-        which is list(frame_id) of list(class) of [N, 5]
-    """
-    seq_results = dict()
-    for info in dataset.img_infos:
-        fname = info['file_name']
-        _, seq_name, frame_ind = fname.replace('.jpg', '').split('/')
-        frame_ind = int(frame_ind)
-        ds_id = info['id']
-        idx = dataset.img_ids.index(ds_id)
-        frame_dets = results[idx]
-        try:
-            seq_results[seq_name][frame_ind] = frame_dets
-        except KeyError:
-            seq_results[seq_name] = {frame_ind: frame_dets}
-    return seq_results
-
-
-def save_seq_results(output_dict, save_dir, ext='.txt'):
-    for seq_name, seq_results in output_dict.items():
-        save_file = osp.join(save_dir, seq_name + ext)
-        with open(save_file, 'w') as fid:
-            for frame_ind, frame_det in seq_results.items():
-                for i, res in enumerate(frame_det):
-                    cat_id = i + 1
-                    if len(res) == 0:
-                        continue
-                    for det in res:
-                        x1, y1, x2, y2, sc = det
-                        w = x2 - x1
-                        h = y2 - y1
-                        fid.writelines('%d,-1,%d,%d,%d,%d,%.4f,%d,-1,-1\n' % (
-                            frame_ind, x1, y1, w, h, sc, cat_id
-                        ))
-
-
-def frames_dets2dict(in_dir):
-    frames_dict = MergeTxt.read_origin(in_dir)
-    seq_dict = dict()
-    for key, frame_det in frames_dict.items():
-        splited = key.split('_')
-        frame_ind = int(splited[-1])
-        seq_name = '_'.join(splited[:-1])
-        if seq_name not in seq_dict:
-            seq_dict[seq_name] = {frame_ind: frame_det}
-        else:
-            seq_dict[seq_name][frame_ind] = frame_det
-    return seq_dict
-
-
-def frames_dets2dict_then_output(in_dir, save_dir, ext='.txt'):
-    seq_dict = frames_dets2dict(in_dir)
-    mmcv.mkdir_or_exist(save_dir)
-    save_seq_results(seq_dict, save_dir, ext)
 
 
 if __name__ == '__main__':
