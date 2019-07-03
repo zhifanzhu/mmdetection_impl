@@ -41,7 +41,8 @@ class Splitbase(object):
                  thresh=0.7,
                  ext='.jpg',
                  label_ext='.txt',
-                 num_process=1):
+                 num_process=1,
+                 with_label=True):
         """
         :param basepath: base path for dota data
         :param outpath: output base path for dota data,
@@ -52,6 +53,7 @@ class Splitbase(object):
             split
         :param ext: ext for the image format
         :param label_ext: ext for label format
+        :param with_label: test set does not have label
         """
         assert ext in ['.jpg', '.png']
         assert label_ext in ['.txt']
@@ -70,10 +72,11 @@ class Splitbase(object):
         self.label_ext = label_ext
         self.num_process = num_process
         self.pool = Pool(num_process)
+        self.with_label = with_label
 
         if not os.path.exists(self.outimagepath):
             os.makedirs(self.outimagepath)
-        if not os.path.exists(self.outlabelpath):
+        if not os.path.exists(self.outlabelpath) and with_label:
             os.makedirs(self.outlabelpath)
 
     def __getstate__(self):
@@ -88,6 +91,9 @@ class Splitbase(object):
         img_save_name = subname + self.ext
         img_out = osp.join(self.outimagepath, img_save_name)
         mmcv.imwrite(subimg, img_out)
+
+        if not self.with_label:
+            return
         # save label
         label_save_name = subname + self.label_ext
         label_out = osp.join(self.outlabelpath, label_save_name)
@@ -124,6 +130,17 @@ class Splitbase(object):
                 left = left + self.slide
         return np.asarray(coors)
 
+    def split_img_without_labels(self, img):
+        img_h, img_w, _ = img.shape
+        coors = self._getsplitcoors(img_shape=(img_h, img_w))
+        patch_list = mmcv.imcrop(img, coors)
+
+        ret = []
+        for subimg, coor in zip(patch_list,
+                                coors):
+            ret.append((subimg, coor))
+        return ret
+
     def split_img_labels(self, img, labels):
         """
             split a single image and ground truth.
@@ -133,6 +150,9 @@ class Splitbase(object):
         :return: list of (img, labels, coors) tuple for each patch
             note: [xywh] in , [xywh] out
         """
+        if labels is None:
+            return self.split_img_without_labels(img)
+
         img_h, img_w, _ = img.shape
         coors = self._getsplitcoors(img_shape=(img_h, img_w))
         patch_list = mmcv.imcrop(img, coors)
@@ -202,6 +222,23 @@ class Splitbase(object):
             2. call split_img_labels to get (img, label, coor)
             3. save patches
         """
+        if not self.with_label:
+            name = img_path.split('.')[0]
+            # label_path = osp.join(self.labelpath, img_path.replace(self.ext, self.label_ext))
+            img_path = osp.join(self.imagepath, img_path)
+            img = mmcv.imread(img_path)
+            img_h, img_w, _ = img.shape
+            subimg_labels = self.split_img_labels(img, labels=None)
+
+            # step 3, save patches
+            for subimg, coor in subimg_labels:
+                coor = xyxy2xywh(coor[None, :]).squeeze(0)
+                subname = '_'.join([str(v) for v in coor])  # x_y_w_h
+                subname = '_'.join([str(img_h), str(img_w), subname])  # join image ori shape
+                subname = '__'.join([name, subname])  # concat fid with double underscore
+                self.save_one_patch(subimg, sublabels=None, subname=subname)
+            return
+
         name = img_path.split('.')[0]
         label_path = osp.join(self.labelpath, img_path.replace(self.ext, self.label_ext))
         img_path = osp.join(self.imagepath, img_path)
@@ -266,10 +303,11 @@ def split_multi_sizes(basepath,
                       outpath,
                       num_process,
                       subsizes=(512, 640, 768, 896, 1024),
-                      gap=128):
+                      gap=128,
+                      with_label=True):
     for subsz in subsizes:
         print('Split size: {}'.format(subsz))
-        S = Splitbase(basepath, outpath, subsize=subsz, gap=gap, num_process=num_process)
+        S = Splitbase(basepath, outpath, subsize=subsz, gap=gap, num_process=num_process, with_label=with_label)
         S.mp_split_and_save()
 
 
@@ -281,8 +319,12 @@ def split_mode_then_convert_to_json(root,
                                     json_prefix='annotations_'):
     assert mode in ['train', 'val', 'test']
     out_file = json_prefix + mode + '.json'
-    if mode in ['train', 'val', 'test']:
+    with_label = True
+    if mode in ['train', 'val']:
         mode = base_prefix + mode
+    elif mode == 'test':
+        mode = base_prefix + 'test-challenge'
+        with_label = False
     else:
         raise KeyError('mode incorrect')
 
@@ -295,8 +337,11 @@ def split_mode_then_convert_to_json(root,
         subsizes=(size, )
         save_ext = '-' + str(size)
     patchpath = basepath + save_ext
-    split_multi_sizes(basepath, patchpath, num_process, subsizes)
+    split_multi_sizes(basepath, patchpath, num_process=num_process,
+                      subsizes=subsizes, with_label=with_label)
 
+    if not with_label:
+        return
     # Now that patchpath is not empty, we can do conversion.
     print('Converting to json...')
     images, annotations = convert_txt_to_json.mp_parse_txt(patchpath, num_process)
