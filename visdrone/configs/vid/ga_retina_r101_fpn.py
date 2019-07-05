@@ -161,6 +161,6 @@ device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/ga_retinanet_r50_caffe_fpn_1x'
-load_from = None
+load_from = 'zoo/ga_retinanet_r101_caffe_fpn_1x_20190523-792ad63d.pth'
 resume_from = None
 workflow = [('train', 1)]
