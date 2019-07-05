@@ -19,13 +19,13 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Convert VisDrone VID annotations to mmdetection format')
     parser.add_argument('--basepath', help='visdrone VID seq basepath')
-    parser.add_argument('--tojson', help='Whether convert result to json')
     parser.add_argument('--split', help='Whether do split after convert to json')
+    parser.add_argument('--with-label',help='whether have label, i.e, test set')
     args = parser.parse_args()
     return args
 
 
-def seq2img(basepath, targetpath=None):
+def seq2img(basepath, targetpath=None, with_label=True):
     """
 
     :param basepath: root of 'sequences' and annotations'
@@ -46,10 +46,12 @@ def seq2img(basepath, targetpath=None):
     target_ann = osp.join(targetpath, 'annotations')
 
     mmcv.mkdir_or_exist(target_img)
-    mmcv.mkdir_or_exist(target_ann)
+    if with_label:
+        mmcv.mkdir_or_exist(target_ann)
     for seq_name in all_seq:
-        seq_ann = osp.join(ann_root, seq_name + ann_ext)
-        labels = _get_seq_anno(seq_ann)
+        if with_label:
+            seq_ann = osp.join(ann_root, seq_name + ann_ext)
+            labels = _get_seq_anno(seq_ann)
         frame_dir = osp.join(seq_root, seq_name)
         for frame in os.listdir(frame_dir):
             stem = frame.replace(img_ext, '')
@@ -61,15 +63,16 @@ def seq2img(basepath, targetpath=None):
             copyfile(src, dst)
 
             # write label
-            frame_ann = labels[labels[:, 0] == frame_ind]
-            ann_dst = dst_stem + ann_ext
-            ann_dst = osp.join(target_ann, ann_dst)
-            with open(ann_dst, 'w') as fid:
-                for gt in frame_ann:
-                    _, trackid, x1, y1, w, h, sc, label, trun, occ = gt
-                    fid.writelines('%d,%d,%d,%d,%d,%d,%d,%d\n' % (
-                        x1, y1, w, h, sc, label, trun, occ
-                    ))
+            if with_label:
+                frame_ann = labels[labels[:, 0] == frame_ind]
+                ann_dst = dst_stem + ann_ext
+                ann_dst = osp.join(target_ann, ann_dst)
+                with open(ann_dst, 'w') as fid:
+                    for gt in frame_ann:
+                        _, trackid, x1, y1, w, h, sc, label, trun, occ = gt
+                        fid.writelines('%d,%d,%d,%d,%d,%d,%d,%d\n' % (
+                            x1, y1, w, h, sc, label, trun, occ
+                        ))
     return targetpath
 
 
@@ -84,8 +87,14 @@ def _get_seq_anno(ann_file):
 
 def main():
     args = parse_args()
-    target_path = seq2img(args.basepath)
-    if args.tojson:
+    if args.with_label == 'True':
+        with_label = True
+    elif args.with_label == 'False':
+        with_label = False
+    else:
+        raise ValueError("with_label either True or False")
+    target_path = seq2img(args.basepath, with_label=with_label)
+    if with_label:
         print('Converting to json...')
         images, annotations = convert_txt_to_json.mp_parse_txt(target_path,
                                                                num_process=8)
@@ -107,20 +116,22 @@ def main():
                                     outpath=patch_path,
                                     num_process=num_process,
                                     subsizes=subsizes,
-                                    gap=128)
-        print('Converting to json...')
-        images, annotations = convert_txt_to_json.mp_parse_txt(patch_path,
-                                                               num_process)
-        categories = convert_txt_to_json.create_categories()
-        annotations = dict(
-            images=images,
-            annotations=annotations,
-            categories=categories
-        )
-        out_file = 'annotations_val.json'
-        out_file = osp.join(patch_path, out_file)
-        mmcv.dump(annotations, out_file)
-        print('Done')
+                                    gap=128,
+                                    with_label=with_label)
+        if with_label:
+            print('Converting to json...')
+            images, annotations = convert_txt_to_json.mp_parse_txt(patch_path,
+                                                                   num_process)
+            categories = convert_txt_to_json.create_categories()
+            annotations = dict(
+                images=images,
+                annotations=annotations,
+                categories=categories
+            )
+            out_file = 'annotations_val.json'
+            out_file = osp.join(patch_path, out_file)
+            mmcv.dump(annotations, out_file)
+            print('Done')
 
 
 if __name__ == '__main__':
