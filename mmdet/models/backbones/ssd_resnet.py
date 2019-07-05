@@ -19,6 +19,11 @@ from ..registry import BACKBONES
 from ..utils import build_conv_layer, build_norm_layer
 
 '''
+    Note:
+        This SSDResNet differ from native ResNet in that, dilation is only set for the very first conv
+        of every block, while in native ResNet dilation is set for every conv.
+        See make_res_layer() for detail.
+
 We only use C4(layer3) as feature map, following speed/accuracy trade-off paper.
 With 512 input, output feature map shape:
     [torch.Size([1, 1024, 32, 32]),
@@ -66,6 +71,7 @@ while use_dilation_conv5 controls the PRESENCE of C5.
 STAGES_DEFAULT = (1, 2, 2, 2)
 DILATIONS_DEFAULT = (1, 1, 1, 1)
 OUT_INDICES_DEFAULT = (0, 1, 2, 3)
+
 
 @BACKBONES.register_module
 class SSDResNet(ResNet):
