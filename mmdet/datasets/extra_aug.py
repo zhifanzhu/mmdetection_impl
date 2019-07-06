@@ -358,10 +358,10 @@ class ExtraAugmentation(object):
 
     def __call__(self, img, boxes, labels):
         img = img.astype(np.float32)
-        for transform in self.transforms:
-            img, boxes, labels = transform(img, boxes, labels)
         if len(self.splits) != 0:
             split_method = random.choice(self.splits)
             img, boxes, labels = split_method(img, boxes, labels)
+        for transform in self.transforms:
+            img, boxes, labels = transform(img, boxes, labels)
 
         return img, boxes, labels

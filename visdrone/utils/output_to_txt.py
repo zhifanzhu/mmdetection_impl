@@ -56,6 +56,7 @@ def main():
     print('saving to {}'.format(out_dir))
 
     cfg = mmcv.Config.fromfile(args.config)
+    print(cfg.data.test)
     model = init_detector(cfg, args.checkpoint)
 
     all_images = args.img_prefix
