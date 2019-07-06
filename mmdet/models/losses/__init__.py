@@ -7,6 +7,7 @@ from .ghm_loss import GHMC, GHMR
 from .balanced_l1_loss import balanced_l1_loss, BalancedL1Loss
 from .mse_loss import mse_loss, MSELoss
 from .iou_loss import iou_loss, bounded_iou_loss, IoULoss, BoundedIoULoss
+from .bootstrapped_sigmoid_classification_loss import BootstrappedSigmoidClassificationLoss
 from .utils import reduce_loss, weight_reduce_loss, weighted_loss
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     'FocalLoss', 'smooth_l1_loss', 'SmoothL1Loss', 'balanced_l1_loss',
     'BalancedL1Loss', 'mse_loss', 'MSELoss', 'iou_loss', 'bounded_iou_loss',
     'IoULoss', 'BoundedIoULoss', 'GHMC', 'GHMR', 'reduce_loss',
-    'weight_reduce_loss', 'weighted_loss'
+    'weight_reduce_loss', 'weighted_loss',
+    'BootstrappedSigmoidClassificationLoss',
 ]
