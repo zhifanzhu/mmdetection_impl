@@ -17,7 +17,7 @@ Available policies:
     rotate_with_bbox(image, bboxes, degrees)
     translate_bbox(image, bboxes, pixels, shift_horizontal)
     {equalize,rotate,translate}_only_bboxes: apply augmentation to box area only.
-    
+
 Design Requirement:
     when a function takes as input bboxes, it must return bboxes(optionally modified) as well.
     In *_only_bboxes policies, prob is independent for each bbox.
@@ -35,7 +35,7 @@ def equalize(image):
     :return: same as image
     """
     def scale_channel_tf(im, c):
-        im = im[:, :, c].astype(np.int32)
+        im = im[:, :, c].astype(np.uint8)
         # Compute the histogram of the image channel.
         histo, _ = np.histogram(im.flatten(), bins=256, range=[0, 255])
         # For the purposes of computing the step, filter out the nonzeros.
@@ -88,6 +88,7 @@ def rotate_with_bboxes(image, bboxes, degrees):
 def _rotate(image, degrees):
     """ Rotate image, fill border value with image mean."""
     fill = np.mean(image, (0, 1))
+    fill = [int(v) for v in fill]
     image_center = tuple(np.array(image.shape[1::-1]) / 2)
     rot_mat = cv2.getRotationMatrix2D(image_center, degrees, 1.0)
     result = cv2.warpAffine(image, rot_mat, image.shape[1::-1],
@@ -189,6 +190,7 @@ def translate_y(image, pixels):
 def _translate_img(image, x_pixels, y_pixels):
     height, width, _ = image.shape
     fill = image.mean((0, 1))
+    fill = [int(v) for v in fill]
     M = np.float32([
         [1, 0, -x_pixels],
         [0, 1, -y_pixels],

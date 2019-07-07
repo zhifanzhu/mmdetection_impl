@@ -349,7 +349,8 @@ class LearnedPolicy(object):
 
     def __call__(self, img, gt_boxes, gt_labels):
         policy = random.choice(self.policies)
-        img, gt_boxes, gt_labels = policy(img, gt_boxes, gt_labels)
+        img, bbox_out, gt_labels = policy(img, gt_boxes, gt_labels)
+        gt_boxes = bbox_out.astype(gt_boxes.dtype)  # some func will distort dtype
         return img, gt_boxes, gt_labels
 
 
