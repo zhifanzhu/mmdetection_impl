@@ -57,7 +57,7 @@ def equalize(image):
         return result.astype(np.uint8)
 
     def scale_channel_cv2(im, c):
-        im = im[:, :, c].astype(np.int32)
+        im = im[:, :, c].astype(np.uint8)
         histo, _ = np.histogram(im.flatten(), bins=256, range=[0, 255])
         cdf = histo.cumsum()
         cdf = (cdf - cdf.min()) * 254 / (cdf[-1] - cdf.min())
