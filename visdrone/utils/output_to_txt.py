@@ -57,6 +57,7 @@ def main():
 
     cfg = mmcv.Config.fromfile(args.config)
     print(cfg.data.test)
+    print(cfg.test_cfg)
     model = init_detector(cfg, args.checkpoint)
 
     all_images = args.img_prefix

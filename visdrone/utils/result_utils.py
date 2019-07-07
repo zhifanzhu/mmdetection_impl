@@ -1,3 +1,4 @@
+import _io
 import numpy as np
 import os.path as osp
 from mmdet import ops
@@ -45,8 +46,10 @@ def many_det2txt(dataset, results, save_dir):
 def single_txt2det(fid, num_classes=10):
     """ Returns detection result from one txt(image)
     Args:
-        fid: opened file handler.
+        fid: opened file handler or a file name.
     """
+    if not isinstance(fid, _io.TextIOWrapper):
+        fid = open(fid, 'r')
     lines = fid.readlines()
     lines = [v.strip('\n') for v in lines]
     lines = [v.split(',') for v in lines]

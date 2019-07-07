@@ -2,6 +2,7 @@ import mmcv
 import numpy as np
 from numpy import random
 
+from mmdet.datasets import learned_aug as aug
 from mmdet.core.evaluation.bbox_overlaps import bbox_overlaps
 
 
@@ -333,6 +334,25 @@ class RandomUniformPatch(object):
         return img, gt_boxes, gt_labels
 
 
+class LearnedPolicy(object):
+    """ Apply augmentation from Google's learned policy"""
+
+    def __init__(self,
+                 policies=None):
+        """
+
+        :param policies: list of tuple, e.g.
+            [('TranslateY_Only_BBoxes', 0.2, 2), ...]
+            where the 2nd is probability to apple and 3rd is magnitude.
+        """
+        self.policies = aug.build_policies(policies)
+
+    def __call__(self, img, gt_boxes, gt_labels):
+        policy = random.choice(self.policies)
+        img, gt_boxes, gt_labels = policy(img, gt_boxes, gt_labels)
+        return img, gt_boxes, gt_labels
+
+
 class ExtraAugmentation(object):
 
     def __init__(self,
@@ -340,7 +360,8 @@ class ExtraAugmentation(object):
                  expand=None,
                  random_crop=None,
                  random_patch=None,
-                 random_uniform_patch=None):
+                 random_uniform_patch=None,
+                 learned_policy=None):
         self.transforms = []
         if photo_metric_distortion is not None:
             self.transforms.append(
@@ -349,6 +370,8 @@ class ExtraAugmentation(object):
             self.transforms.append(Expand(**expand))
         if random_crop is not None:
             self.transforms.append(RandomCrop(**random_crop))
+        if learned_policy is not None:
+            self.transforms.append(LearnedPolicy(**learned_policy))
 
         self.splits = []
         if random_patch is not None:
