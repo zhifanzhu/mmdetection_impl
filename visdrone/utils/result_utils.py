@@ -1,5 +1,6 @@
 import _io
 import numpy as np
+import os
 import os.path as osp
 from mmdet import ops
 
@@ -75,10 +76,58 @@ def single_txt2det(fid, num_classes=10):
     return dets
 
 
+def single_seq2res(in_dir):
+    """ Produce a dict from frame_name to dets"""
+    seq_dict = dict()
+    seq_all = os.listdir(in_dir)
+    num_classes = 10
+    class_base = 1
+
+    def _seq2mat(fid):
+        fid = open(fid, 'r')
+        lines = fid.readlines()
+        lines = [v.strip('\n') for v in lines]
+        lines = [v.split(',') for v in lines]
+        lines = np.float32(lines)[:, :10]
+        return lines
+
+    def _seqcontent2imgcontent(m):
+        """ input [N, 8] mat, output list(cls) of [N, 5]"""
+        out = [None for _ in range(num_classes)]
+        for c in range(num_classes):
+            tmp = np.float32(m[m[:, -3] == c + class_base, :])[:, 2:7]
+            tmp[:, 2:4] += tmp[:, 0:2]
+            out[c] = tmp
+        return out
+
+    for seq in seq_all:
+        stem = seq.replace('.txt', '')
+        seq_fullpath = osp.join(in_dir, seq)
+        content = _seq2mat(seq_fullpath)
+        # import pdb; pdb.set_trace()
+        frames_index_list = np.int32(np.unique(content[:, 0]))
+        expect_frames = set(range(1, frames_index_list.max() + 1))
+        diff = expect_frames - set(frames_index_list)
+        if len(diff) != 0:
+            print('{} missing:'.format(seq))
+            print(diff)
+
+        for frame_ind in frames_index_list:
+            frame_content = content[content[:, 0] == frame_ind, :]
+            if len(frame_content) == 0:
+                print('{} {} has no detection!'.format(seq, frame_ind))
+                continue
+            img_name = '_'.join([stem, format(frame_ind, '07d')])
+            seq_dict[img_name] = _seqcontent2imgcontent(frame_content)
+    return seq_dict
+
+
 def single_seq2det(fid):
     """
         Returns: dict from framd_idx to list of dets (no class agnostic)
     """
+    if not isinstance(fid, _io.TextIOWrapper):
+        fid = open(fid, 'r')
     lines = fid.readlines()
     lines = [v.strip('\n') for v in lines]
     lines = [v.split(',') for v in lines]
