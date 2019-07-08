@@ -1,6 +1,7 @@
 import mmcv
 import numpy as np
 from numpy import random
+import inspect
 
 from mmdet.datasets import learned_aug as aug
 from mmdet.core.evaluation.bbox_overlaps import bbox_overlaps
@@ -345,11 +346,34 @@ class LearnedPolicy(object):
             [('TranslateY_Only_BBoxes', 0.2, 2), ...]
             where the 2nd is probability to apple and 3rd is magnitude.
         """
-        self.policies = aug.build_policies(policies)
+        self.policies = policies
 
     def __call__(self, img, gt_boxes, gt_labels):
-        policy = random.choice(self.policies)
-        img, bbox_out, gt_labels = policy(img, gt_boxes, gt_labels)
+        policy, prob, magnitude = self.policies[random.choice(len(self.policies))]
+        policy = aug.NAME_TO_FUNC[policy]
+        # all bbox only ops have bboxes in return
+        if 'prob' in inspect.getfullargspec(policy)[0]:
+            img, bbox_out = policy(img, gt_boxes, prob, magnitude)
+        else:
+            apply = random.choice([True, False], p=[prob, 1-prob])
+            if apply:
+                args = [img]
+                if 'bboxes' in inspect.getfullargspec(policy)[0]:
+                    args.append(gt_boxes)
+
+                mag_value = random.uniform(- magnitude, magnitude)
+                if 'pixels' in inspect.getfullargspec(policy)[0]:
+                    args.append(mag_value)
+                if 'degrees' in inspect.getfullargspec(policy)[0]:
+                    args.append(mag_value)
+                ret = policy(*args)
+                if isinstance(ret, tuple):
+                    img, bbox_out = ret
+                else:
+                    img, bbox_out = ret, gt_boxes
+            else:
+                return img, gt_boxes, gt_labels
+
         gt_boxes = bbox_out.astype(gt_boxes.dtype)  # some func will distort dtype
         return img, gt_boxes, gt_labels
 

@@ -21,6 +21,8 @@ Available policies:
 Design Requirement:
     when a function takes as input bboxes, it must return bboxes(optionally modified) as well.
     In *_only_bboxes policies, prob is independent for each bbox.
+
+TODO: remove wrapper since pickle don't like'em. Clean-up the code(also in extra_aug)
 """
 
 

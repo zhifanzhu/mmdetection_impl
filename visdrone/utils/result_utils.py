@@ -169,6 +169,7 @@ def concat_1n(bboxes, nms_param):
     else:
         bboxes = np.concatenate(bboxes, 0)
         bboxes, _ = ops.nms(bboxes, iou_thr=nms_param['iou_thr'])
+        # bboxes, _ = ops.soft_nms(np.float32(bboxes), iou_thr=nms_param['iou_thr'], min_score=0.05)
         if 'score_thr' in nms_param:
             inds = bboxes[:, -1] > nms_param['score_thr']
             if len(inds) == 0:
