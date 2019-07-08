@@ -10,7 +10,7 @@ def parse_args():
     return args
 
 
-def main()
+def main():
     args = parse_args()
     indir = args.indir
     outdir = args.outdir
