@@ -3,6 +3,8 @@ import numpy as np
 import os
 import os.path as osp
 from mmdet import ops
+from visdrone.utils import MergeTxt
+from visdrone.utils import seqnms
 
 
 def single_det2txt(result, txt_file):
@@ -361,3 +363,70 @@ def save_merge_patch_out(output_dict, save_dir, ext='.txt'):
     for fstem, results in output_dict.items():
         save_file = osp.join(save_dir, fstem + ext)
         single_det2txt(results, save_file)
+
+
+"""
+    VisDrone VID
+"""
+
+
+def parst_seqdict(d):
+    """
+    :param d: {stem_frameind: dets}, where dets is list of [N, 5]
+    :return: d {stem: {frame_ind: dets}}
+    """
+    tmp_dict = dict()
+    for img_name, img_dets in d.items():
+        info = img_name.split('_')
+        seq_name = '_'.join(info[:-1])
+        frame_ind = int(info[-1])
+        if seq_name not in tmp_dict:
+            tmp_dict[seq_name] = {frame_ind: img_dets}
+        else:
+            tmp_dict[seq_name][frame_ind] = img_dets
+    return tmp_dict
+
+
+""" 
+    Seq NMS
+"""
+
+
+def prepare_seqnms_proposals(in_dir_list, num_classes=10):
+    """
+
+    :param in_dir_list:
+    :param num_classes:
+    :return: dict map seq_name to list(cls) of ([F, N, 5], [F]),
+        first is proposal for seqNMS to consume, second is num_bboxes_per_frame
+    """
+    # 1 split seq into images
+    in_dir_list = [osp.expanduser(v) for v in in_dir_list]
+    seq_ds = [single_seq2res(v) for v in in_dir_list]
+    # 2 merge images
+    d = MergeTxt.merge_dicts(seq_ds, nms_param=None)
+    seq_dict = parst_seqdict(d)  # clip of frames of list(cls) of [N, 5]
+
+    #
+    max_bboxes = seqnms.MAX_BBOXES
+    ret_dict = {}
+    for seq_name, frames_det in seq_dict.items():
+        if seq_name not in ret_dict:
+            ret_dict[seq_name] = [[] for _ in range(num_classes)]
+        for frame_ind in sorted(frames_det.keys()):
+            for c in range(num_classes):
+                dets = frames_det[frame_ind][c]
+                ret_dict[seq_name][c].append(dets)
+
+        for c in range(num_classes):
+            num_bboxes_per_frame = []
+            proposals = ret_dict[seq_name][c]
+            for i, dets in enumerate(proposals):  # each frame
+                num_bboxes_per_frame.append(len(dets))
+                dets = np.pad(np.asarray(dets),
+                              [(0, max_bboxes - len(dets)), (0, 0)],
+                              mode='constant')
+                proposals[i] = dets
+            proposals = np.asarray(proposals)
+            ret_dict[seq_name][c] = (proposals, num_bboxes_per_frame)
+    return ret_dict
