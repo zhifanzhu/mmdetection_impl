@@ -4,12 +4,18 @@ from visdrone.utils import result_utils
 from visdrone.utils import MergeTxt
 
 SEQ_LIST = [
-    '~/val896_A2enhance',
-    '/tmp/valori_gavidseq/',
+    # '~/val896_A2enhance',
+    # '/tmp/valori_gavidseq/',
+    # '~/val896_A2patch1500E1/',
+    # '/tmp/valori_A2Ehvid133E10seq/',
+    '~/test896_A2enhance',
+    '/tmp/testori_gavid1500seq/',
+    '~/test896_A2patch1500E1/',
+    '/tmp/testori_A2Ehvid133E10seq/',
 ]
 
 print(SEQ_LIST)
-nms_param=dict(iou_thr=0.33, max_det=350, score_thr=0.05)
+nms_param=dict(iou_thr=0.5, max_det=100, score_thr=0.05)
 print(nms_param)
 
 
@@ -20,7 +26,8 @@ seq_ds = [result_utils.single_seq2res(v) for v in SEQ_LIST]
 d = MergeTxt.merge_dicts(seq_ds, nms_param)
 
 # 3 aggregate
-out_dir = '/tmp/vidout/'
+out_dir = '/tmp/vidS123G1/'
+print(out_dir)
 mmcv.mkdir_or_exist(osp.expanduser(out_dir))
 
 
