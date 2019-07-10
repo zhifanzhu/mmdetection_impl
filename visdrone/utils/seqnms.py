@@ -31,7 +31,7 @@ def seq_nms_core(proposals, num_frames, num_bboxes_per_frame, nms_thr=0.5, link_
     num_valid_proposals = sum(num_bboxes_per_frame)
 
     while num_valid_proposals != 0:
-        print(num_valid_proposals)
+        # print(num_valid_proposals)
         best_seq_ind, best_seq, begin_t, end_t = find_best_seq(
             proposals, num_frames, thr=link_thr, rescore=rescore)
         if len(best_seq) == 1 and best_seq[0][-1] == 0:

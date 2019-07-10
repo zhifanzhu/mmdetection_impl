@@ -5,6 +5,7 @@ import os.path as osp
 from mmdet import ops
 from visdrone.utils import MergeTxt
 from visdrone.utils import seqnms
+from visdrone.utils import box_ops
 
 
 def single_det2txt(result, txt_file):
@@ -220,6 +221,7 @@ def concat_1n(bboxes, nms_param):
     else:
         bboxes = np.concatenate(bboxes, 0)
         bboxes, _ = ops.nms(bboxes, iou_thr=nms_param['iou_thr'])
+        # bboxes, _ = box_ops.refine_boxes(bboxes, nms_iou_thr=nms_param['iou_thr'])
         # bboxes, _ = ops.soft_nms(np.float32(bboxes), iou_thr=nms_param['iou_thr'], min_score=0.05)
         if 'score_thr' in nms_param:
             inds = bboxes[:, -1] > nms_param['score_thr']
