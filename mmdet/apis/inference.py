@@ -68,22 +68,45 @@ def inference_detector(model, imgs):
         return _inference_generator(model, imgs, img_transform, device)
 
 
+# def _prepare_data(img, img_transform, cfg, device):
+#     ori_shape = img.shape
+#     img, img_shape, pad_shape, scale_factor = img_transform(
+#         img,
+#         scale=cfg.data.test.img_scale,
+#         keep_ratio=cfg.data.test.get('resize_keep_ratio', True))
+#     img = to_tensor(img).to(device).unsqueeze(0)
+#     img_meta = [
+#         dict(
+#             ori_shape=ori_shape,
+#             img_shape=img_shape,
+#             pad_shape=pad_shape,
+#             scale_factor=scale_factor,
+#             flip=False)
+#     ]
+#     return dict(img=[img], img_meta=[img_meta])
 def _prepare_data(img, img_transform, cfg, device):
     ori_shape = img.shape
-    img, img_shape, pad_shape, scale_factor = img_transform(
-        img,
-        scale=cfg.data.test.img_scale,
-        keep_ratio=cfg.data.test.get('resize_keep_ratio', True))
-    img = to_tensor(img).to(device).unsqueeze(0)
-    img_meta = [
-        dict(
-            ori_shape=ori_shape,
-            img_shape=img_shape,
-            pad_shape=pad_shape,
-            scale_factor=scale_factor,
-            flip=False)
-    ]
-    return dict(img=[img], img_meta=[img_meta])
+    imgs = []
+    img_metas = []
+    scales = cfg.data.test.img_scale
+    for scale in scales:
+        _img, img_shape, pad_shape, scale_factor = img_transform(
+            img,
+            scale=scale,
+            keep_ratio=cfg.data.test.get('resize_keep_ratio', True))
+        _img = to_tensor(_img).to(device).unsqueeze(0)
+        img_meta = [
+            dict(
+                ori_shape=ori_shape,
+                img_shape=img_shape,
+                pad_shape=pad_shape,
+                scale_factor=scale_factor,
+                flip=False)
+        ]
+        imgs.append(_img)
+        img_metas.append(img_meta)
+
+    return dict(img=imgs, img_meta=img_metas)
 
 
 def _inference_single(model, img, img_transform, device):
