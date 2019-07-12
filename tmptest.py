@@ -27,7 +27,7 @@ from visdrone.utils import MergeTxt, result_utils
 class TestDataset(Dataset):
     def __init__(self, img_dir, cfg):
         self.img_dir = osp.expanduser(img_dir)
-        self.img_list = os.listdir(img_dir)
+        self.img_list = os.listdir(self.img_dir)
         cfg = cfg.data.test
         self.img_scales = cfg.img_scale if isinstance(cfg.img_scale,
                                                   list) else [cfg.img_scale]
@@ -36,7 +36,7 @@ class TestDataset(Dataset):
         # padding border to ensure the image size can be divided by
         # size_divisor (used for FPN)
         self.size_divisor = cfg.size_divisor
-        self.resize_keep_ratio = cfg.resize_keep_ratio
+        self.resize_keep_ratio = True  #cfg.resize_keep_ratio
         self.img_transform = ImageTransform(
             size_divisor=self.size_divisor, **self.img_norm_cfg)
         self.bbox_transform = BboxTransform()
@@ -242,9 +242,9 @@ def main():
 
     rank, _ = get_dist_info()
     if rank == 0:
-        img_pfx = osp.join(args.img_prefix, 'images')
         out_dir =tempfile.mkdtemp()
-        for i, img_name in enumerate(img_pfx):
+        all_imgs = os.listdir(osp.expanduser(args.img_prefix))
+        for i, img_name in enumerate(all_imgs):
             # img_full_name = osp.join(img_pfx, img_name)
             txt_file = '{}.txt'.format(img_name.split('.')[0])
             txt_file = osp.join(out_dir, txt_file)
@@ -253,6 +253,7 @@ def main():
         print('DET patch merging...')
         temp_out = out_dir
         out_dir = args.out_dir
+        print(out_dir)
         nms_param = dict(iou_thr=0.5, max_det=500, score_thr=0.05)
         merge_dict = MergeTxt.read_txtdir(temp_out, nms_param)
         shutil.rmtree(temp_out)

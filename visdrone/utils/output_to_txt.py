@@ -77,7 +77,7 @@ def main():
         print('DET patch merging...')
         temp_out = out_dir
         out_dir = args.out_dir
-        nms_param = dict(iou_thr=0.5, max_det=200, score_thr=0.1)
+        nms_param = dict(iou_thr=0.5, max_det=500, score_thr=0.05)
         merge_dict = MergeTxt.read_txtdir(temp_out, nms_param)
         shutil.rmtree(temp_out)
         mmcv.mkdir_or_exist(out_dir)
@@ -87,7 +87,7 @@ def main():
         print('VID patch merging...')
         temp_out = out_dir
         out_dir = args.out_dir
-        nms_param = dict(iou_thr=0.5, max_det=250, score_thr=0.05)
+        nms_param = dict(iou_thr=0.5, max_det=500, score_thr=0.05)
         merge_dict = MergeTxt.read_txtdir(temp_out, nms_param)
         shutil.rmtree(temp_out)
         # parse dict
