@@ -13,8 +13,16 @@
 import os
 import struct
 
+
+"""
+    When given an image, one need to determine the size of image, using PIL library
+    can be slow, and this function gives a faster approach.
+"""
+
+
 class UnknownImageFormat(Exception):
     pass
+
 
 def get_image_size(file_path):
     """
