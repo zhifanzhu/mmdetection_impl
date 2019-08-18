@@ -118,3 +118,6 @@ data
 Untitled.ipynb
 zoo
 work_dirs
+
+# Pytorch
+*.pth

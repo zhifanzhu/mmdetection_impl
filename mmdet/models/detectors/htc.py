@@ -1,11 +1,11 @@
 import torch
 import torch.nn.functional as F
 
-from .cascade_rcnn import CascadeRCNN
+from mmdet.core import (bbox2result, bbox2roi, build_assigner, build_sampler,
+                        merge_aug_masks)
 from .. import builder
 from ..registry import DETECTORS
-from mmdet.core import (bbox2roi, bbox2result, build_assigner, build_sampler,
-                        merge_aug_masks)
+from .cascade_rcnn import CascadeRCNN
 
 
 @DETECTORS.register_module
@@ -154,6 +154,46 @@ class HybridTaskCascade(CascadeRCNN):
             mask_pred = mask_head(mask_feats)
         return mask_pred
 
+    def forward_dummy(self, img):
+        outs = ()
+        # backbone
+        x = self.extract_feat(img)
+        # rpn
+        if self.with_rpn:
+            rpn_outs = self.rpn_head(x)
+            outs = outs + (rpn_outs, )
+        proposals = torch.randn(1000, 4).cuda()
+        # semantic head
+        if self.with_semantic:
+            _, semantic_feat = self.semantic_head(x)
+        else:
+            semantic_feat = None
+        # bbox heads
+        rois = bbox2roi([proposals])
+        for i in range(self.num_stages):
+            cls_score, bbox_pred = self._bbox_forward_test(
+                i, x, rois, semantic_feat=semantic_feat)
+            outs = outs + (cls_score, bbox_pred)
+        # mask heads
+        if self.with_mask:
+            mask_rois = rois[:100]
+            mask_roi_extractor = self.mask_roi_extractor[-1]
+            mask_feats = mask_roi_extractor(
+                x[:len(mask_roi_extractor.featmap_strides)], mask_rois)
+            if self.with_semantic and 'mask' in self.semantic_fusion:
+                mask_semantic_feat = self.semantic_roi_extractor(
+                    [semantic_feat], mask_rois)
+                mask_feats += mask_semantic_feat
+            last_feat = None
+            for i in range(self.num_stages):
+                mask_head = self.mask_head[i]
+                if self.mask_info_flow:
+                    mask_pred, last_feat = mask_head(mask_feats, last_feat)
+                else:
+                    mask_pred = mask_head(mask_feats)
+                outs = outs + (mask_pred, )
+        return outs
+
     def forward_train(self,
                       img,
                       img_meta,
@@ -206,9 +246,10 @@ class HybridTaskCascade(CascadeRCNN):
                 gt_bboxes_ignore = [None for _ in range(num_imgs)]
 
             for j in range(num_imgs):
-                assign_result = bbox_assigner.assign(
-                    proposal_list[j], gt_bboxes[j], gt_bboxes_ignore[j],
-                    gt_labels[j])
+                assign_result = bbox_assigner.assign(proposal_list[j],
+                                                     gt_bboxes[j],
+                                                     gt_bboxes_ignore[j],
+                                                     gt_labels[j])
                 sampling_result = bbox_sampler.sample(
                     assign_result,
                     proposal_list[j],
@@ -309,13 +350,12 @@ class HybridTaskCascade(CascadeRCNN):
                 if self.with_mask:
                     mask_head = self.mask_head[i]
                     if det_bboxes.shape[0] == 0:
-                        segm_result = [
-                            [] for _ in range(mask_head.num_classes - 1)
-                        ]
+                        mask_classes = mask_head.num_classes - 1
+                        segm_result = [[] for _ in range(mask_classes)]
                     else:
                         _bboxes = (
-                            det_bboxes[:, :4] * scale_factor
-                            if rescale else det_bboxes)
+                            det_bboxes[:, :4] *
+                            scale_factor if rescale else det_bboxes)
                         mask_pred = self._mask_forward_test(
                             i, x, _bboxes, semantic_feat=semantic_feat)
                         segm_result = mask_head.get_seg_masks(
@@ -343,13 +383,12 @@ class HybridTaskCascade(CascadeRCNN):
 
         if self.with_mask:
             if det_bboxes.shape[0] == 0:
-                segm_result = [
-                    [] for _ in range(self.mask_head[-1].num_classes - 1)
-                ]
+                mask_classes = self.mask_head[-1].num_classes - 1
+                segm_result = [[] for _ in range(mask_classes)]
             else:
                 _bboxes = (
-                    det_bboxes[:, :4] * scale_factor
-                    if rescale else det_bboxes)
+                    det_bboxes[:, :4] *
+                    scale_factor if rescale else det_bboxes)
 
                 mask_rois = bbox2roi([_bboxes])
                 aug_masks = []

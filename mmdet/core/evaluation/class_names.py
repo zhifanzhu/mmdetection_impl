@@ -89,13 +89,21 @@ def visdrone_classes():
     ]
 
 
+def cityscapes_classes():
+    return [
+        'person', 'rider', 'car', 'truck', 'bus', 'train', 'motorcycle',
+        'bicycle'
+    ]
+
+
 dataset_aliases = {
     'voc': ['voc', 'pascal_voc', 'voc07', 'voc12'],
     'imagenet_det': ['det', 'imagenet_det', 'ilsvrc_det'],
     'imagenet_vid': ['vid', 'imagenet_vid', 'ilsvrc_vid'],
     'coco': ['coco', 'mscoco', 'ms_coco'],
+    'wider_face': ['WIDERFaceDataset', 'wider_face', 'WDIERFace'],
     'visdrone': ['visdrone', 'VisDrone'],
-    'wider_face': ['WIDERFaceDataset', 'wider_face', 'WDIERFace']
+    'cityscapes': ['cityscapes']
 }
 
 

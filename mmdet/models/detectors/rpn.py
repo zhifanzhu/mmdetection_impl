@@ -1,10 +1,10 @@
 import mmcv
 
-from mmdet.core import tensor2imgs, bbox_mapping
-from .base import BaseDetector
-from .test_mixins import RPNTestMixin
+from mmdet.core import bbox_mapping, tensor2imgs
 from .. import builder
 from ..registry import DETECTORS
+from .base import BaseDetector
+from .test_mixins import RPNTestMixin
 
 
 @DETECTORS.register_module
@@ -37,6 +37,11 @@ class RPN(BaseDetector, RPNTestMixin):
         if self.with_neck:
             x = self.neck(x)
         return x
+
+    def forward_dummy(self, img):
+        x = self.extract_feat(img)
+        rpn_outs = self.rpn_head(x)
+        return rpn_outs
 
     def forward_train(self,
                       img,
