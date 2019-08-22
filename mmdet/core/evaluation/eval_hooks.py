@@ -179,8 +179,7 @@ class NonDistEvalHook(Hook):
         if isinstance(dataset, Dataset):
             self.dataset = dataset
         elif isinstance(dataset, dict):
-            self.dataset = obj_from_dict(dataset, datasets,
-                                         {'test_mode': True})
+            self.dataset = datasets.build_dataset(dataset, {'test_mode': True})
         else:
             raise TypeError(
                 'dataset must be a Dataset object or a dict, not {}'.format(
