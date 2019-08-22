@@ -1,8 +1,11 @@
 from __future__ import division
 import argparse
 import os
+import glob, re
+from shutil import copyfile
 
 import torch
+import mmcv
 from mmcv import Config
 
 from mmdet import __version__
@@ -56,8 +59,27 @@ def main():
     # update configs according to CLI args
     if args.work_dir is not None:
         cfg.work_dir = args.work_dir
-    if args.resume_from is not None:
-        cfg.resume_from = args.resume_from
+    # copy config file to work_dir
+    assert cfg.work_dir is not None
+    config_basename = os.path.basename(args.config)
+    dst_cfg_file = os.path.join(cfg.work_dir, config_basename)
+    if not os.path.exists(dst_cfg_file):
+        mmcv.mkdir_or_exist(cfg.work_dir)
+        copyfile(args.config, dst_cfg_file)
+
+    # By default, search work_dir and resume from latest.pth
+    def _epoch_num(name):
+        return int(re.findall('epoch_[0-9]*.pth', name)[0].replace(
+            'epoch_', '').replace('.pth', ''))
+    pths = sorted(glob.glob(
+        os.path.join(cfg.work_dir, 'epoch_*.pth')
+    ), key=_epoch_num)
+    if len(pths) > 0:
+        print("Found {}, will resume from it by default.".format(pths[-1]))
+        cfg.resume_from = pths[-1]
+    # if args.resume_from is not None:
+    #     cfg.resume_from = args.resume_from
+
     cfg.gpus = args.gpus
 
     if args.autoscale_lr:

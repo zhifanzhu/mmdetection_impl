@@ -22,7 +22,8 @@ cd mmdetection
 # Step three: link datasets
 mkdir data
 # ln -s $COCO_ROOT data
-ln -sfn /path/to/work_dirs word_dirs
+ln -sfn /path/to/work_dirs work_dirs
+ln -sfn /path/to/workvids workvids
 ln -sfn /path/to/zoo zoo
 
 # Tensorboard
