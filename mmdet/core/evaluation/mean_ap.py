@@ -243,7 +243,11 @@ def eval_map(det_results,
     Returns:
         tuple: (mAP, [dict, dict, ...])
     """
-    assert len(det_results) == len(gt_bboxes) == len(gt_labels)
+    if not len(det_results) == len(gt_bboxes) == len(gt_labels):
+        print("\nINFO one of len(det_result):{}, len(gt_bboxes):{}, "
+              "len(gt_labels):{} mismatch, "
+              "may because you set num_evals to a smaller number".format(
+                len(det_results), len(gt_bboxes), len(gt_labels)))
     if gt_ignore is not None:
         assert len(gt_ignore) == len(gt_labels)
         for i in range(len(gt_ignore)):

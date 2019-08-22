@@ -175,7 +175,7 @@ class CocoDistEvalmAPHook(DistEvalHook):
 
 class NonDistEvalHook(Hook):
 
-    def __init__(self, dataset, cfg=None, interval=1):
+    def __init__(self, dataset, cfg=None, interval=1, num_evals=-1):
         if isinstance(dataset, Dataset):
             self.dataset = dataset
         elif isinstance(dataset, dict):
@@ -191,6 +191,9 @@ class NonDistEvalHook(Hook):
             workers_per_gpu=cfg.data.workers_per_gpu,
             dist=False,
             shuffle=False)
+        self.num_evals = num_evals
+        if self.num_evals < 0:
+            self.num_evals = len(self.data_loader)
 
     def after_train_epoch(self, runner):
         if not self.every_n_epochs(runner, self.interval):
@@ -199,7 +202,10 @@ class NonDistEvalHook(Hook):
         results = []
         # results = [None for _ in range(len(self.dataset))]
         prog_bar = mmcv.ProgressBar(len(self.dataset))
+        num_evals = self.num_evals
         for i, data in enumerate(self.data_loader):
+            if i == num_evals:
+                break
             with torch.no_grad():
                 result = runner.model(
                     return_loss=False, rescale=True, **data)
@@ -213,6 +219,44 @@ class NonDistEvalHook(Hook):
 
     def evaluate(self):
         raise NotImplementedError
+
+
+class NonDistEvalmAPHook(NonDistEvalHook):
+
+    def evaluate(self, runner, results):
+        gt_bboxes = []
+        gt_labels = []
+        gt_ignore = [] if self.dataset.with_crowd else None
+        for i in range(len(self.dataset)):
+            ann = self.dataset.get_ann_info(i)
+            bboxes = ann['bboxes']
+            labels = ann['labels']
+            if gt_ignore is not None:
+                ignore = np.concatenate([
+                    np.zeros(bboxes.shape[0], dtype=np.bool),
+                    np.ones(ann['bboxes_ignore'].shape[0], dtype=np.bool)
+                ])
+                gt_ignore.append(ignore)
+                bboxes = np.vstack([bboxes, ann['bboxes_ignore']])
+                labels = np.concatenate([labels, ann['labels_ignore']])
+            gt_bboxes.append(bboxes)
+            gt_labels.append(labels)
+        # If the dataset is VOC2007, then use 11 points mAP evaluation.
+        if hasattr(self.dataset, 'year') and self.dataset.year == 2007:
+            ds_name = 'voc07'
+        else:
+            ds_name = self.dataset.CLASSES
+        mean_ap, eval_results = eval_map(
+            results,
+            gt_bboxes,
+            gt_labels,
+            gt_ignore=gt_ignore,
+            scale_ranges=None,
+            iou_thr=0.5,
+            dataset=ds_name,
+            print_summary=True)
+        runner.log_buffer.output['mAP'] = mean_ap
+        runner.log_buffer.ready = True
 
 
 class CocoNonDistEvalmAPHook(NonDistEvalHook):
