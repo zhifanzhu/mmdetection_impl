@@ -17,7 +17,7 @@ from .mean_ap import eval_map
 
 class DistEvalHook(Hook):
 
-    def __init__(self, dataset, interval=1):
+    def __init__(self, dataset, interval=1, num_evals=-1, shuffle=False):
         if isinstance(dataset, Dataset):
             self.dataset = dataset
         elif isinstance(dataset, dict):
@@ -27,6 +27,10 @@ class DistEvalHook(Hook):
                 'dataset must be a Dataset object or a dict, not {}'.format(
                     type(dataset)))
         self.interval = interval
+        self.num_evals = num_evals
+        if self.num_evals < 0:
+            self.num_evals = len(self.dataset)
+        self.shuffle = shuffle
 
     def after_train_epoch(self, runner):
         if not self.every_n_epochs(runner, self.interval):
@@ -35,7 +39,10 @@ class DistEvalHook(Hook):
         results = [None for _ in range(len(self.dataset))]
         if runner.rank == 0:
             prog_bar = mmcv.ProgressBar(len(self.dataset))
-        for idx in range(runner.rank, len(self.dataset), runner.world_size):
+        range_idxs = range(runner.rank, len(self.dataset), runner.world_size)
+        if self.shuffle:
+            np.random.shuffle(range_idxs)
+        for idx in range_idxs[:self.num_evals]:
             data = self.dataset[idx]
             data_gpu = scatter(
                 collate([data], samples_per_gpu=1),
@@ -96,6 +103,8 @@ class DistEvalmAPHook(DistEvalHook):
         # If the dataset is VOC2007, then use 11 points mAP evaluation.
         if hasattr(self.dataset, 'year') and self.dataset.year == 2007:
             ds_name = 'voc07'
+        elif hasattr(self.dataset, 'DATASET_NAME'):
+            ds_name = self.dataset.DATASET_NAME
         else:
             ds_name = self.dataset.CLASSES
         mean_ap, eval_results = eval_map(
@@ -262,6 +271,8 @@ class NonDistEvalmAPHook(NonDistEvalHook):
         # If the dataset is VOC2007, then use 11 points mAP evaluation.
         if hasattr(self.dataset, 'year') and self.dataset.year == 2007:
             ds_name = 'voc07'
+        elif hasattr(self.dataset, 'DATASET_NAME'):
+            ds_name = self.dataset.DATASET_NAME
         else:
             ds_name = self.dataset.CLASSES
         mean_ap, eval_results = eval_map(
