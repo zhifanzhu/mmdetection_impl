@@ -175,7 +175,7 @@ class CocoDistEvalmAPHook(DistEvalHook):
 
 class NonDistEvalHook(Hook):
 
-    def __init__(self, dataset, cfg=None, interval=1, num_evals=-1):
+    def __init__(self, dataset, interval=1, num_evals=-1, shuffle=False):
         if isinstance(dataset, Dataset):
             self.dataset = dataset
         elif isinstance(dataset, dict):
@@ -185,35 +185,53 @@ class NonDistEvalHook(Hook):
                 'dataset must be a Dataset object or a dict, not {}'.format(
                     type(dataset)))
         self.interval = interval
-        self.data_loader = datasets.build_dataloader(
-            self.dataset,
-            imgs_per_gpu=1,
-            workers_per_gpu=cfg.data.workers_per_gpu,
-            dist=False,
-            shuffle=False)
         self.num_evals = num_evals
         if self.num_evals < 0:
-            self.num_evals = len(self.data_loader)
+            self.num_evals = len(self.dataset)
+        self.shuffle = shuffle
+
+    def after_train_iter(self, runner):
+        if not self.every_n_iters(runner, 200):
+            return
+        runner.model.eval()
+        results = []
+        prog_bar = mmcv.ProgressBar(len(self.dataset))
+        for idx in range(len(self.dataset))[:self.num_evals]:
+            data = self.dataset[idx]
+            data_gpu = scatter(
+                collate([data], samples_per_gpu=1),
+                [torch.cuda.current_device()])[0]
+
+            with torch.no_grad():
+                result = runner.model(
+                    return_loss=False, rescale=True, **data_gpu)
+            results.append(result)
+
+            prog_bar.update()
+
+        self.evaluate(runner, results)
 
     def after_train_epoch(self, runner):
         if not self.every_n_epochs(runner, self.interval):
             return
         runner.model.eval()
         results = []
-        # results = [None for _ in range(len(self.dataset))]
         prog_bar = mmcv.ProgressBar(len(self.dataset))
-        num_evals = self.num_evals
-        for i, data in enumerate(self.data_loader):
-            if i == num_evals:
-                break
+        range_idxs = range(len(self.dataset))
+        if self.shuffle:
+            np.random.shuffle(range_idxs)
+        for idx in range_idxs[:self.num_evals]:
+            data = self.dataset[idx]
+            data_gpu = scatter(
+                collate([data], samples_per_gpu=1),
+                [torch.cuda.current_device()])[0]
+
             with torch.no_grad():
                 result = runner.model(
-                    return_loss=False, rescale=True, **data)
+                    return_loss=False, rescale=True, **data_gpu)
             results.append(result)
 
-            batch_size = data['img'][0].size(0)
-            for _ in range(batch_size):
-                prog_bar.update()
+            prog_bar.update()
 
         self.evaluate(runner, results)
 

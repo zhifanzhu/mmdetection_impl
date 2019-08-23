@@ -3,6 +3,9 @@ import os
 import os.path as osp
 import shutil
 import tempfile
+import glob
+import re
+import numpy as np
 
 import mmcv
 import torch
@@ -11,17 +14,19 @@ from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import get_dist_info, load_checkpoint
 
 from mmdet.apis import init_dist
-from mmdet.core import coco_eval, results2json, wrap_fp16_model
+from mmdet.core import eval_map, results2json, wrap_fp16_model
 from mmdet.datasets import build_dataloader, build_dataset
 from mmdet.models import build_detector
 
 
-def single_gpu_test(model, data_loader, show=False):
+def single_gpu_test(model, data_loader, num_evals, show=False):
     model.eval()
     results = []
     dataset = data_loader.dataset
     prog_bar = mmcv.ProgressBar(len(dataset))
     for i, data in enumerate(data_loader):
+        if i == num_evals:
+            break
         with torch.no_grad():
             result = model(return_loss=False, rescale=not show, **data)
         results.append(result)
@@ -35,7 +40,7 @@ def single_gpu_test(model, data_loader, show=False):
     return results
 
 
-def multi_gpu_test(model, data_loader, tmpdir=None):
+def multi_gpu_test(model, data_loader, num_evals, tmpdir=None):
     model.eval()
     results = []
     dataset = data_loader.dataset
@@ -43,6 +48,8 @@ def multi_gpu_test(model, data_loader, tmpdir=None):
     if rank == 0:
         prog_bar = mmcv.ProgressBar(len(dataset))
     for i, data in enumerate(data_loader):
+        if i == num_evals:
+            break
         with torch.no_grad():
             result = model(return_loss=False, rescale=True, **data)
         results.append(result)
@@ -100,11 +107,53 @@ def collect_results(result_part, size, tmpdir=None):
         return ordered_results
 
 
+def get_pascal_gts(dataset):
+    gt_bboxes = []
+    gt_labels = []
+    gt_ignore = []
+    for i in range(len(dataset)):
+        ann = dataset.get_ann_info(i)
+        bboxes = ann['bboxes']
+        labels = ann['labels']
+        if 'bboxes_ignore' in ann:
+            ignore = np.concatenate([
+                np.zeros(bboxes.shape[0], dtype=np.bool),
+                np.ones(ann['bboxes_ignore'].shape[0], dtype=np.bool)
+            ])
+            gt_ignore.append(ignore)
+            bboxes = np.vstack([bboxes, ann['bboxes_ignore']])
+            labels = np.concatenate([labels, ann['labels_ignore']])
+        gt_bboxes.append(bboxes)
+        gt_labels.append(labels)
+    if not gt_ignore:
+        gt_ignore = gt_ignore
+    if hasattr(dataset, 'year') and dataset.year == 2007:
+        dataset_name = 'voc07'
+    else:
+        dataset_name = dataset.CLASSES  # TODO(zhifan): check mean_ap()
+    return gt_bboxes, gt_labels, gt_ignore, dataset_name
+
+
 def parse_args():
+
+    def _str2bool(v):
+        if isinstance(v, bool):
+            return v
+        if v.lower() in ('yes', 'true', 't', 'y', '1'):
+            return True
+        elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected.')
+
     parser = argparse.ArgumentParser(description='MMDet test detector')
     parser.add_argument('config', help='test config file path')
-    parser.add_argument('checkpoint', help='checkpoint file')
-    parser.add_argument('--out', help='output result file')
+    parser.add_argument('--checkpoint', help='checkpoint file')
+    parser.add_argument(
+        '--num-evals', type=int, default=-1, help='number of images to eval')
+    parser.add_argument(
+        '--shuffle', type=_str2bool, default=False,
+        help='whether shuffle eval dataset')
     parser.add_argument(
         '--json_out',
         help='output result file name without extension',
@@ -132,17 +181,26 @@ def parse_args():
 def main():
     args = parse_args()
 
-    assert args.out or args.show or args.json_out, \
-        ('Please specify at least one operation (save or show the results) '
-         'with the argument "--out" or "--show" or "--json_out"')
-
-    if args.out is not None and not args.out.endswith(('.pkl', '.pickle')):
-        raise ValueError('The output file must be a pkl file.')
+    # assert args.show or args.json_out, \
+    #     ('Please specify at least one operation (save or show the results) '
+    #      'with the argument "--out" or "--show" or "--json_out"')
 
     if args.json_out is not None and args.json_out.endswith('.json'):
         args.json_out = args.json_out[:-5]
 
     cfg = mmcv.Config.fromfile(args.config)
+
+    checkpoint_file = args.checkpoint
+    if not checkpoint_file:
+        def _epoch_num(name):
+            return int(re.findall('epoch_[0-9]*.pth', name)[0].replace(
+                'epoch_', '').replace('.pth', ''))
+        pths = sorted(glob.glob(
+            os.path.join(cfg.work_dir, 'epoch_*.pth')
+        ), key=_epoch_num)
+        if len(pths) > 0:
+            print("Found {}, use it as checkpoint by default.".format(pths[-1]))
+            checkpoint_file = pths[-1]
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
@@ -164,14 +222,14 @@ def main():
         imgs_per_gpu=1,
         workers_per_gpu=cfg.data.workers_per_gpu,
         dist=distributed,
-        shuffle=False)
+        shuffle=args.shuffle)  # TODO: hack shuffle True
 
     # build the model and load checkpoint
     model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
     fp16_cfg = cfg.get('fp16', None)
     if fp16_cfg is not None:
         wrap_fp16_model(model)
-    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+    checkpoint = load_checkpoint(model, checkpoint_file, map_location='cpu')
     # old versions did not save class info in checkpoints, this walkaround is
     # for backward compatibility
     if 'CLASSES' in checkpoint['meta']:
@@ -179,35 +237,23 @@ def main():
     else:
         model.CLASSES = dataset.CLASSES
 
+    num_evals = args.num_evals
+    if num_evals < 0:
+        num_evals = len(data_loader)
     if not distributed:
         model = MMDataParallel(model, device_ids=[0])
-        outputs = single_gpu_test(model, data_loader, args.show)
+        outputs = single_gpu_test(model, data_loader, num_evals, args.show)
     else:
         model = MMDistributedDataParallel(model.cuda())
-        outputs = multi_gpu_test(model, data_loader, args.tmpdir)
+        outputs = multi_gpu_test(model, data_loader, num_evals, args.tmpdir)
 
     rank, _ = get_dist_info()
-    if args.out and rank == 0:
-        print('\nwriting results to {}'.format(args.out))
-        mmcv.dump(outputs, args.out)
-        eval_types = args.eval
-        if eval_types:
-            print('Starting evaluate {}'.format(' and '.join(eval_types)))
-            if eval_types == ['proposal_fast']:
-                result_file = args.out
-                coco_eval(result_file, eval_types, dataset.coco)
-            else:
-                if not isinstance(outputs[0], dict):
-                    result_files = results2json(dataset, outputs, args.out)
-                    coco_eval(result_files, eval_types, dataset.coco)
-                else:
-                    for name in outputs[0]:
-                        print('\nEvaluating {}'.format(name))
-                        outputs_ = [out[name] for out in outputs]
-                        result_file = args.out + '.{}'.format(name)
-                        result_files = results2json(dataset, outputs_,
-                                                    result_file)
-                        coco_eval(result_files, eval_types, dataset.coco)
+    if rank == 0:
+        gt_bboxes, gt_labels, gt_ignore, dataset_name = get_pascal_gts(dataset)
+        print('\nStarting evaluate {}'.format(dataset_name))
+        eval_map(outputs, gt_bboxes, gt_labels, gt_ignore,
+                 scale_ranges=None, iou_thr=0.5, dataset=dataset_name,
+                 print_summary=True)
 
     # Save predictions in the COCO json format
     if args.json_out and rank == 0:

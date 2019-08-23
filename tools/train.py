@@ -59,11 +59,11 @@ def main():
     # update configs according to CLI args
     if args.work_dir is not None:
         cfg.work_dir = args.work_dir
-    # copy config file to work_dir
+    # copy(overwrite) config file to work_dir
     assert cfg.work_dir is not None
     config_basename = os.path.basename(args.config)
     dst_cfg_file = os.path.join(cfg.work_dir, config_basename)
-    if not os.path.exists(dst_cfg_file):
+    if not os.path.abspath(dst_cfg_file) == os.path.abspath(args.config):
         mmcv.mkdir_or_exist(cfg.work_dir)
         copyfile(args.config, dst_cfg_file)
 
