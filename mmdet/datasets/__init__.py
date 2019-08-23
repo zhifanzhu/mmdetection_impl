@@ -11,17 +11,14 @@ from .voc import VOCDataset
 from .visdrone_dataset import VisDroneDataset
 from .wider_face import WIDERFaceDataset
 from .xml_style import XMLDataset
+from .imagenet_stillvid import StillVIDDataset
 
 __all__ = [
-    'CustomDataset', 'XMLDataset', 'CocoDataset', 'VOCDataset', 'GroupSampler',
-    'DistributedGroupSampler', 'build_dataloader', 'to_tensor', 'random_scale',
-    'show_ann', 'get_dataset', 'ConcatDataset', 'RepeatDataset',
-    'ExtraAugmentation', 'WIDERFaceDataset',
-    'VisDroneDataset'
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'VOCDataset',
     'CityscapesDataset', 'GroupSampler', 'DistributedGroupSampler',
     'build_dataloader', 'to_tensor', 'random_scale', 'show_ann',
     'ConcatDataset', 'RepeatDataset', 'ExtraAugmentation', 'WIDERFaceDataset',
     'DATASETS', 'build_dataset',
-    'VisDroneDataset'
+    'VisDroneDataset',
+    'StillVIDDataset',
 ]
