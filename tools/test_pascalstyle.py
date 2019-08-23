@@ -129,8 +129,10 @@ def get_pascal_gts(dataset):
         gt_ignore = gt_ignore
     if hasattr(dataset, 'year') and dataset.year == 2007:
         dataset_name = 'voc07'
+    elif hasattr(dataset, 'DATASET_NAME'):
+        dataset_name = dataset.DATASET_NAME
     else:
-        dataset_name = dataset.CLASSES  # TODO(zhifan): check mean_ap()
+        dataset_name = dataset.CLASSES
     return gt_bboxes, gt_labels, gt_ignore, dataset_name
 
 
