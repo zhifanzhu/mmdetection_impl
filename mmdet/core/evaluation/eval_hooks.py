@@ -190,26 +190,26 @@ class NonDistEvalHook(Hook):
             self.num_evals = len(self.dataset)
         self.shuffle = shuffle
 
-    def after_train_iter(self, runner):
-        if not self.every_n_iters(runner, 200):
-            return
-        runner.model.eval()
-        results = []
-        prog_bar = mmcv.ProgressBar(len(self.dataset))
-        for idx in range(len(self.dataset))[:self.num_evals]:
-            data = self.dataset[idx]
-            data_gpu = scatter(
-                collate([data], samples_per_gpu=1),
-                [torch.cuda.current_device()])[0]
-
-            with torch.no_grad():
-                result = runner.model(
-                    return_loss=False, rescale=True, **data_gpu)
-            results.append(result)
-
-            prog_bar.update()
-
-        self.evaluate(runner, results)
+    # def after_train_iter(self, runner):
+    #     if not self.every_n_iters(runner, 200):
+    #         return
+    #     runner.model.eval()
+    #     results = []
+    #     prog_bar = mmcv.ProgressBar(len(self.dataset))
+    #     for idx in range(len(self.dataset))[:self.num_evals]:
+    #         data = self.dataset[idx]
+    #         data_gpu = scatter(
+    #             collate([data], samples_per_gpu=1),
+    #             [torch.cuda.current_device()])[0]
+    #
+    #         with torch.no_grad():
+    #             result = runner.model(
+    #                 return_loss=False, rescale=True, **data_gpu)
+    #         results.append(result)
+    #
+    #         prog_bar.update()
+    #
+    #     self.evaluate(runner, results)
 
     def after_train_epoch(self, runner):
         if not self.every_n_epochs(runner, self.interval):
