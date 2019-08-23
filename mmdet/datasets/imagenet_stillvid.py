@@ -28,9 +28,25 @@ class StillVIDDataset(CustomDataset):
     def load_annotations(self, ann_file):
         img_infos = []
         img_ids = mmcv.list_from_file(ann_file)
-        for id_line in img_ids:
+
+        def _train_get_img_id(id_line):
             _4d_8d, _pos, _frame_id, _num_frames = id_line.split(' ')
             img_id = '{}/{:06d}'.format(_4d_8d, int(_frame_id))
+            return img_id
+
+        def _val_get_img_id(id_line):
+            img_id, _global_index = id_line.split(' ')
+            return img_id
+
+        if img_ids[0].split('/')[0] == 'train':
+            img_id_func = _train_get_img_id
+        elif img_ids[0].split('/')[0] == 'val':
+            img_id_func = _val_get_img_id
+        else:
+            raise ValueError("Unknown prefix in annoation txt file.")
+
+        for id_line in img_ids:
+            img_id = img_id_func(id_line)
             filename = 'Data/VID/{}.JPEG'.format(img_id)
             xml_path = osp.join(self.img_prefix, 'Annotations/VID',
                                 '{}.xml'.format(img_id))
