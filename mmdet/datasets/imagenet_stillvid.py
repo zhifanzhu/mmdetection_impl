@@ -13,11 +13,11 @@ class StillVIDDataset(CustomDataset):
     """ Imagenet VID dataset for still image detection. This is in contrast to
     Imagenet seqVID dataset which does produce data for snippet level detection."""
 
-    CLASSES = ('n02691156' 'n02419796' 'n02131653' 'n02834778' 'n01503061' 'n02924116'
-               'n02958343' 'n02402425' 'n02084071' 'n02121808' 'n02503517' 'n02118333'
-               'n02510455' 'n02342885' 'n02374451' 'n02129165' 'n01674464' 'n02484322'
-               'n03790512' 'n02324045' 'n02509815' 'n02411705' 'n01726692' 'n02355227'
-               'n02129604' 'n04468005' 'n01662784' 'n04530566' 'n02062744' 'n02391049')
+    CLASSES = ('n02691156', 'n02419796', 'n02131653', 'n02834778', 'n01503061', 'n02924116',
+               'n02958343', 'n02402425', 'n02084071', 'n02121808', 'n02503517', 'n02118333',
+               'n02510455', 'n02342885', 'n02374451', 'n02129165', 'n01674464', 'n02484322',
+               'n03790512', 'n02324045', 'n02509815', 'n02411705', 'n01726692', 'n02355227',
+               'n02129604', 'n04468005', 'n01662784', 'n04530566', 'n02062744', 'n02391049',)
     DATASET_NAME = 'vid'
 
     def __init__(self, min_size=None, **kwargs):
@@ -31,7 +31,7 @@ class StillVIDDataset(CustomDataset):
         for id_line in img_ids:
             _4d_8d, _pos, _frame_id, _num_frames = id_line.split(' ')
             img_id = '{}/{:06d}'.format(_4d_8d, int(_frame_id))
-            filename = 'Data/VID/{}.jpg'.format(img_id)
+            filename = 'Data/VID/{}.JPEG'.format(img_id)
             xml_path = osp.join(self.img_prefix, 'Annotations/VID',
                                 '{}.xml'.format(img_id))
             tree = ET.parse(xml_path)
@@ -56,7 +56,6 @@ class StillVIDDataset(CustomDataset):
         for obj in root.findall('object'):
             name = obj.find('name').text
             label = self.cat2label[name]
-            difficult = int(obj.find('difficult').text)
             bnd_box = obj.find('bndbox')
             bbox = [
                 int(bnd_box.find('xmin').text),
@@ -71,7 +70,7 @@ class StillVIDDataset(CustomDataset):
                 h = bbox[3] - bbox[1]
                 if w < self.min_size or h < self.min_size:
                     ignore = True
-            if difficult or ignore:
+            if ignore:
                 bboxes_ignore.append(bbox)
                 labels_ignore.append(label)
             else:
