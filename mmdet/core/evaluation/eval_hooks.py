@@ -40,12 +40,12 @@ class DistEvalHook(Hook):
         if not self.every_n_epochs(runner, self.interval):
             return
         runner.model.eval()
-        if runner.rank == 0:
-            prog_bar = mmcv.ProgressBar(len(self.dataset))
         range_idxs = list(range(runner.rank, len(self.dataset), runner.world_size))
         if self.shuffle:
             np.random.shuffle(range_idxs)
         range_idxs = range_idxs[:self.num_evals]
+        if runner.rank == 0:
+            prog_bar = mmcv.ProgressBar(len(range_idxs))
         results = []
         for idx in range_idxs:
             data = self.dataset[idx]
@@ -243,12 +243,12 @@ class NonDistEvalHook(Hook):
         if not self.every_n_epochs(runner, self.interval):
             return
         runner.model.eval()
-        results = []
-        prog_bar = mmcv.ProgressBar(len(self.dataset))
         range_idxs = list(range(len(self.dataset)))
         if self.shuffle:
             np.random.shuffle(range_idxs)
         range_idxs = range_idxs[:self.num_evals]
+        prog_bar = mmcv.ProgressBar(len(range_idxs))
+        results = []
         for idx in range_idxs:
             data = self.dataset[idx]
             data_gpu = scatter(

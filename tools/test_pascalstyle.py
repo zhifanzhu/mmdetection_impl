@@ -203,6 +203,8 @@ def main():
         if len(pths) > 0:
             print("Found {}, use it as checkpoint by default.".format(pths[-1]))
             checkpoint_file = pths[-1]
+    if not checkpoint_file:
+        raise ValueError("Checkpoints not found, check work_dir non empty.")
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
