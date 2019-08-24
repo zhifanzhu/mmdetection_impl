@@ -15,6 +15,8 @@ from .coco_utils import fast_eval_recall, results2json
 from .mean_ap import eval_map
 
 
+# TODO(zhifan): fix num_evals and shuffle for COCO
+
 class DistEvalHook(Hook):
 
     def __init__(self, dataset, interval=1, num_evals=-1, shuffle=False):
@@ -31,18 +33,21 @@ class DistEvalHook(Hook):
         if self.num_evals < 0:
             self.num_evals = len(self.dataset)
         self.shuffle = shuffle
+        if hasattr(self.dataset, 'coco') and self.shuffle and self.num_evals > 0:
+            raise NotImplementedError
 
     def after_train_epoch(self, runner):
         if not self.every_n_epochs(runner, self.interval):
             return
         runner.model.eval()
-        results = [None for _ in range(len(self.dataset))]
         if runner.rank == 0:
             prog_bar = mmcv.ProgressBar(len(self.dataset))
-        range_idxs = range(runner.rank, len(self.dataset), runner.world_size)
+        range_idxs = list(range(runner.rank, len(self.dataset), runner.world_size))
         if self.shuffle:
             np.random.shuffle(range_idxs)
-        for idx in range_idxs[:self.num_evals]:
+        range_idxs = range_idxs[:self.num_evals]
+        results = []
+        for idx in range_idxs:
             data = self.dataset[idx]
             data_gpu = scatter(
                 collate([data], samples_per_gpu=1),
@@ -52,7 +57,7 @@ class DistEvalHook(Hook):
             with torch.no_grad():
                 result = runner.model(
                     return_loss=False, rescale=True, **data_gpu)
-            results[idx] = result
+            results.append(result)
 
             batch_size = runner.world_size
             if runner.rank == 0:
@@ -64,15 +69,21 @@ class DistEvalHook(Hook):
             dist.barrier()
             for i in range(1, runner.world_size):
                 tmp_file = osp.join(runner.work_dir, 'temp_{}.pkl'.format(i))
+                tmp_range = osp.join(runner.work_dir, 'temp_range_{}.pkl'.format(i))
                 tmp_results = mmcv.load(tmp_file)
-                for idx in range(i, len(results), runner.world_size):
-                    results[idx] = tmp_results[idx]
+                tmp_range_idxs = mmcv.load(tmp_range)
+                results.extend(tmp_results)
+                range_idxs.extend(tmp_range_idxs)
                 os.remove(tmp_file)
-            self.evaluate(runner, results)
+                os.remove(tmp_range_idxs)
+            self.evaluate(runner, results, range_idxs)
         else:
             tmp_file = osp.join(runner.work_dir,
                                 'temp_{}.pkl'.format(runner.rank))
+            tmp_range = osp.join(runner.work_dir,
+                                 'temp_range_{}.pkl'.format(runner.rank))
             mmcv.dump(results, tmp_file)
+            mmcv.dump(range_idxs, tmp_range)
             dist.barrier()
         dist.barrier()
 
@@ -82,11 +93,13 @@ class DistEvalHook(Hook):
 
 class DistEvalmAPHook(DistEvalHook):
 
-    def evaluate(self, runner, results):
+    def evaluate(self, runner, results, range_idxs=None):
         gt_bboxes = []
         gt_labels = []
         gt_ignore = [] if self.dataset.with_crowd else None
-        for i in range(len(self.dataset)):
+        if range_idxs is None:
+            range_idxs = range(len(self.dataset))
+        for i in range_idxs:
             ann = self.dataset.get_ann_info(i)
             bboxes = ann['bboxes']
             labels = ann['labels']
@@ -198,14 +211,20 @@ class NonDistEvalHook(Hook):
         if self.num_evals < 0:
             self.num_evals = len(self.dataset)
         self.shuffle = shuffle
+        if hasattr(self.dataset, 'coco') and self.shuffle and self.num_evals > 0:
+            raise NotImplementedError
 
     # def after_train_iter(self, runner):
-    #     if not self.every_n_iters(runner, 200):
+    #     if not self.every_n_iters(runner, 100):
     #         return
     #     runner.model.eval()
     #     results = []
     #     prog_bar = mmcv.ProgressBar(len(self.dataset))
-    #     for idx in range(len(self.dataset))[:self.num_evals]:
+    #     range_idxs = list(range(len(self.dataset)))
+    #     if self.shuffle:
+    #         np.random.shuffle(range_idxs)
+    #     range_idxs = range_idxs[:self.num_evals]
+    #     for idx in range_idxs:
     #         data = self.dataset[idx]
     #         data_gpu = scatter(
     #             collate([data], samples_per_gpu=1),
@@ -218,7 +237,7 @@ class NonDistEvalHook(Hook):
     #
     #         prog_bar.update()
     #
-    #     self.evaluate(runner, results)
+    #     self.evaluate(runner, results, range_idxs=range_idxs)
 
     def after_train_epoch(self, runner):
         if not self.every_n_epochs(runner, self.interval):
@@ -226,10 +245,11 @@ class NonDistEvalHook(Hook):
         runner.model.eval()
         results = []
         prog_bar = mmcv.ProgressBar(len(self.dataset))
-        range_idxs = range(len(self.dataset))
+        range_idxs = list(range(len(self.dataset)))
         if self.shuffle:
             np.random.shuffle(range_idxs)
-        for idx in range_idxs[:self.num_evals]:
+        range_idxs = range_idxs[:self.num_evals]
+        for idx in range_idxs:
             data = self.dataset[idx]
             data_gpu = scatter(
                 collate([data], samples_per_gpu=1),
@@ -242,7 +262,7 @@ class NonDistEvalHook(Hook):
 
             prog_bar.update()
 
-        self.evaluate(runner, results)
+        self.evaluate(runner, results, range_idxs=range_idxs)
 
     def evaluate(self):
         raise NotImplementedError
@@ -250,11 +270,13 @@ class NonDistEvalHook(Hook):
 
 class NonDistEvalmAPHook(NonDistEvalHook):
 
-    def evaluate(self, runner, results):
+    def evaluate(self, runner, results, range_idxs=None):
         gt_bboxes = []
         gt_labels = []
         gt_ignore = [] if self.dataset.with_crowd else None
-        for i in range(len(self.dataset)):
+        if range_idxs is None:
+            range_idxs = range(len(self.dataset))
+        for i in range_idxs:
             ann = self.dataset.get_ann_info(i)
             bboxes = ann['bboxes']
             labels = ann['labels']

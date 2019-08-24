@@ -116,7 +116,7 @@ log_config = dict(
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=1, num_evals=2000)
+evaluation = dict(interval=1, num_evals=5000, shuffle=True)
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
