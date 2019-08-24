@@ -122,7 +122,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/retinanet_r50_voc12'
+work_dir = './workvids/retinanet_r50_vid15frames'
 load_from = './zoo/retinanet_r50_fpn_2x_20190616-75574209.pth'
 resume_from = None
 workflow = [('train', 1)]
