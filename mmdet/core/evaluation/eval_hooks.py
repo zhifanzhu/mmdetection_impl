@@ -75,7 +75,7 @@ class DistEvalHook(Hook):
                 results.extend(tmp_results)
                 range_idxs.extend(tmp_range_idxs)
                 os.remove(tmp_file)
-                os.remove(tmp_range_idxs)
+                os.remove(tmp_range)
             self.evaluate(runner, results, range_idxs)
         else:
             tmp_file = osp.join(runner.work_dir,
