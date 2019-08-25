@@ -76,7 +76,7 @@ data = dict(
             resize_keep_ratio=False),
         dict(
             type=det_dataset_type,
-            ann_file=data_root + 'ImageSets/DET/DET_train_30classes.txt',
+            ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,
             img_scale=(512, 512),
             img_norm_cfg=img_norm_cfg,
