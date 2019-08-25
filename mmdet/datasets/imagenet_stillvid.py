@@ -29,14 +29,14 @@ class StillVIDDataset(CustomDataset):
         img_infos = []
         img_ids = mmcv.list_from_file(ann_file)
 
-        def _train_get_img_id(id_line):
+        def _train_get_img_id(_id_line):
             _4d_8d, _pos, _frame_id, _num_frames = id_line.split(' ')
-            img_id = '{}/{:06d}'.format(_4d_8d, int(_frame_id))
-            return img_id
+            _img_id = '{}/{:06d}'.format(_4d_8d, int(_frame_id))
+            return _img_id
 
-        def _val_get_img_id(id_line):
-            img_id, _global_index = id_line.split(' ')
-            return img_id
+        def _val_get_img_id(_id_line):
+            _img_id, _global_index = id_line.split(' ')
+            return _img_id
 
         if img_ids[0].split('/')[0] == 'train':
             img_id_func = _train_get_img_id

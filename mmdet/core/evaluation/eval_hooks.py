@@ -45,7 +45,7 @@ class DistEvalHook(Hook):
             np.random.shuffle(range_idxs)
         range_idxs = range_idxs[:self.num_evals]
         if runner.rank == 0:
-            prog_bar = mmcv.ProgressBar(len(range_idxs))
+            prog_bar = mmcv.ProgressBar(len(range_idxs) * runner.world_size)
         results = []
         for idx in range_idxs:
             data = self.dataset[idx]
