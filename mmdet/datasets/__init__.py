@@ -12,6 +12,7 @@ from .visdrone_dataset import VisDroneDataset
 from .wider_face import WIDERFaceDataset
 from .xml_style import XMLDataset
 from .imagenet_stillvid import StillVIDDataset
+from .imagenet_det30 import DET30Dataset
 
 __all__ = [
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'VOCDataset',
@@ -20,5 +21,5 @@ __all__ = [
     'ConcatDataset', 'RepeatDataset', 'ExtraAugmentation', 'WIDERFaceDataset',
     'DATASETS', 'build_dataset',
     'VisDroneDataset',
-    'StillVIDDataset',
+    'StillVIDDataset', 'DET30Dataset'
 ]
