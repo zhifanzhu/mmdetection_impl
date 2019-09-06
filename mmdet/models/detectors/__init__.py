@@ -13,10 +13,14 @@ from .retinanet import RetinaNet
 from .rpn import RPN
 from .single_stage import SingleStageDetector
 from .two_stage import TwoStageDetector
+from .seq_base import SeqBaseDetector
+from .seq_single_stage import SeqSingleStageDetector
+from .seq_retinanet import SeqRetinaNet
 
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
     'FastRCNN', 'FasterRCNN', 'MaskRCNN', 'CascadeRCNN', 'HybridTaskCascade',
     'DoubleHeadRCNN', 'RetinaNet', 'FCOS', 'GridRCNN', 'MaskScoringRCNN',
-    'RepPointsDetector'
+    'RepPointsDetector',
+    'SeqBaseDetector', 'SeqSingleStageDetector', 'SeqRetinaNet',
 ]
