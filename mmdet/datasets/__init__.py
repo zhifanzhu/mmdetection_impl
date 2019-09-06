@@ -6,7 +6,6 @@ from .dataset_wrappers import ConcatDataset, RepeatDataset
 from .extra_aug import ExtraAugmentation
 from .loader import DistributedGroupSampler, GroupSampler, build_dataloader
 from .registry import DATASETS
-from .utils import random_scale, show_ann, to_tensor
 from .voc import VOCDataset
 from .visdrone_dataset import VisDroneDataset
 from .wider_face import WIDERFaceDataset
@@ -17,9 +16,8 @@ from .imagenet_det30 import DET30Dataset
 __all__ = [
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'VOCDataset',
     'CityscapesDataset', 'GroupSampler', 'DistributedGroupSampler',
-    'build_dataloader', 'to_tensor', 'random_scale', 'show_ann',
-    'ConcatDataset', 'RepeatDataset', 'ExtraAugmentation', 'WIDERFaceDataset',
-    'DATASETS', 'build_dataset',
+    'build_dataloader', 'ConcatDataset', 'RepeatDataset', 'ExtraAugmentation',
+    'WIDERFaceDataset', 'DATASETS', 'build_dataset',
     'VisDroneDataset',
-    'StillVIDDataset', 'DET30Dataset'
+    'StillVIDDataset', 'DET30Dataset',
 ]

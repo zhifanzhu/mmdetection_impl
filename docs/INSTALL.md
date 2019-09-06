@@ -7,7 +7,7 @@
 - PyTorch 1.1 or higher
 - CUDA 9.0 or higher
 - NCCL 2
-- GCC 4.9 or higher
+- GCC(G++) 4.9 or higher
 - [mmcv](https://github.com/open-mmlab/mmcv)
 
 We have tested the following versions of OS and softwares:
@@ -15,7 +15,7 @@ We have tested the following versions of OS and softwares:
 - OS: Ubuntu 16.04/18.04 and CentOS 7.2
 - CUDA: 9.0/9.2/10.0
 - NCCL: 2.1.15/2.2.13/2.3.7/2.4.2
-- GCC: 4.9/5.3/5.4/7.3
+- GCC(G++): 4.9/5.3/5.4/7.3
 
 ### Install mmdetection
 
@@ -55,7 +55,7 @@ It is recommended that you run step d each time you pull some updates from githu
 
 ### Another option: Docker Image
 
-We provide a [Dockerfile](docker/Dockerfile) to build an image.
+We provide a [Dockerfile](../docker/Dockerfile) to build an image.
 
 ```shell
 # build an image with PyTorch 1.1, CUDA 10.0 and CUDNN 7.5

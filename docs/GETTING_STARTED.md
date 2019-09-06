@@ -89,12 +89,10 @@ model = init_detector(config_file, checkpoint_file, device='cuda:0')
 # test a single image and show the results
 img = 'test.jpg'  # or img = mmcv.imread(img), which will only load it once
 result = inference_detector(model, img)
+# visualize the results in a new window
 show_result(img, result, model.CLASSES)
-
-# test a list of images and write the results to image files
-imgs = ['test1.jpg', 'test2.jpg']
-for i, result in enumerate(inference_detector(model, imgs)):
-    show_result(imgs[i], result, model.CLASSES, out_file='result_{}.jpg'.format(i))
+# or save the visualization results to image files
+show_result(img, result, model.CLASSES, out_file='result.jpg')
 
 # test a video and show the results
 video = mmcv.VideoReader('video.mp4')
@@ -103,7 +101,7 @@ for frame in video:
     show_result(frame, result, model.CLASSES, wait_time=1)
 ```
 
-A notebook demo can be found in [demo/inference_demo.ipynb](demo/inference_demo.ipynb).
+A notebook demo can be found in [demo/inference_demo.ipynb](../demo/inference_demo.ipynb).
 
 
 ## Train a model
@@ -133,7 +131,7 @@ If you want to specify the working directory in the command, you can add an argu
 
 Optional arguments are:
 
-- `--validate` (**strongly recommended**): Perform evaluation at every k (default value is 1, which can be modified like [this](configs/mask_rcnn_r50_fpn_1x.py#L174)) epochs during the training.
+- `--validate` (**strongly recommended**): Perform evaluation at every k (default value is 1, which can be modified like [this](../configs/mask_rcnn_r50_fpn_1x.py#L174)) epochs during the training.
 - `--work_dir ${WORK_DIR}`: Override the working directory specified in the config file.
 - `--resume_from ${CHECKPOINT_FILE}`: Resume from a previous checkpoint file.
 
@@ -155,7 +153,7 @@ Here is an example of using 16 GPUs to train Mask R-CNN on the dev partition.
 ./tools/slurm_train.sh dev mask_r50_1x configs/mask_rcnn_r50_fpn_1x.py /nfs/xxxx/mask_rcnn_r50_fpn_1x 16
 ```
 
-You can check [slurm_train.sh](tools/slurm_train.sh) for full arguments and environment variables.
+You can check [slurm_train.sh](../tools/slurm_train.sh) for full arguments and environment variables.
 
 If you have just multiple machines connected with ethernet, you can refer to
 pytorch [launch utility](https://pytorch.org/docs/stable/distributed_deprecated.html#launch-utility).
@@ -168,7 +166,7 @@ Usually it is slow if you do not have high speed networking like infiniband.
 
 You can plot loss/mAP curves given a training log file. Run `pip install seaborn` first to install the dependency.
 
-![loss curve image](demo/loss_curve.png)
+![loss curve image](../demo/loss_curve.png)
 
 ```shell
 python tools/analyze_logs.py plot_curve [--keys ${KEYS}] [--title ${TITLE}] [--legend ${LEGEND}] [--backend ${BACKEND}] [--style ${STYLE}] [--out ${OUT_FILE}]
@@ -324,12 +322,12 @@ There are two ways to work with custom datasets.
 
   You can write a new Dataset class inherited from `CustomDataset`, and overwrite two methods
   `load_annotations(self, ann_file)` and `get_ann_info(self, idx)`,
-  like [CocoDataset](mmdet/datasets/coco.py) and [VOCDataset](mmdet/datasets/voc.py).
+  like [CocoDataset](../mmdet/datasets/coco.py) and [VOCDataset](../mmdet/datasets/voc.py).
 
 - offline conversion
 
   You can convert the annotation format to the expected format above and save it to
-  a pickle or json file, like [pascal_voc.py](tools/convert_datasets/pascal_voc.py).
+  a pickle or json file, like [pascal_voc.py](../tools/convert_datasets/pascal_voc.py).
   Then you can simply use `CustomDataset`.
 
 ### Develop new components
