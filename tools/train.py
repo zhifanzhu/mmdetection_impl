@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument(
         '--validate',
         action='store_true',
+        default=True,
         help='whether to evaluate the checkpoint during training')
     parser.add_argument(
         '--gpus',
