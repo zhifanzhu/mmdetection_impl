@@ -8,11 +8,11 @@ class SeqRetinaNet(SeqSingleStageDetector):
     def __init__(self,
                  backbone,
                  neck,
-                 temporal_module,
                  bbox_head,
+                 temporal_module=None,
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None):
         super(SeqRetinaNet, self).__init__(
-            backbone, neck, temporal_module, bbox_head,
+            backbone, neck, bbox_head, temporal_module,
             train_cfg, test_cfg, pretrained)

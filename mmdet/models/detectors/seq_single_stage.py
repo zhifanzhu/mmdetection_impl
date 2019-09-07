@@ -12,8 +12,8 @@ class SeqSingleStageDetector(SeqBaseDetector):
     def __init__(self,
                  backbone,
                  neck=None,
-                 temporal_module=None,
                  bbox_head=None,
+                 temporal_module=None,
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None):
@@ -40,15 +40,14 @@ class SeqSingleStageDetector(SeqBaseDetector):
                 self.neck.init_weights()
         self.bbox_head.init_weights()
 
-    def extract_feat(self, img):
+    def extract_feat(self, img, seq_len):
         # assert len(img.shape) == 4
-        batch, time, chan, height, width = img.shape
-        img = img.reshape([batch*time, chan, height, width])
+        batch = img.size(0) // seq_len
         x = self.backbone(img)  # [[b*t, c1, h1, w1]*4]
         if self.with_neck:
             x = self.neck(x)
         if self.with_temporal_module:
-            x = [v.reshape([batch, time, *v.shape[1:]])
+            x = [v.reshape([batch, seq_len, *v.shape[1:]])
                  for v in x]
             x_seq = [v.permute([1, 0, 2, 3, 4]) for v in x]  # [[t, b, c1, h1, w1]*4]
             x = self.temporal_module(x_seq)  # [[b*t, c, h, *w]*4]
@@ -62,15 +61,15 @@ class SeqSingleStageDetector(SeqBaseDetector):
     def forward_train(self,
                       img,
                       img_metas,
+                      seq_len,
                       gt_bboxes,
                       gt_labels,
                       gt_bboxes_ignore=None):
-        x = self.extract_feat(img)
+        x = self.extract_feat(img, seq_len)
         outs = self.bbox_head(x)
         loss_inputs = outs + (gt_bboxes, gt_labels, img_metas, self.train_cfg)
         losses = self.bbox_head.loss(
             *loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
-        # TODO(zhifan) determine losses shape, reshape back here?
         return losses
 
     def simple_test(self, img, img_meta, rescale=False):

@@ -1,6 +1,9 @@
 import logging
 from abc import ABCMeta, abstractmethod
 
+from functools import reduce
+import operator
+
 import mmcv
 import numpy as np
 import pycocotools.mask as maskUtils
@@ -39,7 +42,7 @@ class SeqBaseDetector(nn.Module):
         return hasattr(self, 'mask_head') and self.mask_head is not None
 
     @abstractmethod
-    def extract_feat(self, imgs):
+    def extract_feat(self, imgs, seq_len):
         pass
 
     def extract_feats(self, imgs):
@@ -87,6 +90,21 @@ class SeqBaseDetector(nn.Module):
     @auto_fp16(apply_to=('img', ))
     def forward(self, img, img_meta, return_loss=True, **kwargs):
         if return_loss:
+            # During train, collate_fn add batch to 0th dim,
+            # i.e. stack for 'img', list append for others
+            # the inputs are [B, T, C, H, W] like,
+            #
+            # We expand img to [B*T, C, H, W] for subclass,
+            # and make list of list to flattened list,
+            # and pass an extra parameter : seq_len
+            batch, seq_len, chan, height, width = img.shape
+            img = img.reshape([batch*seq_len, chan, height, width])
+            img_meta = reduce(operator.concat, img_meta)
+            kwargs = {
+                key: reduce(operator.concat, value)
+                for key, value in kwargs.items()
+            }
+            kwargs['seq_len'] = seq_len
             return self.forward_train(img, img_meta, **kwargs)
         else:
             return self.forward_test(img, img_meta, **kwargs)

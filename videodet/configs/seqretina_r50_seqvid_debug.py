@@ -1,6 +1,6 @@
 # model settings
 model = dict(
-    type='RetinaNet',
+    type='SeqRetinaNet',
     pretrained='torchvision://resnet50',
     backbone=dict(
         type='ResNet',
@@ -53,7 +53,8 @@ test_cfg = dict(
     nms=dict(type='nms', iou_thr=0.5),
     max_per_img=100)
 # dataset settings
-dataset_type = 'StillVIDDataset'
+dataset_type = 'SeqVIDDataset'
+seq_len = 3
 data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
@@ -87,17 +88,20 @@ data = dict(
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
+        seq_len=seq_len,
+        ann_file=data_root + 'ImageSets/VID/VID_train_video_debug.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        seq_len=seq_len,
+        ann_file=data_root + 'ImageSets/VID/VID_train_video_debug.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        seq_len=seq_len,
+        ann_file=data_root + 'ImageSets/VID/VID_val_frames_debug.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
@@ -113,7 +117,7 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=50,
+    interval=1,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
@@ -125,7 +129,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/retinanet_r50_vid15frames'
+work_dir = './workvids/retina_r50_seqvid_debug'
 load_from = './zoo/retinanet_r50_fpn_2x_20190616-75574209.pth'
 resume_from = None
 workflow = [('train', 1)]
