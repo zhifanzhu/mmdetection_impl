@@ -51,7 +51,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print("DID YOU REMEMBER TO ADD --validate?")
+    print("\t\tDID YOU REMEMBER TO ADD --validate?")
 
     cfg = Config.fromfile(args.config)
     # set cudnn_benchmark

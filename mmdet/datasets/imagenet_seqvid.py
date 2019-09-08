@@ -244,7 +244,7 @@ class SeqVIDDataset(Dataset):
             for frame_id in range(start_frame, num_frames):
                 for _ in range(repeat):
                     frame_ids.append(frame_id)
-            for _ in residue:
+            for _ in range(residue):
                 frame_ids.append(num_frames - 1)
         else:
             if self.skip:
