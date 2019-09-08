@@ -216,31 +216,6 @@ class NonDistEvalHook(Hook):
         if hasattr(self.dataset, 'coco') and self.shuffle and self.num_evals > 0:
             raise NotImplementedError
 
-    # def after_train_iter(self, runner):
-    #     if not self.every_n_iters(runner, 100):
-    #         return
-    #     runner.model.eval()
-    #     results = []
-    #     prog_bar = mmcv.ProgressBar(len(self.dataset))
-    #     range_idxs = list(range(len(self.dataset)))
-    #     if self.shuffle:
-    #         np.random.shuffle(range_idxs)
-    #     range_idxs = range_idxs[:self.num_evals]
-    #     for idx in range_idxs:
-    #         data = self.dataset[idx]
-    #         data_gpu = scatter(
-    #             collate([data], samples_per_gpu=1),
-    #             [torch.cuda.current_device()])[0]
-    #
-    #         with torch.no_grad():
-    #             result = runner.model(
-    #                 return_loss=False, rescale=True, **data_gpu)
-    #         results.append(result)
-    #
-    #         prog_bar.update()
-    #
-    #     self.evaluate(runner, results, range_idxs=range_idxs)
-
     def after_train_epoch(self, runner):
         if not self.every_n_epochs(runner, self.interval):
             return
@@ -347,3 +322,90 @@ class CocoNonDistEvalmAPHook(NonDistEvalHook):
         runner.log_buffer.ready = True
         for res_type in res_types:
             os.remove(result_files[res_type])
+
+
+class NonDistSeqEvalmAPHook(Hook):
+    """ Currently, the only diff is results extend instead of append."""
+
+    def __init__(self, dataset, interval=1, num_evals=-1, shuffle=False):
+        if isinstance(dataset, Dataset):
+            self.dataset = dataset
+        elif isinstance(dataset, dict):
+            self.dataset = datasets.build_dataset(dataset, {'test_mode': True})
+        else:
+            raise TypeError(
+                'dataset must be a Dataset object or a dict, not {}'.format(
+                    type(dataset)))
+        self.interval = interval
+        self.num_evals = num_evals
+        if self.num_evals < 0:
+            self.num_evals = len(self.dataset)
+        self.shuffle = shuffle
+        if hasattr(self.dataset, 'coco') and self.shuffle and self.num_evals > 0:
+            raise NotImplementedError
+
+    def after_train_epoch(self, runner):
+        if not self.every_n_epochs(runner, self.interval):
+            return
+        runner.model.eval()
+        range_idxs = list(range(len(self.dataset)))
+        if self.shuffle:
+            np.random.shuffle(range_idxs)
+        range_idxs = range_idxs[:self.num_evals]
+        prog_bar = mmcv.ProgressBar(len(range_idxs))
+        results = []
+        for idx in range_idxs:
+            data = self.dataset[idx]
+            data_gpu = scatter(
+                collate([data], samples_per_gpu=1),
+                [torch.cuda.current_device()])[0]
+
+            with torch.no_grad():
+                result, out_dict = runner.model(
+                    return_loss=False, rescale=True, **data_gpu)
+            results.extend(result)
+
+            prog_bar.update()
+
+        self.evaluate(runner, results, range_idxs=range_idxs)
+
+    def evaluate(self, runner, results, range_idxs=None):
+        """ If more than 'seq_len' frames per video, only first 'seq_len' will
+        be loaded.
+        """
+        gt_bboxes = []
+        gt_labels = []
+        gt_ignore = []
+        if range_idxs is None:
+            range_idxs = range(len(self.dataset))
+        for i in range_idxs:
+            frame_ids = self.dataset.select_test_clip(i)
+            anns = self.dataset.get_ann_info(i, frame_ids)
+            for ann in anns:
+                bboxes = ann['bboxes']
+                labels = ann['labels']
+                if gt_ignore is not None:
+                    ignore = np.concatenate([
+                        np.zeros(bboxes.shape[0], dtype=np.bool),
+                        np.ones(ann['bboxes_ignore'].shape[0], dtype=np.bool)
+                    ])
+                    gt_ignore.append(ignore)
+                    bboxes = np.vstack([bboxes, ann['bboxes_ignore']])
+                    labels = np.concatenate([labels, ann['labels_ignore']])
+                gt_bboxes.append(bboxes)
+                gt_labels.append(labels)
+        if hasattr(self.dataset, 'DATASET_NAME'):
+            ds_name = self.dataset.DATASET_NAME
+        else:
+            ds_name = self.dataset.CLASSES
+        mean_ap, eval_results = eval_map(
+            results,
+            gt_bboxes,
+            gt_labels,
+            gt_ignore=gt_ignore,
+            scale_ranges=None,
+            iou_thr=0.5,
+            dataset=ds_name,
+            print_summary=True)
+        runner.log_buffer.output['mAP'] = mean_ap
+        runner.log_buffer.ready = True

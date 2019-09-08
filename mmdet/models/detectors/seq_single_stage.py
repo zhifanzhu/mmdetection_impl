@@ -40,17 +40,10 @@ class SeqSingleStageDetector(SeqBaseDetector):
                 self.neck.init_weights()
         self.bbox_head.init_weights()
 
-    def extract_feat(self, img, seq_len):
-        # assert len(img.shape) == 4
-        batch = img.size(0) // seq_len
-        x = self.backbone(img)  # [[b*t, c1, h1, w1]*4]
+    def extract_feat(self, img):
+        x = self.backbone(img)
         if self.with_neck:
             x = self.neck(x)
-        if self.with_temporal_module:
-            x = [v.reshape([batch, seq_len, *v.shape[1:]])
-                 for v in x]
-            x_seq = [v.permute([1, 0, 2, 3, 4]) for v in x]  # [[t, b, c1, h1, w1]*4]
-            x = self.temporal_module(x_seq)  # [[b*t, c, h, *w]*4]
         return x
 
     def forward_dummy(self, img):
@@ -65,15 +58,30 @@ class SeqSingleStageDetector(SeqBaseDetector):
                       gt_bboxes,
                       gt_labels,
                       gt_bboxes_ignore=None):
-        x = self.extract_feat(img, seq_len)
+        batch = img.size(0) // seq_len
+        x = self.extract_feat(img)  # [[b*t, c1, h1, w1]*5]
+        if self.with_temporal_module:
+            x = [v.reshape([batch, seq_len, *v.shape[1:]])
+                 for v in x]
+            x_seq = [v.permute([1, 0, 2, 3, 4]) for v in x]  # [[t, b, c1, h1, w1]*5]
+            x, _ = self.temporal_module(x_seq, in_dict=None, is_train=True)
+            # x = [[b*t, c, h, *w]*5]
+
         outs = self.bbox_head(x)
         loss_inputs = outs + (gt_bboxes, gt_labels, img_metas, self.train_cfg)
         losses = self.bbox_head.loss(
             *loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
         return losses
 
-    def simple_test(self, img, img_meta, rescale=False):
-        x = self.extract_feat(img)
+    def temporal_test(self, img, img_meta, seq_len, rescale=False):
+        x = self.extract_feat(img)  # [[1*1, c1, h1, w1]*5]
+        out_dict = None
+        if self.with_temporal_module:
+            x = [v.reshape([1, -1, *v.shape[1:]])
+                 for v in x]
+            x_seq = [v.permute([1, 0, 2, 3, 4]) for v in x]
+            x, out_dict = self.temporal_module(x_seq, in_dict=None, is_train=True)
+
         outs = self.bbox_head(x)
         bbox_inputs = outs + (img_meta, self.test_cfg, rescale)
         bbox_list = self.bbox_head.get_bboxes(*bbox_inputs)
@@ -81,7 +89,24 @@ class SeqSingleStageDetector(SeqBaseDetector):
             bbox2result(det_bboxes, det_labels, self.bbox_head.num_classes)
             for det_bboxes, det_labels in bbox_list
         ]
-        return bbox_results[0]
+        return bbox_results, out_dict
+
+    def simple_test(self, img, img_meta, in_dict=None, rescale=False):
+        x = self.extract_feat(img)  # [[1*1, c1, h1, w1]*5]
+        out_dict = None
+        if self.with_temporal_module:
+            # During test, no reshape & permute
+            x, out_dict = self.temporal_module(x, in_dict=in_dict,
+                                               is_train=False)
+
+        outs = self.bbox_head(x)
+        bbox_inputs = outs + (img_meta, self.test_cfg, rescale)
+        bbox_list = self.bbox_head.get_bboxes(*bbox_inputs)
+        bbox_results = [
+            bbox2result(det_bboxes, det_labels, self.bbox_head.num_classes)
+            for det_bboxes, det_labels in bbox_list
+        ]
+        return bbox_results[0], out_dict
 
     def aug_test(self, imgs, img_metas, rescale=False):
         raise NotImplementedError

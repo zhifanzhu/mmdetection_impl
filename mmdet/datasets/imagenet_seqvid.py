@@ -90,13 +90,12 @@ class SeqVIDDataset(Dataset):
         vid_ids = mmcv.list_from_file(ann_file)
 
         def _train_get_vid_id(_id_line):
-            _4d_8d, _num_frames = id_line.split(' ')
-            return _4d_8d, int(_num_frames)
+            _4d_8d, _start_ind, _end_ind, _num_frames = _id_line.split(' ')
+            return _4d_8d, int(_start_ind), int(_end_ind), int(_num_frames)
 
         def _val_get_vid_id(_id_line):
-            # TODO(zhifan)
-            _img_id, _global_index = id_line.split(' ')
-            return _img_id, None
+            _vid_id, _start_ind, _end_ind, _num_frames = id_line.split(' ')
+            return _vid_id, int(_start_ind), int(_end_ind), int(_num_frames)
 
         if vid_ids[0].split('/')[0] == 'train':
             vid_id_func = _train_get_vid_id
@@ -107,7 +106,7 @@ class SeqVIDDataset(Dataset):
 
         for id_line in vid_ids:
             # Probe first frame to get info
-            vid_id, num_frames = vid_id_func(id_line)
+            vid_id, start_ind, end_ind, num_frames = vid_id_func(id_line)
             foldername = f'Data/VID/{vid_id}.JPEG'
             xml_path = Path(self.img_prefix
                             )/f'Annotations/VID/{vid_id}/000000.xml'
@@ -121,6 +120,8 @@ class SeqVIDDataset(Dataset):
                      filename=foldername,
                      width=width,
                      height=height,
+                     start_ind=start_ind,
+                     end_ind=end_ind,
                      num_frames=num_frames))
         return vid_infos
 
@@ -228,13 +229,16 @@ class SeqVIDDataset(Dataset):
 
     def select_clip(self, idx):
         vid_info = self.vid_infos[idx]
+        start_ind = vid_info['start_ind']
+        end_ind = vid_info['end_ind']
         num_frames = vid_info['num_frames']
         frame_ids = []
 
         if num_frames == self.seq_len:
-            return list(range(num_frames))
+            return list(range(start_ind, end_ind))
         elif num_frames < self.seq_len:
-            start_frame = 0
+            # [1, 2, 3], seq_len = 7 -> [1, 1, 2, 2, 3, 3, 3]
+            start_frame = start_ind
             repeat = self.seq_len // num_frames
             residue = self.seq_len % num_frames
             for frame_id in range(start_frame, num_frames):
@@ -245,13 +249,21 @@ class SeqVIDDataset(Dataset):
         else:
             if self.skip:
                 skip = random.randint(1, int(num_frames / self.seq_len))
-                start = random.randint(0, num_frames - self.seq_len * skip)
+                start = random.randint(start_ind,
+                                       num_frames - self.seq_len * skip)
                 frame_ids = list(range(start, num_frames, skip))[:self.seq_len]
             else:
-                start = np.random.randint(num_frames - self.seq_len)
+                start = np.random.randint(start_ind, end_ind - self.seq_len)
                 frame_ids = list(range(start, start + self.seq_len))
 
         return frame_ids
+
+    def select_test_clip(self, idx):
+        vid_info = self.vid_infos[idx]
+        start_ind = vid_info['start_ind']
+        end_ind = vid_info['end_ind']
+        end_ind = min(end_ind, start_ind + self.seq_len)
+        return list(range(start_ind, end_ind))
 
     def prepare_train_img(self, idx):
         frame_ids = self.select_clip(idx)  # list of int
@@ -267,14 +279,16 @@ class SeqVIDDataset(Dataset):
         return seq_results_collated
 
     def prepare_test_img(self, idx):
-        # TODO(zhifan)
-        img_info = self.img_infos[idx]
-        results = dict(img_info=img_info)
-        if self.proposals is not None:
-            results['proposals'] = self.proposals[idx]
-        self.pre_pipeline(results)
-        res = self.pipeline(results)
-        return res
+        frame_ids = self.select_test_clip(idx)  # list of int
+        img_infos = self.get_frame_info(idx, frame_ids)
+        seq_results = []
+        for img_info in img_infos:
+            results = dict(img_info=img_info)
+            self.pre_pipeline(results)
+            results_dict = self.pipeline(results)
+            seq_results.append(results_dict)
+        seq_results_collated = seq_collate(seq_results)
+        return seq_results_collated
 
 
 def seq_collate(batch, samples_per_gpu=1):

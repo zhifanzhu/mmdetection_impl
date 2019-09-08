@@ -9,7 +9,8 @@ from mmcv.runner import DistSamplerSeedHook, Runner, obj_from_dict
 from mmdet import datasets
 from mmdet.core import (CocoDistEvalmAPHook, CocoDistEvalRecallHook,
                         DistEvalmAPHook, DistOptimizerHook, Fp16OptimizerHook,
-                        NonDistEvalmAPHook, CocoNonDistEvalmAPHook)
+                        NonDistEvalmAPHook, CocoNonDistEvalmAPHook,
+                        NonDistSeqEvalmAPHook)
 from mmdet.datasets import DATASETS, build_dataloader
 from mmdet.models import RPN
 from .env import get_root_logger
@@ -227,6 +228,9 @@ def _non_dist_train(model, dataset, cfg, validate=False):
             if issubclass(dataset_type, datasets.CocoDataset):
                 runner.register_hook(
                     CocoNonDistEvalmAPHook(val_dataset_cfg, **eval_cfg))
+            elif issubclass(dataset_type, datasets.SeqVIDDataset):
+                runner.register_hook(
+                   NonDistSeqEvalmAPHook(val_dataset_cfg, **eval_cfg))
             else:
                 runner.register_hook(
                     NonDistEvalmAPHook(val_dataset_cfg, **eval_cfg))

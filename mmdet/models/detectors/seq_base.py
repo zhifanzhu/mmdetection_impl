@@ -42,7 +42,7 @@ class SeqBaseDetector(nn.Module):
         return hasattr(self, 'mask_head') and self.mask_head is not None
 
     @abstractmethod
-    def extract_feat(self, imgs, seq_len):
+    def extract_feat(self, imgs):
         pass
 
     def extract_feats(self, imgs):
@@ -56,6 +56,10 @@ class SeqBaseDetector(nn.Module):
 
     @abstractmethod
     def simple_test(self, img, img_meta, **kwargs):
+        pass
+
+    @abstractmethod
+    def temporal_test(self, img, img_meta, seq_len, **kwargs):
         pass
 
     @abstractmethod
@@ -82,10 +86,20 @@ class SeqBaseDetector(nn.Module):
         imgs_per_gpu = imgs[0].size(0)
         assert imgs_per_gpu == 1
 
-        if num_augs == 1:
-            return self.simple_test(imgs[0], img_metas[0], **kwargs)
+        assert num_augs == 1
+        imgs = imgs[0]
+        img_metas  = img_metas[0]
+        if imgs.dim() == 5:
+            # Do reshape
+            batch, seq_len, chan, height, width = imgs.shape
+            imgs = imgs.reshape([batch*seq_len, chan, height, width])
+            img_metas = reduce(operator.concat, img_metas)
+            kwargs['seq_len'] = seq_len
+            return self.temporal_test(imgs, img_metas, **kwargs)
+        elif imgs.dim() == 4:
+            return self.simple_test(imgs, img_metas, **kwargs)
         else:
-            return self.aug_test(imgs, img_metas, **kwargs)
+            raise NotImplementedError
 
     @auto_fp16(apply_to=('img', ))
     def forward(self, img, img_meta, return_loss=True, **kwargs):
