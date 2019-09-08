@@ -7,7 +7,7 @@ model = dict(
         depth=50,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=4,
         style='pytorch'),
     neck=dict(
         type='FPN',
@@ -124,13 +124,13 @@ log_config = dict(
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=1, num_evals=5000, shuffle=True)
+evaluation = dict(interval=1, num_evals=2000, shuffle=True)
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './workvids/seqretina_r50_seqvid_debug'
-load_from = './zoo/retinanet_r50_fpn_2x_20190616-75574209.pth'
+load_from = './zoo/RetinaR50DetVidEpoch20.pth'
 resume_from = None
 workflow = [('train', 1)]

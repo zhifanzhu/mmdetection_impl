@@ -1,13 +1,13 @@
 # model settings
 model = dict(
-    type='RetinaNet',
+    type='SeqRetinaNet',
     pretrained='torchvision://resnet50',
     backbone=dict(
         type='ResNet',
         depth=50,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=4,
         style='pytorch'),
     neck=dict(
         type='FPN',
@@ -16,6 +16,8 @@ model = dict(
         start_level=1,
         add_extra_convs=True,
         num_outs=5),
+    temporal_module=dict(
+        type='Identity'),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -53,14 +55,14 @@ test_cfg = dict(
     nms=dict(type='nms', iou_thr=0.5),
     max_per_img=100)
 # dataset settings
-dataset_type = 'StillVIDDataset'
+dataset_type = 'SeqVIDDataset'
 data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
-    dict(type='Resize', img_scale=(512, 512), keep_ratio=True),
+    dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
@@ -74,7 +76,7 @@ test_pipeline = [
         img_scale=(512, 512),
         flip=False,
         transforms=[
-            dict(type='Resize', keep_ratio=True),
+            dict(type='Resize', keep_ratio=False),
             dict(type='RandomFlip'),
             dict(type='Normalize', **img_norm_cfg),
             dict(type='Pad', size_divisor=32),
@@ -87,21 +89,24 @@ data = dict(
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_train_15frames_debug.txt',
+        seq_len=12,
+        ann_file=data_root + 'ImageSets/VID/VID_train_video.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames_debug.txt',
+        seq_len=24,
+        ann_file=data_root + 'ImageSets/VID/VID_val_video.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames_debug.txt',
+        seq_len=24,
+        ann_file=data_root + 'ImageSets/VID/VID_val_video.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=1e-3, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=1e-4, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -119,13 +124,13 @@ log_config = dict(
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=1, num_evals=5000, shuffle=True)
+evaluation = dict(interval=1, num_evals=1500, shuffle=True)
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/retina_r50_vid15frames_debug'
-load_from = './zoo/retinanet_r50_fpn_2x_20190616-75574209.pth'
+work_dir = './workvids/seqretina_r50_iden'
+load_from = './zoo/RetinaR50DetVidEpoch20.pth'
 resume_from = None
 workflow = [('train', 1)]

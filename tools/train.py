@@ -24,7 +24,6 @@ def parse_args():
     parser.add_argument(
         '--validate',
         action='store_true',
-        default=True,
         help='whether to evaluate the checkpoint during training')
     parser.add_argument(
         '--gpus',
@@ -52,6 +51,7 @@ def parse_args():
 
 def main():
     args = parse_args()
+    print("DID YOU REMEMBER TO ADD --validate?")
 
     cfg = Config.fromfile(args.config)
     # set cudnn_benchmark
