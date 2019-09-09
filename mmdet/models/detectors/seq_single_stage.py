@@ -68,7 +68,20 @@ class SeqSingleStageDetector(SeqBaseDetector):
             # x = [[b*t, c, h, *w]*5]
 
         outs = self.bbox_head(x)
-        loss_inputs = outs + (gt_bboxes, gt_labels, img_metas, self.train_cfg)
+
+        # Some frames may have no annotation, disable calculation on them.
+        valid_gt_ind = [i for i, gt in enumerate(gt_bboxes) if len(gt) != 0]
+        new_outs = []
+        for out in outs:
+            new_out = [o[valid_gt_ind, ...].contiguous()
+                       for o in out]
+            new_outs.append(new_out)
+        new_outs = tuple(new_outs)
+        gt_bboxes = [gt_bboxes[i] for i in valid_gt_ind]
+        gt_labels = [gt_labels[i] for i in valid_gt_ind]
+        img_metas = [img_metas[i] for i in valid_gt_ind]
+
+        loss_inputs = new_outs + (gt_bboxes, gt_labels, img_metas, self.train_cfg)
         losses = self.bbox_head.loss(
             *loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
         return losses

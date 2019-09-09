@@ -69,10 +69,6 @@ class SeqVIDDataset(Dataset):
             self.proposals = self.load_proposals(proposal_file)
         else:
             self.proposals = None
-        # filter images with no annotation during training
-        if not test_mode:
-            valid_inds = self._filter_imgs()
-            self.vid_infos = [self.vid_infos[i] for i in valid_inds]
         # set group flag for the sampler
         if not self.test_mode:
             self._set_group_flag()
@@ -109,7 +105,7 @@ class SeqVIDDataset(Dataset):
             vid_id, start_ind, end_ind, num_frames = vid_id_func(id_line)
             foldername = f'Data/VID/{vid_id}.JPEG'
             xml_path = Path(self.img_prefix
-                            )/f'Annotations/VID/{vid_id}/000000.xml'
+                            )/f'Annotations/VID/{vid_id}/{start_ind:06d}.xml'
             tree = ET.parse(xml_path)
             root = tree.getroot()
             size = root.find('size')
@@ -187,14 +183,6 @@ class SeqVIDDataset(Dataset):
         results['bbox_fields'] = []
         results['mask_fields'] = []
 
-    def _filter_imgs(self, min_size=32):
-        """Filter images too small."""
-        valid_inds = []
-        for i, vid_info in enumerate(self.vid_infos):
-            if min(vid_info['width'], vid_info['height']) >= min_size:
-                valid_inds.append(i)
-        return valid_inds
-
     def _set_group_flag(self):
         """Set flag according to image aspect ratio.
 
@@ -207,11 +195,18 @@ class SeqVIDDataset(Dataset):
             if vid_info['width'] / vid_info['height'] > 1:
                 self.flag[i] = 1
 
+    def _rand_another(self, idx):
+        pool = np.where(self.flag == self.flag[idx])[0]
+        return np.random.choice(pool)
+
     def __getitem__(self, idx):
         if self.test_mode:
             return self.prepare_test_img(idx)
         while True:
             data = self.prepare_train_img(idx)
+            if data is None:
+                idx = self._rand_another(idx)
+                continue
             return data
 
     def get_frame_info(self, idx, frame_ids):
@@ -276,6 +271,12 @@ class SeqVIDDataset(Dataset):
             results_dict = self.pipeline(results)
             seq_results.append(results_dict)
         seq_results_collated = seq_collate(seq_results)
+
+        # Check at least one frame has annotation, since we did not use _filter_imgs()
+        # during loading annotaion.
+        sum_gts = sum([len(v) for v in seq_results_collated['gt_bboxes'].data])
+        if sum_gts == 0:
+            return None
         return seq_results_collated
 
     def prepare_test_img(self, idx):
