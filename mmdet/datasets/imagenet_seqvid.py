@@ -233,14 +233,13 @@ class SeqVIDDataset(Dataset):
             return list(range(start_ind, end_ind))
         elif num_frames < self.seq_len:
             # [1, 2, 3], seq_len = 7 -> [1, 1, 2, 2, 3, 3, 3]
-            start_frame = start_ind
             repeat = self.seq_len // num_frames
             residue = self.seq_len % num_frames
-            for frame_id in range(start_frame, num_frames):
+            for frame_id in range(start_ind, end_ind):
                 for _ in range(repeat):
                     frame_ids.append(frame_id)
             for _ in range(residue):
-                frame_ids.append(num_frames - 1)
+                frame_ids.append(end_ind - 1)
         else:
             if self.skip:
                 skip = random.randint(1, int(num_frames / self.seq_len))
