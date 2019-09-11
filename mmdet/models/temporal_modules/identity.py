@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 
 from ..registry import TEMPORAL_MODULE
-from mmdet.core import multi_apply
 
 
 """
