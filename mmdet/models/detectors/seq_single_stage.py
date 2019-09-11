@@ -38,6 +38,8 @@ class SeqSingleStageDetector(SeqBaseDetector):
                     m.init_weights()
             else:
                 self.neck.init_weights()
+        if self.with_temporal_module:
+            self.temporal_module.init_weights()
         self.bbox_head.init_weights()
 
     def extract_feat(self, img):
@@ -59,11 +61,11 @@ class SeqSingleStageDetector(SeqBaseDetector):
                       gt_labels,
                       gt_bboxes_ignore=None):
         batch = img.size(0) // seq_len
-        x = self.extract_feat(img)  # [[b*t, c1, h1, w1]*5]
+        x = self.extract_feat(img)  # [[b*t, c1, h1, w1]*4]
         if self.with_temporal_module:
             x = [v.reshape([batch, seq_len, *v.shape[1:]])
                  for v in x]
-            x_seq = [v.permute([1, 0, 2, 3, 4]) for v in x]  # [[t, b, c1, h1, w1]*5]
+            x_seq = [v.permute([1, 0, 2, 3, 4]).contiguous() for v in x]  # [[t, b, c1, h1, w1]*5]
             x, _ = self.temporal_module(x_seq, in_dict=None, is_train=True)
             # x = [[b*t, c, h, *w]*5]
 
@@ -87,7 +89,7 @@ class SeqSingleStageDetector(SeqBaseDetector):
         return losses
 
     def temporal_test(self, img, img_meta, seq_len, rescale=False):
-        x = self.extract_feat(img)  # [[1*1, c1, h1, w1]*5]
+        x = self.extract_feat(img)  # [[1*1, c1, h1, w1]*4]
         out_dict = None
         if self.with_temporal_module:
             x = [v.reshape([1, -1, *v.shape[1:]])
