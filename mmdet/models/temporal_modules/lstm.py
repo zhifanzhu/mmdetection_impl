@@ -110,80 +110,128 @@ class BottleneckLSTMCell(nn.Module):
 
 @TEMPORAL_MODULE.register_module
 class BottleneckLSTMDecoder(nn.Module):
-    """ Apply BottleneckLSTM cell to ONLY ONE layer in feature map.
-    Future existed layers (with smaller size) will be replaced by convolution on
-    previous layer after 'from_layer'.
-        E.g.: , from_layer=2, in_channels [256, 256, 256, 256, 256],
+    """ Apply BottleneckLSTM cell to feature map.
+
+    Future existed layers (with smaller size) may be replaced by convolution on
+    previous layer.
+
+    E.g.:
+    1) out_layers_type=[0, 0, 1, 2, 2], in_channels=[256, 256, 256, 256, 256],
         with shape [64, 32, 16, 8, 4],
-        the result outputs will be [64, 32, 16_new, 8_new, 4_new].
+       the result outputs will be [64, 32, 16_new, 8_new, 4_new].
+    2) [0, 0, 0, 0] means don't use any LSTM.
+    3) [0, 1, 2, 2, 0] mean use old feature on first and last
+       layer, while add one LSTM cell to second layer.
 
     """
 
     def __init__(self,
                  in_channels,
-                 lstm_cfg,
-                 from_layer=2,
+                 lstm_cfgs,
+                 out_layers_type,
                  neck_first=True):
         """
         Args:
             in_channels: list of int, #-feat-channel of each feature layer
                 during forward, this should match the real input.
-            lstm_cfg: Config
+            lstm_cfgs: list of Config, must match number of '1' in 'out_layers_type'
+            out_layers_type: list of int, length should match in_channels.
+                '0' means use old, '1' means use LSTM output,
+                '2' means use Conv output of last '1' or '2' layer.
+                Note '2' must proceed after '1' or '2', but not '0'.
             neck_first: bool
-            from_layer: start from 0, to N-1, start LSTM from
-                which layer of FPN/Backbone output.
         """
         super(BottleneckLSTMDecoder, self).__init__()
-        assert from_layer > 0
-        assert from_layer < len(in_channels)
+        assert len(in_channels) == len(out_layers_type)
         self.neck_first = neck_first
-        self.from_layer = from_layer
-        self.lstm_cell = BottleneckLSTMCell(**lstm_cfg)
-        extra_convs = []
-        for l in range(from_layer + 1, len(in_channels)):
-            extra_convs.append(nn.Conv2d(
-                in_channels=in_channels[l],
-                out_channels=in_channels[l],
-                kernel_size=3,
-                stride=2,
-                padding=1))
-        self.extra_convs = nn.ModuleList(extra_convs)
+        self.out_layers_type = out_layers_type
+        self.num_olds = sum([1 for t in out_layers_type if t == 0])
+        self.num_lstms = sum([1 for t in out_layers_type if t == 1])
+        self.num_extra_convs = sum([1 for t in out_layers_type if t == 2])
+
+        if self.num_lstms:
+            lstm_cells = []
+            for i in range(self.num_lstms):
+                lstm_cells.append(BottleneckLSTMCell(**lstm_cfgs[i]))
+            self.lstm_cells = nn.ModuleList(lstm_cells)
+
+        if self.num_extra_convs > 0:
+            extra_convs = []
+            for l, tp in enumerate(out_layers_type):
+                if tp == 2:
+                    extra_convs.append(nn.Conv2d(
+                        in_channels=in_channels[l],
+                        out_channels=in_channels[l],
+                        kernel_size=3,
+                        stride=2,
+                        padding=1))
+            self.extra_convs = nn.ModuleList(extra_convs)
 
     def init_weights(self):
-        self.lstm_cell.init_weights()
-        for conv in self.extra_convs:
-            xavier_init(conv)
+        if self.num_lstms > 0:
+            for lstm_cell in self.lstm_cells:
+                lstm_cell.init_weights()
+        if self.num_extra_convs > 0:
+            for conv in self.extra_convs:
+                xavier_init(conv)
 
     def forward(self, input_list, in_dict=None, is_train=False):
+        # First process time dimension in lower layer, then go up
+        # This will affect how state_dict updates.
         time, batch, chan, _, _ = input_list[0].shape
 
-        final_outs = [
-            inputs.permute(1, 0, 2, 3, 4).reshape([-1, *inputs.shape[2:]])
-            for inputs in input_list[:self.from_layer]
-        ]
         if is_train or in_dict is None:
             device = input_list[0].device
-            _t, _b, _c, _h, _w = input_list[self.from_layer].shape
-            state_dict = self.lstm_cell.init_state([_b, _c, _h, _w], device)
-        else:
-            state_dict = in_dict
+            state_dict_lists = []
+            lstm_lvl = 0
+            for lvl, tp in enumerate(self.out_layers_type):
+                if tp == 1:
+                    _t, _b, _c, _h, _w = input_list[lvl].shape
+                    in_shape = [_b, _c, _h, _w]
+                    state_dict_lists.append(
+                        self.lstm_cells[lstm_lvl].init_state(in_shape, device))
+                    lstm_lvl += 1
+            in_dict = dict(state_dict_lists=state_dict_lists)
 
-        outs = []
+        state_dict_lists = in_dict['state_dict_lists']
+
+        final_outs = []
+        out_dict_lists = []
+        lstm_level = 0
+        extra_level = 0
+        feats = None
+        for lvl, inputs in enumerate(input_list):
+            if self.out_layers_type[lvl] == 0:
+                # Use exists
+                out = inputs.permute(1, 0, 2, 3, 4)
+                out = out.reshape([-1, *inputs.shape[2:]])
+
+            elif self.out_layers_type[lvl] == 1:
+                # Use output of LSTM
+                feats, state_dict = self.forward_lstm(
+                    inputs,
+                    self.lstm_cells[lstm_level],
+                    state_dict=state_dict_lists[lstm_level])
+                feats = feats.permute(1, 0, 2, 3, 4)
+                feats = feats.reshape([-1, *feats.shape[2:]])
+                out = feats
+                lstm_level += 1
+                out_dict_lists.append(state_dict)
+            else:
+                # Use last feature map.
+                feats = F.relu(self.extra_convs[extra_level](feats))
+                out = feats
+                extra_level += 1
+            final_outs.append(out)
+
+        out_dict = dict(state_dict_lists=out_dict_lists)
+        return final_outs, out_dict
+
+    @staticmethod
+    def forward_lstm(inputs, lstm_cell, state_dict):
         decoder_outs = []
-        for decoder_input in input_list[self.from_layer]:
-            feat, state_dict = self.lstm_cell(
-                decoder_input, state_dict)
+        for decoder_input in inputs:
+            feat, state_dict = lstm_cell(decoder_input, state_dict)
             decoder_outs.append(feat)
-        decoder_outs = torch.cat(decoder_outs, dim=0)
-        outs.append(decoder_outs)
-
-        for conv in self.extra_convs:
-            decoder_outs = F.relu(conv(decoder_outs))
-            outs.append(decoder_outs)
-        for out in outs:
-            final_outs.append(
-                out.reshape(
-                    time, batch, *out.shape[1:]).permute(
-                    1, 0, 2, 3, 4).reshape(
-                    batch*time, *out.shape[1:]))
-        return final_outs, state_dict
+        decoder_outs = torch.stack(decoder_outs, dim=0)
+        return decoder_outs, state_dict

@@ -26,7 +26,7 @@ model = dict(
                  forget_bias=1.0,
                  activation='relu6',
                  clip_state=False)],
-        out_layers_type=[0, 0, 1, 2, 2],
+        out_layers_type=[0, 0, 1, 0, 0],
         neck_first=True),
     bbox_head=dict(
         type='RetinaHead',
@@ -140,7 +140,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/seqRetinaR50LSTM_debug'
+work_dir = './workvids/seqRetinaR50LSTM00100_debug'
 load_from = './zoo/RetinaR50DetVidEpoch20.pth'
 resume_from = None
 workflow = [('train', 1)]
