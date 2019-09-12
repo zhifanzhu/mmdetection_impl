@@ -59,7 +59,7 @@ class CorrelationAdaptor(nn.Module):
             normal_init(conv_offset, std=0.01)
             normal_init(conv_adaption, std=0.01)
 
-    # TODO test use previous?
+    # TODO(zhifan) use previous in_dict during test.
     def forward(self, input_list, in_dict=None, is_train=False):
         outs = []
         num_adapt_layers = len(self.conv_offsets)

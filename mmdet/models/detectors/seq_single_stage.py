@@ -21,9 +21,12 @@ class SeqSingleStageDetector(SeqBaseDetector):
         self.backbone = builder.build_backbone(backbone)
         if neck is not None:
             self.neck = builder.build_neck(neck)
+        self.neck_first = True
         if temporal_module is not None:
             self.temporal_module = builder.build_temporal_module(
                 temporal_module)
+            if hasattr(self.temporal_module, 'neck_first'):
+                self.neck_first = self.temporal_module.neck_first
         self.bbox_head = builder.build_head(bbox_head)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
@@ -44,11 +47,12 @@ class SeqSingleStageDetector(SeqBaseDetector):
 
     def extract_feat(self, img):
         x = self.backbone(img)
-        if self.with_neck:
+        if self.with_neck and self.neck_first:
             x = self.neck(x)
         return x
 
     def forward_dummy(self, img):
+        # TODO zhifan
         x = self.extract_feat(img)
         outs = self.bbox_head(x)
         return outs
@@ -68,6 +72,9 @@ class SeqSingleStageDetector(SeqBaseDetector):
             x_seq = [v.permute([1, 0, 2, 3, 4]).contiguous() for v in x]  # [[t, b, c1, h1, w1]*5]
             x, _ = self.temporal_module(x_seq, in_dict=None, is_train=True)
             # x = [[b*t, c, h, *w]*5]
+
+        if self.with_neck and not self.neck_first:
+            x = self.neck(x)
 
         outs = self.bbox_head(x)
 
@@ -97,6 +104,9 @@ class SeqSingleStageDetector(SeqBaseDetector):
             x_seq = [v.permute([1, 0, 2, 3, 4]) for v in x]
             x, out_dict = self.temporal_module(x_seq, in_dict=None, is_train=True)
 
+        if self.with_neck and not self.neck_first:
+            x = self.neck(x)
+
         outs = self.bbox_head(x)
         bbox_inputs = outs + (img_meta, self.test_cfg, rescale)
         bbox_list = self.bbox_head.get_bboxes(*bbox_inputs)
@@ -113,6 +123,9 @@ class SeqSingleStageDetector(SeqBaseDetector):
             # During test, no reshape & permute
             x, out_dict = self.temporal_module(x, in_dict=in_dict,
                                                is_train=False)
+
+        if self.with_neck and not self.neck_first:
+            x = self.neck(x)
 
         outs = self.bbox_head(x)
         bbox_inputs = outs + (img_meta, self.test_cfg, rescale)
