@@ -25,8 +25,8 @@ model = dict(
     temporal_module=dict(
         type='BottleneckLSTMDecoder',
         in_channels=[256, 256, 256, 256, 256],
-        lstm_cfgs=[lstm_cfg, lstm_cfg, lstm_cfg, lstm_cfg, lstm_cfg],
-        out_layers_type=[1, 1, 1, 1, 1],
+        lstm_cfgs=[lstm_cfg, lstm_cfg, lstm_cfg],
+        out_layers_type=[1, 0, 1, 0, 1],
         neck_first=True),
     bbox_head=dict(
         type='RetinaHead',
@@ -95,28 +95,28 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=2,
-    workers_per_gpu=0,
+    imgs_per_gpu=4,
+    workers_per_gpu=2,
     train=dict(
         type=dataset_type,
-        seq_len=3,
-        ann_file=data_root + 'ImageSets/VID/VID_train_video_debug.txt',
+        seq_len=12,
+        ann_file=data_root + 'ImageSets/VID/VID_train_videos.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
         seq_len=24,
-        ann_file=data_root + 'ImageSets/VID/VID_val_video_debug.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
         seq_len=24,
-        ann_file=data_root + 'ImageSets/VID/VID_val_video_debug.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=1e-3, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=1e-4, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -128,19 +128,19 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=1,
+    interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=1, num_evals=2000, shuffle=True)
+evaluation = dict(interval=1, num_evals=1000, shuffle=True)
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/seqRetinaR50LSTM11111_debug'
+work_dir = './workvids/seqRetinaR50LSTM10101'
 load_from = './zoo/RetinaR50DetVidEpoch20.pth'
 resume_from = None
 workflow = [('train', 1)]

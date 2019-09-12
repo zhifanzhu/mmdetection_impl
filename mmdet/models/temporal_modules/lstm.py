@@ -148,6 +148,7 @@ class BottleneckLSTMDecoder(nn.Module):
         self.num_olds = sum([1 for t in out_layers_type if t == 0])
         self.num_lstms = sum([1 for t in out_layers_type if t == 1])
         self.num_extra_convs = sum([1 for t in out_layers_type if t == 2])
+        assert len(lstm_cfgs) == self.num_lstms
 
         if self.num_lstms:
             lstm_cells = []
