@@ -1,10 +1,10 @@
 # model settings
 lstm_cfg = dict(in_channels=256,
-              hidden_size=256,
-              kernel_size=3,
-              forget_bias=1.0,
-              activation='relu6',
-              clip_state=False)
+                hidden_size=256,
+                kernel_size=3,
+                forget_bias=1.0,
+                activation='relu6',
+                clip_state=False)
 model = dict(
     type='SeqRetinaNet',
     pretrained='torchvision://resnet50',
@@ -106,7 +106,7 @@ data = dict(
     val=dict(
         type=dataset_type,
         seq_len=24,
-        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos_mini.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
