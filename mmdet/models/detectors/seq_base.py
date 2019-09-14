@@ -92,7 +92,9 @@ class SeqBaseDetector(nn.Module):
         if imgs.dim() == 5:
             # Do reshape
             batch, seq_len, chan, height, width = imgs.shape
-            imgs = imgs.reshape([batch*seq_len, chan, height, width])
+            imgs = imgs.permute(1, 0, 2, 3, 4).contiguous().view(
+                [seq_len*batch, chan, height, width])
+            img_metas = list(map(list, zip(*img_metas)))
             img_metas = reduce(operator.concat, img_metas)
             kwargs['seq_len'] = seq_len
             return self.temporal_test(imgs, img_metas, **kwargs)
@@ -108,14 +110,16 @@ class SeqBaseDetector(nn.Module):
             # i.e. stack for 'img', list append for others
             # the inputs are [B, T, C, H, W] like,
             #
-            # We expand img to [B*T, C, H, W] for subclass,
-            # and make list of list to flattened list,
+            # We permute img to [T*B, C, H, W] for subclass,
+            # and transpose list of list to flattened list,
             # and pass an extra parameter : seq_len
             batch, seq_len, chan, height, width = img.shape
-            img = img.reshape([batch*seq_len, chan, height, width])
+            img = img.permute(1, 0, 2, 3, 4).contiguous().view(
+                [seq_len*batch, chan, height, width])
+            img_meta = list(map(list, zip(*img_meta)))
             img_meta = reduce(operator.concat, img_meta)
             kwargs = {
-                key: reduce(operator.concat, value)
+                key: reduce(operator.concat, list(map(list, zip(*value))))
                 for key, value in kwargs.items()
             }
             kwargs['seq_len'] = seq_len

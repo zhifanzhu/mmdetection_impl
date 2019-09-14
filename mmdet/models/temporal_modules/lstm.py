@@ -204,8 +204,7 @@ class BottleneckLSTMDecoder(nn.Module):
         for lvl, inputs in enumerate(input_list):
             if self.out_layers_type[lvl] == 0:
                 # Use exists
-                out = inputs.permute(1, 0, 2, 3, 4)
-                out = out.reshape([-1, *inputs.shape[2:]])
+                out = out.view([-1, *inputs.shape[2:]])
 
             elif self.out_layers_type[lvl] == 1:
                 # Use output of LSTM
@@ -213,8 +212,7 @@ class BottleneckLSTMDecoder(nn.Module):
                     inputs,
                     self.lstm_cells[lstm_level],
                     state_dict=state_dict_lists[lstm_level])
-                feats = feats.permute(1, 0, 2, 3, 4)
-                feats = feats.reshape([-1, *feats.shape[2:]])
+                feats = feats.view([-1, *feats.shape[2:]])
                 out = feats
                 lstm_level += 1
                 out_dict_lists.append(state_dict)

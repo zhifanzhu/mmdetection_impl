@@ -68,8 +68,7 @@ class CorrelationAdaptor(nn.Module):
             outs.append(feats)
         for inputs in input_list[num_adapt_layers:]:
             time, batch, c, h, w = inputs.shape
-            outs.append(
-                inputs.permute([1, 0, 2, 3, 4]).reshape([batch*time, c, h, w]))
+            outs.append(inputs.view([time*batch, c, h, w]))
         if is_train:
             return outs, None
         else:
@@ -89,5 +88,5 @@ class CorrelationAdaptor(nn.Module):
             offset = self.conv_offsets[level](corr_feat)
             x = self.relu(self.conv_adaptions[level](inputs[t], offset))
             feats.append(x)
-        feats = torch.stack(feats, dim=0)
-        return feats.permute([1, 0, 2, 3, 4]).reshape([batch*time, c, h, w])
+        feats = torch.cat(feats, dim=0)
+        return feats
