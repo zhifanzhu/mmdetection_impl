@@ -204,7 +204,7 @@ class BottleneckLSTMDecoder(nn.Module):
         for lvl, inputs in enumerate(input_list):
             if self.out_layers_type[lvl] == 0:
                 # Use exists
-                out = out.view([-1, *inputs.shape[2:]])
+                out = inputs.view([-1, *inputs.shape[2:]])
 
             elif self.out_layers_type[lvl] == 1:
                 # Use output of LSTM
