@@ -13,7 +13,7 @@ self.forward_train(x_seq) receives input like:
 x_seq: a list(repr multilevel feature, typical 5) of [T, B, C, H, W] Tensor.
 
 and is responsible for transforming output to bbox_head compatible format,
-i.e. [[B*T, C, H, W]*5] (Or [[B*T, C, H, W]*6] like LSTM-SSD).
+i.e. [[T*B, C, H, W]*5] (Or [[T*B, C, H, W]*6] like LSTM-SSD).
 
 During test, input shape:
 x: [1*1, C, H, W] * 5]
@@ -63,7 +63,7 @@ class Identity(nn.Module):
         return tuple(out_feats), out_dict
 
     def forward_single(self, inputs, in_state):
-        time, batch, c, h, w = inputs.shape
+        # time, batch, c, h, w = inputs.shape
 
         # Do a dummy rnn step
         outputs = []
@@ -72,7 +72,6 @@ class Identity(nn.Module):
             out = self.decoder(decoder_input) + out_state
             out_state = out_state  # Dummy update
             outputs.append(out)
-        outputs = torch.stack(outputs)
+        outputs = torch.cat(outputs)
         # Transform back
-        outputs = outputs.permute([1, 0, 2, 3, 4]).reshape([batch*time, c, h, w])
         return outputs, out_state

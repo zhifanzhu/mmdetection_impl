@@ -65,13 +65,12 @@ class SeqSingleStageDetector(SeqBaseDetector):
                       gt_labels,
                       gt_bboxes_ignore=None):
         batch = img.size(0) // seq_len
-        x = self.extract_feat(img)  # [[b*t, c1, h1, w1]*4]
+        x = self.extract_feat(img)  # [[T*B, c1, h1, w1]*4]
         if self.with_temporal_module:
-            x = [v.reshape([batch, seq_len, *v.shape[1:]])
-                 for v in x]
-            x_seq = [v.permute([1, 0, 2, 3, 4]).contiguous() for v in x]  # [[t, b, c1, h1, w1]*5]
+            x_seq = [v.view([seq_len, batch, *v.shape[1:]])
+                     for v in x]
             x, _ = self.temporal_module(x_seq, in_dict=None, is_train=True)
-            # x = [[b*t, c, h, *w]*5]
+            # x = [[T*B, c, h, *w]*5]
 
         if self.with_neck and not self.neck_first:
             x = self.neck(x)
@@ -99,9 +98,8 @@ class SeqSingleStageDetector(SeqBaseDetector):
         x = self.extract_feat(img)  # [[1*1, c1, h1, w1]*4]
         out_dict = None
         if self.with_temporal_module:
-            x = [v.reshape([1, -1, *v.shape[1:]])
-                 for v in x]
-            x_seq = [v.permute([1, 0, 2, 3, 4]) for v in x]
+            x_seq = [v.view([seq_len, 1, *v.shape[1:]])
+                     for v in x]
             x, out_dict = self.temporal_module(x_seq, in_dict=None, is_train=True)
 
         if self.with_neck and not self.neck_first:

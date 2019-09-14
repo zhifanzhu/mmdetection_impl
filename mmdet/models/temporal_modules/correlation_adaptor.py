@@ -68,8 +68,7 @@ class CorrelationAdaptor(nn.Module):
             outs.append(feats)
         for inputs in input_list[num_adapt_layers:]:
             time, batch, c, h, w = inputs.shape
-            outs.append(
-                inputs.permute([1, 0, 2, 3, 4]).reshape([batch*time, c, h, w]))
+            outs.append(inputs.view([time*batch, c, h, w]))
         if is_train:
             return outs, None
         else:
@@ -82,12 +81,16 @@ class CorrelationAdaptor(nn.Module):
     def forward_single(self, inputs, level):
         time, batch, c, h, w = inputs.shape
 
-        feats = [inputs[0]]
+        corr_feats = []
         for t in range(1, len(inputs)):
-            corr_feat = self.point_corrs[level](inputs[t-1], inputs[t])
+            # corr_feat = self.point_corrs[level](inputs[t-1], inputs[t])
+            corr_feat = self.point_corrs[level](inputs[t], inputs[t-1])  # changed on 09.14
             corr_feat = corr_feat.reshape(batch, h, w, -1).permute(0, 3, 1, 2)
-            offset = self.conv_offsets[level](corr_feat)
-            x = self.relu(self.conv_adaptions[level](inputs[t], offset))
-            feats.append(x)
-        feats = torch.stack(feats, dim=0)
-        return feats.permute([1, 0, 2, 3, 4]).reshape([batch*time, c, h, w])
+            corr_feats.append(corr_feat)
+        # Parallelize offset and dconv computation, though no speedup.
+        corr_feats = torch.cat(corr_feats)
+        offset = self.conv_offsets[level](corr_feats)
+        feat_inputs = inputs[1:].view((time - 1) * batch, c, h, w)
+        feats = self.relu(self.conv_adaptions[level](feat_inputs, offset))
+        feats = torch.cat([inputs[0], feats], dim=0)
+        return feats

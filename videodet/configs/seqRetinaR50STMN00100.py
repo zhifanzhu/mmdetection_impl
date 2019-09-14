@@ -17,13 +17,15 @@ model = dict(
         add_extra_convs=True,
         num_outs=5),
     temporal_module=dict(
-        type='CorrelationAdaptor',
-        in_channels=256,
-        out_channels=256,
-        displacements=(8, 8, 4, 2),
-        strides=(2, 1, 1, 1),
-        kernel_size=3,
-        deformable_groups=4),
+        type='RNNDecoder',
+        in_channels=[256, 256, 256, 256, 256],
+        rnncell_type='STMNCell',
+        rnn_cfgs=[
+            dict(in_channels=256,
+                 hidden_size=256,
+                 kernel_size=3)],
+        out_layers_type=[0, 0, 1, 0, 0],
+        neck_first=True),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -130,13 +132,13 @@ log_config = dict(
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=1, num_evals=1500, shuffle=True)
+evaluation = dict(interval=1, num_evals=1000, shuffle=True)
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/seqRetinaR50Corr'
+work_dir = './workvids/seqRetinaR50STMN00100'
 load_from = './zoo/RetinaR50DetVidEpoch20.pth'
 resume_from = None
 workflow = [('train', 1)]
