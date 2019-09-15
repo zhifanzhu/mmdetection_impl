@@ -38,7 +38,8 @@ test_cfg = dict(
     score_thr=0.02,
     max_per_img=200)
 # dataset settings
-dataset_type = 'StillVIDDataset'
+vid_dataset_type = 'StillVIDDataset'
+det_dataset_type = 'DET30Dataset'
 data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 train_pipeline = [
@@ -81,19 +82,26 @@ test_pipeline = [
 data = dict(
     imgs_per_gpu=24,
     workers_per_gpu=3,
-    train=dict(
-        type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_train_15frames_debug.txt',
-        img_prefix=data_root,
-        pipeline=train_pipeline),
+    train=[
+        dict(
+            type=vid_dataset_type,
+            ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
+            img_prefix=data_root,
+            pipeline=train_pipeline),
+        dict(
+            type=det_dataset_type,
+            ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
+            img_prefix=data_root,
+            pipeline=train_pipeline),
+    ],
     val=dict(
-        type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames_debug.txt',
+        type=vid_dataset_type,
+        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
-        type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames_debug.txt',
+        type=vid_dataset_type,
+        ann_file=data_root + 'ImageSets/VID/VID_val_frames_mini.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
