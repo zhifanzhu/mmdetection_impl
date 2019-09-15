@@ -241,11 +241,10 @@ class SeqVIDDataset(Dataset):
             for _ in range(residue):
                 frame_ids.append(end_ind - 1)
         else:
-            if self.skip:
-                skip = random.randint(1, int(num_frames / self.seq_len))
+            if self.skip and self.seq_len * self.skip < num_frames:
                 start = random.randint(start_ind,
-                                       num_frames - self.seq_len * skip)
-                frame_ids = list(range(start, num_frames, skip))[:self.seq_len]
+                                       num_frames - self.seq_len * self.skip)
+                frame_ids = list(range(start, num_frames, self.skip))[:self.seq_len]
             else:
                 start = np.random.randint(start_ind, end_ind - self.seq_len)
                 frame_ids = list(range(start, start + self.seq_len))

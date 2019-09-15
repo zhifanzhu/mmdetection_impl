@@ -2,23 +2,17 @@
 input_size = 300
 model = dict(
     type='SingleStageDetector',
-    pretrained='zoo/vgg16_caffe-292e1171.pth',
+    pretrained='zoo/mobilenet_v2.pth.tar',
     backbone=dict(
-        type='SSDVGG',
-        input_size=input_size,
-        depth=16,
-        with_last_pool=False,
-        ceil_mode=True,
-        out_indices=(3, 4),
-        out_feature_indices=(22, 34),
-        l2_norm_scale=20),
+        type='SSDMobileNetV2',
+        input_size=input_size),
     neck=None,
     bbox_head=dict(
-        type='SSDHead',
+        type='SSDLiteHead',
         input_size=input_size,
-        in_channels=(512, 1024, 512, 256, 256, 256),
+        in_channels=(576, 1280, 512, 256, 256, 128),
         num_classes=31,
-        anchor_strides=(8, 16, 32, 64, 100, 300),
+        anchor_strides=(16, 32, 64, 128, 150, 300),
         basesize_ratio_range=(0.2, 0.9),
         anchor_ratios=([2], [2, 3], [2, 3], [2, 3], [2], [2]),
         target_means=(.0, .0, .0, .0),
@@ -44,10 +38,9 @@ test_cfg = dict(
     score_thr=0.02,
     max_per_img=200)
 # dataset settings
-vid_dataset_type = 'StillVIDDataset'
-det_dataset_type = 'DET30Dataset'
+dataset_type = 'StillVIDDataset'
 data_root = 'data/ILSVRC2015/'
-img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
+img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile', to_float32=True),
     dict(type='LoadAnnotations', with_bbox=True),
@@ -86,32 +79,25 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=24,
-    workers_per_gpu=3,
-    train=[
-        dict(
-            type=vid_dataset_type,
-            ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
-            img_prefix=data_root,
-            pipeline=train_pipeline),
-        dict(
-            type=det_dataset_type,
-            ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
-            img_prefix=data_root,
-            pipeline=train_pipeline),
-    ],
+    imgs_per_gpu=2,
+    workers_per_gpu=2,
+    train=dict(
+        type=dataset_type,
+        ann_file=data_root + 'ImageSets/VID/VID_train_15frames_debug.txt',
+        img_prefix=data_root,
+        pipeline=train_pipeline),
     val=dict(
-        type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        type=dataset_type,
+        ann_file=data_root + 'ImageSets/VID/VID_val_frames_debug.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
-        type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames_mini.txt',
+        type=dataset_type,
+        ann_file=data_root + 'ImageSets/VID/VID_val_frames_debug.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=0.015, momentum=0.9, weight_decay=5e-4)
+optimizer = dict(type='RMSprop', lr=4e-3, momentum=0.9, weight_decay=5e-4)
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
@@ -123,7 +109,7 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=100,
+    interval=1,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
@@ -134,7 +120,7 @@ evaluation = dict(interval=1, num_evals=5000, shuffle=True)
 total_epochs = 24
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/ssdvgg300_fromimagenet'
+work_dir = './workvids/ssd300MV2_debug'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
