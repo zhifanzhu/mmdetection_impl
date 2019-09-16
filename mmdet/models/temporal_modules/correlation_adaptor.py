@@ -80,6 +80,8 @@ class CorrelationAdaptor(nn.Module):
 
     def forward_single(self, inputs, level):
         time, batch, c, h, w = inputs.shape
+        if time <= 1:
+            return inputs
 
         corr_feats = []
         for t in range(1, len(inputs)):
