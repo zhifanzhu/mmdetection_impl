@@ -10,7 +10,7 @@ from ..registry import TEMPORAL_MODULE
 """
 STMN is very similar to ConvGRU, except
 1) use relu instead of sigmoid and tanh
-2) use linear_scale after z and r, in paper they called it 
+2) use linear_scale after z and r, in paper they called it
     BN_star, but it has no trainable parameter at all.
 3) MatchTrans
 4) Init weights using `swapped out conv layers`
@@ -153,7 +153,7 @@ class RNNDecoder(nn.Module):
             for l, tp in enumerate(out_layers_type):
                 if tp == 2:
                     extra_convs.append(nn.Conv2d(
-                        in_channels=in_channels[l],
+                        in_channels=in_channels[l-1],
                         out_channels=in_channels[l],
                         kernel_size=3,
                         stride=2,
