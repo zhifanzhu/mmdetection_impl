@@ -156,12 +156,21 @@ class ExtraConv(nn.Module):
 class SSDMobileNetV2(MobileNetV2):
     def __init__(self,
                  input_size,
+                 frozen_stages=-1,
                  google_stype=True):
+        """
+
+        Args:
+            input_size: only support 300
+            frozen_stages: int, [0, 18], representing layer1 to layer19
+            google_stype: bool
+        """
         super(SSDMobileNetV2, self).__init__(
             n_class=1,
             width_mult=1.0)
         assert input_size == 300
         self.input_size = input_size
+        self.frozen_stages = frozen_stages
 
         if google_stype:
             self.extra = nn.ModuleList([
@@ -177,6 +186,16 @@ class SSDMobileNetV2(MobileNetV2):
                 InvertedResidual(256, 256, stride=2, expand_ratio=0.5),
                 InvertedResidual(256, 128, stride=2, expand_ratio=0.25)
             ])
+
+        self._freeze_stages()
+
+    def _freeze_stages(self):
+        if self.frozen_stages >= 0:
+            for i in range(self.frozen_stages):
+                m = getattr(self.features, str(i))
+                m.eval()
+                for param in m.parameters():
+                    param.requires_grad = False
 
     def init_weights(self, pretrained=None):
         if isinstance(pretrained, str):
