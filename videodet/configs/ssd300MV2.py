@@ -80,8 +80,8 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=24,
-    workers_per_gpu=3,
+    imgs_per_gpu=32,
+    workers_per_gpu=4,
     train=[
         dict(
             type=vid_dataset_type,
@@ -105,7 +105,7 @@ data = dict(
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='RMSprop', lr=0.004, momentum=0.9, weight_decay=5e-4)
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=5e-4)
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
@@ -117,7 +117,7 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=100,
+    interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
