@@ -103,7 +103,7 @@ class ConcatCorrelationAdaptor(nn.Module):
     def forward_single(self, inputs, level, lowest_shape):
         time, batch, c, h, w = inputs.shape
         if time <= 1:
-            return inputs
+            return inputs.view(-1, c, h, w)
 
         corr_feats = []
         for t in range(1, len(inputs)):
