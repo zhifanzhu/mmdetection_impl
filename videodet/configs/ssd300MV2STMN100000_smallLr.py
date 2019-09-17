@@ -1,24 +1,29 @@
 # model settings
 input_size = 300
 model = dict(
-    type='SingleStageDetector',
-    pretrained='zoo/vgg16_caffe-292e1171.pth',
+    type='SeqSingleStageDetector',
+    pretrained='zoo/mobilenet_v2.pth.tar',
     backbone=dict(
-        type='SSDVGG',
+        type='SSDMobileNetV2',
         input_size=input_size,
-        depth=16,
-        with_last_pool=False,
-        ceil_mode=True,
-        out_indices=(3, 4),
-        out_feature_indices=(22, 34),
-        l2_norm_scale=20),
+        frozen_stages=18),
     neck=None,
+    temporal_module=dict(
+        type='RNNDecoder',
+        in_channels=[576, 1280, 512, 256, 256, 128],
+        rnncell_type='STMNCell',
+        rnn_cfgs=[
+            dict(in_channels=576,
+                 hidden_size=576,
+                 kernel_size=3)],
+        out_layers_type=[1, 0, 0, 0, 0, 0],
+        neck_first=True),
     bbox_head=dict(
-        type='SSDHead',
+        type='SSDLiteHead',
         input_size=input_size,
-        in_channels=(512, 1024, 512, 256, 256, 256),
+        in_channels=(576, 1280, 512, 256, 256, 128),
         num_classes=31,
-        anchor_strides=(8, 16, 32, 64, 100, 300),
+        anchor_strides=(16, 32, 64, 128, 150, 300),
         basesize_ratio_range=(0.2, 0.9),
         anchor_ratios=([2], [2, 3], [2, 3], [2, 3], [2], [2]),
         target_means=(.0, .0, .0, .0),
@@ -44,31 +49,15 @@ test_cfg = dict(
     score_thr=0.02,
     max_per_img=200)
 # dataset settings
-vid_dataset_type = 'StillVIDDataset'
-det_dataset_type = 'DET30Dataset'
+dataset_type = 'SeqVIDDataset'
 data_root = 'data/ILSVRC2015/'
-img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
+img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile', to_float32=True),
-    dict(type='LoadAnnotations', with_bbox=True),
-    dict(
-        type='PhotoMetricDistortion',
-        brightness_delta=32,
-        contrast_range=(0.5, 1.5),
-        saturation_range=(0.5, 1.5),
-        hue_delta=18),
-    dict(
-        type='Expand',
-        mean=img_norm_cfg['mean'],
-        to_rgb=img_norm_cfg['to_rgb'],
-        ratio_range=(1, 4)),
-    dict(
-        type='MinIoURandomCrop',
-        min_ious=(0.1, 0.3, 0.5, 0.7, 0.9),
-        min_crop_size=0.3),
+    dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
     dict(type='Resize', img_scale=(300, 300), keep_ratio=False),
-    dict(type='Normalize', **img_norm_cfg),
     dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='Normalize', **img_norm_cfg),
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
 ]
@@ -86,32 +75,28 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=8,
+    imgs_per_gpu=4,
     workers_per_gpu=3,
-    train=[
-        dict(
-            type=vid_dataset_type,
-            ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
-            img_prefix=data_root,
-            pipeline=train_pipeline),
-        dict(
-            type=det_dataset_type,
-            ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
-            img_prefix=data_root,
-            pipeline=train_pipeline),
-    ],
+    train=dict(
+        type=dataset_type,
+        seq_len=12,
+        ann_file=data_root + 'ImageSets/VID/VID_train_videos_144.txt',
+        img_prefix=data_root,
+        pipeline=train_pipeline),
     val=dict(
-        type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        type=dataset_type,
+        seq_len=24,
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos_mini.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
-        type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        type=dataset_type,
+        seq_len=24,
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=1e-3, momentum=0.9, weight_decay=5e-4)
+optimizer = dict(type='SGD', lr=1e-5, momentum=0.9, weight_decay=5e-4)
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
@@ -119,7 +104,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[16, 20])
+    step=[8, 11])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -129,12 +114,12 @@ log_config = dict(
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=1, num_evals=5000, shuffle=True)
+evaluation = dict(interval=1, num_evals=1000, shuffle=True)
 # runtime settings
-total_epochs = 24
+total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/ssdvgg300_fromimagenet'
-load_from = None
+work_dir = './workvids/ssd300MV2STMN100000_smallLr'
+load_from = './zoo/SSDMobileV2DetVidEpoch24.pth'
 resume_from = None
 workflow = [('train', 1)]
