@@ -157,12 +157,19 @@ class SSDMobileNetV2(MobileNetV2):
     def __init__(self,
                  input_size,
                  frozen_stages=-1,
+                 out_layers=('layer15', 'layer19'),
+                 with_extra=True,
                  google_stype=True):
         """
 
         Args:
             input_size: only support 300
             frozen_stages: int, [0, 18], representing layer1 to layer19
+            out_layers: tuple of str, str has to be:
+                1) 'layer15' representing 'layer15/expansion_output',
+                    stride of 16 (size 32 in 512x512 input)
+                2) 'layer19', stride of 32 (size 16 in 512x512 input).
+            with_extra: bool
             google_stype: bool
         """
         super(SSDMobileNetV2, self).__init__(
@@ -171,21 +178,25 @@ class SSDMobileNetV2(MobileNetV2):
         assert input_size == 300
         self.input_size = input_size
         self.frozen_stages = frozen_stages
+        self.out_layers = out_layers
+        assert {'layer15', 'layer19'} == set(out_layers)
+        self.with_extra = with_extra
 
-        if google_stype:
-            self.extra = nn.ModuleList([
-                ExtraConv(1280, 512, stride=2, insert_1x1_conv=True),
-                ExtraConv(512, 256, stride=2, insert_1x1_conv=True),
-                ExtraConv(256, 256, stride=2, insert_1x1_conv=True),
-                ExtraConv(256, 128, stride=2, insert_1x1_conv=True),
-            ])
-        else:
-            self.extra = nn.ModuleList([
-                InvertedResidual(1280, 512, stride=2, expand_ratio=0.2),
-                InvertedResidual(512, 256, stride=2, expand_ratio=0.25),
-                InvertedResidual(256, 256, stride=2, expand_ratio=0.5),
-                InvertedResidual(256, 128, stride=2, expand_ratio=0.25)
-            ])
+        if self.with_extra:
+            if google_stype:
+                self.extra = nn.ModuleList([
+                    ExtraConv(1280, 512, stride=2, insert_1x1_conv=True),
+                    ExtraConv(512, 256, stride=2, insert_1x1_conv=True),
+                    ExtraConv(256, 256, stride=2, insert_1x1_conv=True),
+                    ExtraConv(256, 128, stride=2, insert_1x1_conv=True),
+                ])
+            else:
+                self.extra = nn.ModuleList([
+                    InvertedResidual(1280, 512, stride=2, expand_ratio=0.2),
+                    InvertedResidual(512, 256, stride=2, expand_ratio=0.25),
+                    InvertedResidual(256, 256, stride=2, expand_ratio=0.5),
+                    InvertedResidual(256, 128, stride=2, expand_ratio=0.25)
+                ])
 
         self._freeze_stages()
 
@@ -216,30 +227,34 @@ class SSDMobileNetV2(MobileNetV2):
         else:
             raise TypeError('pretrained must be a str or None')
 
-        for m in self.extra.modules():
-            if isinstance(m, nn.Conv2d):
-                xavier_init(m, distribution='uniform')
+        if self.with_extra:
+            for m in self.extra.modules():
+                if isinstance(m, nn.Conv2d):
+                    xavier_init(m, distribution='uniform')
 
     def forward(self, x):
         outs = []
+        has_15 = 'layer15' in self.out_layers
+        has_19 = 'layer19' in self.out_layers
         for i, layer in enumerate(self.features):
             # layer15/expansion_output
-            if i == 14:
+            if i == 14 and has_15:
                 for i_sub, conv_op in enumerate(layer.conv):
                     x = conv_op(x)
                     if i_sub == 0:
                         outs.append(x)
                 continue
             # layer19
-            if i == 18:
+            if i == 18 and has_19:
                 x = layer(x)
                 outs.append(x)
                 continue
 
             x = layer(x)
 
-        for i, layer in enumerate(self.extra):
-            x = layer(x)
-            outs.append(x)
+        if self.with_extra:
+            for i, layer in enumerate(self.extra):
+                x = layer(x)
+                outs.append(x)
 
         return tuple(outs)
