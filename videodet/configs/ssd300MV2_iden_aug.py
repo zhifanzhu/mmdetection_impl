@@ -86,7 +86,8 @@ data = dict(
     workers_per_gpu=3,
     train=dict(
         type=dataset_type,
-        seq_len=12,
+        seq_len=8,
+        skip=[1, 3, 5],
         ann_file=data_root + 'ImageSets/VID/VID_train_videos_144.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
@@ -126,7 +127,7 @@ evaluation = dict(interval=1, num_evals=1000, shuffle=True)
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/ssd300MV2_iden'
+work_dir = './workvids/ssd300MV2_iden_aug'
 load_from = './zoo/SSDMobileV2DetVidEpoch24.pth'
 resume_from = None
 workflow = [('train', 1)]
