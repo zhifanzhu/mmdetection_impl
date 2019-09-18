@@ -287,7 +287,7 @@ class SeqVIDDataset(Dataset):
                     data, _ = t(data, state)
                 if data is None:
                     raise ValueError('None data not allowed in seq dataset.')
-        return data
+            return data
 
     def prepare_train_img(self, idx):
         frame_ids = self.select_clip(idx)  # list of int
