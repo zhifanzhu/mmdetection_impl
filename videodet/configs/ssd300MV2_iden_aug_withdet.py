@@ -123,6 +123,7 @@ data = dict(
             pipeline=train_pipeline),
         dict(
             type=seqdet_dataset_type,
+            divisor=16,
             seq_len=8,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,

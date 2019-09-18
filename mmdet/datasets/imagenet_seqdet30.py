@@ -33,12 +33,28 @@ class SeqDET30Dataset(Dataset):
                  ann_file,
                  pipeline,
                  seq_len,
+                 divisor,
                  min_size=None,
                  data_root=None,
                  img_prefix=None,
                  seg_prefix=None,
                  proposal_file=None,
                  test_mode=False):
+        """
+
+        Args:
+            ann_file:
+            pipeline:
+            seq_len:
+            divisor: int, since DET dataset are too large when images repeats to seq_len,
+                use divisor to get len(ds) = len(original) // divisor.
+            min_size:
+            data_root:
+            img_prefix:
+            seg_prefix:
+            proposal_file:
+            test_mode:
+        """
         self.ann_file = ann_file
         self.data_root = data_root
         self.img_prefix = img_prefix
@@ -46,6 +62,7 @@ class SeqDET30Dataset(Dataset):
         self.proposal_file = proposal_file
         self.test_mode = test_mode
         self.seq_len = seq_len
+        self.divisor = divisor
 
         # join paths if data_root is specified
         if self.data_root is not None:
@@ -78,7 +95,7 @@ class SeqDET30Dataset(Dataset):
         self.min_size = min_size
 
     def __len__(self):
-        return len(self.img_infos)
+        return len(self.img_infos) // self.divisor
 
     def load_annotations(self, ann_file):
         img_infos = []
@@ -183,6 +200,7 @@ class SeqDET30Dataset(Dataset):
         return np.random.choice(pool)
 
     def __getitem__(self, idx):
+        idx = min(idx * self.divisor, len(self))
         if self.test_mode:
             raise ValueError("Not allowed")
         while True:
