@@ -111,7 +111,7 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=4,
+    imgs_per_gpu=3,
     workers_per_gpu=3,
     train=[
         dict(
@@ -123,10 +123,10 @@ data = dict(
             pipeline=train_pipeline),
         dict(
             type=seqdet_dataset_type,
-            seq_len=3,
+            seq_len=8,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,
-            pipeline=train_pipeline),
+            pipeline=seqdet_train_pipeline),
     ],
     val=dict(
         type=dataset_type,
