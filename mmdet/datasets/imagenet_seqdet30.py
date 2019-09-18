@@ -219,9 +219,10 @@ class SeqDET30Dataset(Dataset):
     def prepare_train_img(self, idx):
         img_info = self.img_infos[idx]
         ann_info = self.get_ann_info(idx)
-        results = dict(img_info=img_info, ann_info=ann_info)
         seq_results = []
         for i in range(self.seq_len):
+            results = dict(img_info=img_info, ann_info=ann_info)
+            self.pre_pipeline(results)
             if i == 0:
                 results_dict, trans_states = self.pipeline_with_state(
                     results, None)
