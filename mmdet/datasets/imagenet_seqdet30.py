@@ -203,8 +203,8 @@ class SeqDET30Dataset(Dataset):
                 else:
                     data = t(data)
                     state_list.append(None)
-                if data is None:
-                    raise ValueError('None data not allowed in seq dataset.')
+                # if data is None:
+                #     raise ValueError('None data not allowed in seq dataset.')
             return data, state_list
         else:
             for state, t in zip(state_list, self.pipeline.transforms):
@@ -212,8 +212,8 @@ class SeqDET30Dataset(Dataset):
                     data = t(data)
                 else:
                     data, _ = t(data, state)
-                if data is None:
-                    raise ValueError('None data not allowed in seq dataset.')
+                # if data is None:
+                #     raise ValueError('None data not allowed in seq dataset.')
         return data
 
     def prepare_train_img(self, idx):
@@ -229,6 +229,9 @@ class SeqDET30Dataset(Dataset):
                 results_dict = self.pipeline_with_state(results, trans_states)
             seq_results.append(results_dict)
         seq_results_collated = seq_collate(seq_results)
+        sum_gts = sum([len(v) for v in seq_results_collated['gt_bboxes'].data])
+        if sum_gts == 0:
+            return None
         return seq_results_collated
 
 
