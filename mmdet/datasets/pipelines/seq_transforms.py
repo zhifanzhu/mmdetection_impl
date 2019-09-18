@@ -197,6 +197,7 @@ class SeqRandomFlip(object):
         if 'flip' not in results:
             if state is None:
                 flip = True if np.random.rand() < self.flip_ratio else False
+                state = dict(flip=flip)
             else:
                 flip = state['flip']
             results['flip'] = flip
@@ -219,7 +220,7 @@ class SeqRandomFlip(object):
 
 
 @PIPELINES.register_module
-class RandomCrop(object):
+class SeqRandomCrop(object):
     """Random crop the image & bboxes.
 
     Args:
@@ -229,12 +230,17 @@ class RandomCrop(object):
     def __init__(self, crop_size):
         self.crop_size = crop_size
 
-    def __call__(self, results):
+    def __call__(self, results, state=None):
         img = results['img']
         margin_h = max(img.shape[0] - self.crop_size[0], 0)
         margin_w = max(img.shape[1] - self.crop_size[1], 0)
-        offset_h = np.random.randint(0, margin_h + 1)
-        offset_w = np.random.randint(0, margin_w + 1)
+        if state is None:
+            offset_h = np.random.randint(0, margin_h + 1)
+            offset_w = np.random.randint(0, margin_w + 1)
+            state = dict(offset_h=offset_h, offset_w=offset_w)
+        else:
+            offset_h = state['offset_h']
+            offset_w = state['offset_w']
         crop_y1, crop_y2 = offset_h, offset_h + self.crop_size[0]
         crop_x1, crop_x2 = offset_w, offset_w + self.crop_size[1]
 
@@ -274,7 +280,7 @@ class RandomCrop(object):
                     valid_gt_masks.append(gt_mask)
                 results['gt_masks'] = valid_gt_masks
 
-        return results
+        return results, state
 
     def __repr__(self):
         return self.__class__.__name__ + '(crop_size={})'.format(
@@ -282,51 +288,7 @@ class RandomCrop(object):
 
 
 @PIPELINES.register_module
-class SegResizeFlipPadRescale(object):
-    """A sequential transforms to semantic segmentation maps.
-
-    The same pipeline as input images is applied to the semantic segmentation
-    map, and finally rescale it by some scale factor. The transforms include:
-    1. resize
-    2. flip
-    3. pad
-    4. rescale (so that the final size can be different from the image size)
-
-    Args:
-        scale_factor (float): The scale factor of the final output.
-    """
-
-    def __init__(self, scale_factor=1):
-        self.scale_factor = scale_factor
-
-    def __call__(self, results):
-        if results['keep_ratio']:
-            gt_seg = mmcv.imrescale(
-                results['gt_semantic_seg'],
-                results['scale'],
-                interpolation='nearest')
-        else:
-            gt_seg = mmcv.imresize(
-                results['gt_semantic_seg'],
-                results['scale'],
-                interpolation='nearest')
-        if results['flip']:
-            gt_seg = mmcv.imflip(gt_seg)
-        if gt_seg.shape != results['pad_shape']:
-            gt_seg = mmcv.impad(gt_seg, results['pad_shape'][:2])
-        if self.scale_factor != 1:
-            gt_seg = mmcv.imrescale(
-                gt_seg, self.scale_factor, interpolation='nearest')
-        results['gt_semantic_seg'] = gt_seg
-        return results
-
-    def __repr__(self):
-        return self.__class__.__name__ + '(scale_factor={})'.format(
-            self.scale_factor)
-
-
-@PIPELINES.register_module
-class PhotoMetricDistortion(object):
+class SeqPhotoMetricDistortion(object):
     """Apply photometric distortion to image sequentially, every transformation
     is applied with a probability of 0.5. The position of random contrast is in
     second or second to last.
@@ -356,35 +318,82 @@ class PhotoMetricDistortion(object):
         self.contrast_lower, self.contrast_upper = contrast_range
         self.saturation_lower, self.saturation_upper = saturation_range
         self.hue_delta = hue_delta
+        self.contrast_range = contrast_range
+        self.saturation_range =saturation_range
 
-    def __call__(self, results):
-        img = results['img']
-        # random brightness
-        if random.randint(2):
+    def __call__(self, results, state=None):
+        if state is None:
+            delta_randint = random.randint(2)
             delta = random.uniform(-self.brightness_delta,
                                    self.brightness_delta)
+            mode = random.randint(2)
+            mode_randint = random.randint(2)
+            alpha = random.uniform(self.contrast_lower,
+                                   self.contrast_upper)
+            sat_randint = random.randint(2)
+            sat_multiplier = random.uniform(self.saturation_lower,
+                                            self.saturation_upper)
+            hue_randint = random.randint(2)
+            hue_multiplier = random.uniform(-self.hue_delta, self.hue_delta)
+            contrast_randint = random.randint(2)
+            contrast_alpha = random.uniform(self.contrast_lower,
+                                            self.contrast_upper)
+            perm_randint = random.randint(2)
+            perm = random.permutation(3)
+
+            state = dict(
+                delta_randint=delta_randint,
+                delta=delta,
+                mode=mode,
+                mode_randint=mode_randint,
+                alpha=alpha,
+                sat_randint=sat_randint,
+                sat_multiplier=sat_multiplier,
+                hue_randint=hue_randint,
+                hue_multiplier=hue_multiplier,
+                contrast_randint=contrast_randint,
+                contrast_alpha=contrast_alpha,
+                perm_randint=perm_randint,
+                perm=perm)
+        else:
+            delta_randint = state['delta_randint']
+            delta = state['delta']
+            mode = state['mode']
+            mode_randint = state['mode_randint']
+            alpha = state['alpha']
+            sat_randint = state['sat_randint']
+            sat_multiplier = state['sat_multiplier']
+            hue_randint = state['hue_randint']
+            hue_multiplier = state['hue_multiplier']
+            contrast_randint = state['contrast_randint']
+            contrast_alpha = state['contrast_alpha']
+            perm_randint = state['perm_randint']
+            perm = state['perm']
+
+        img = results['img']
+        # random brightness
+        if delta_randint:
+            delta = delta
             img += delta
 
         # mode == 0 --> do random contrast first
         # mode == 1 --> do random contrast last
-        mode = random.randint(2)
+        mode = mode
         if mode == 1:
-            if random.randint(2):
-                alpha = random.uniform(self.contrast_lower,
-                                       self.contrast_upper)
+            if mode_randint:
+                alpha = alpha
                 img *= alpha
 
         # convert color from BGR to HSV
         img = mmcv.bgr2hsv(img)
 
         # random saturation
-        if random.randint(2):
-            img[..., 1] *= random.uniform(self.saturation_lower,
-                                          self.saturation_upper)
+        if sat_randint:
+            img[..., 1] *= sat_multiplier
 
         # random hue
-        if random.randint(2):
-            img[..., 0] += random.uniform(-self.hue_delta, self.hue_delta)
+        if hue_randint:
+            img[..., 0] += hue_multiplier
             img[..., 0][img[..., 0] > 360] -= 360
             img[..., 0][img[..., 0] < 0] += 360
 
@@ -393,17 +402,16 @@ class PhotoMetricDistortion(object):
 
         # random contrast
         if mode == 0:
-            if random.randint(2):
-                alpha = random.uniform(self.contrast_lower,
-                                       self.contrast_upper)
+            if contrast_randint:
+                alpha = contrast_alpha
                 img *= alpha
 
         # randomly swap channels
-        if random.randint(2):
-            img = img[..., random.permutation(3)]
+        if perm_randint:
+            img = img[..., perm]
 
         results['img'] = img
-        return results
+        return results, state
 
     def __repr__(self):
         repr_str = self.__class__.__name__
@@ -415,7 +423,7 @@ class PhotoMetricDistortion(object):
 
 
 @PIPELINES.register_module
-class Expand(object):
+class SeqExpand(object):
     """Random expand the image & bboxes.
 
     Randomly place the original image on a canvas of 'ratio' x original image
@@ -433,25 +441,45 @@ class Expand(object):
         else:
             self.mean = mean
         self.min_ratio, self.max_ratio = ratio_range
+        self.to_rgb = to_rgb
+        self.ratio_range = ratio_range
 
-    def __call__(self, results):
-        if random.randint(2):
-            return results
+    def __call__(self, results, state=None):
+        if state is None:
+            ret_randint = random.randint(2)
+        else:
+            ret_randint = state['ret_randint']
+
+        if ret_randint:
+            state = dict(ret_randint=ret_randint)
+            return results, state
 
         img, boxes = [results[k] for k in ('img', 'gt_bboxes')]
 
         h, w, c = img.shape
-        ratio = random.uniform(self.min_ratio, self.max_ratio)
+        if state is None:
+            ratio = random.uniform(self.min_ratio, self.max_ratio)
+        else:
+            ratio = state['ratio']
         expand_img = np.full((int(h * ratio), int(w * ratio), c),
                              self.mean).astype(img.dtype)
-        left = int(random.uniform(0, w * ratio - w))
-        top = int(random.uniform(0, h * ratio - h))
+        if state is None:
+            left = int(random.uniform(0, w * ratio - w))
+            top = int(random.uniform(0, h * ratio - h))
+        else:
+            left = state['left']
+            top = state['top']
         expand_img[top:top + h, left:left + w] = img
         boxes = boxes + np.tile((left, top), 2).astype(boxes.dtype)
 
         results['img'] = expand_img
         results['gt_bboxes'] = boxes
-        return results
+        state = dict(
+            ret_randint=ret_randint,
+            ratio=ratio,
+            left=left,
+            top=top)
+        return results, state
 
     def __repr__(self):
         repr_str = self.__class__.__name__
@@ -461,7 +489,7 @@ class Expand(object):
 
 
 @PIPELINES.register_module
-class MinIoURandomCrop(object):
+class SeqMinIoURandomCrop(object):
     """Random crop the image & bboxes, the cropped patches have minimum IoU
     requirement with original image & bboxes, the IoU threshold is randomly
     selected from min_ious.
@@ -474,17 +502,22 @@ class MinIoURandomCrop(object):
     def __init__(self, min_ious=(0.1, 0.3, 0.5, 0.7, 0.9), min_crop_size=0.3):
         # 1: return ori img
         self.sample_mode = (1, *min_ious, 0)
+        self.min_ious = min_ious
         self.min_crop_size = min_crop_size
 
-    def __call__(self, results):
+    def __call__(self, results, state=None):
+        if state is not None:
+            return self._call_with_state(results, state)
+
         img, boxes, labels = [
             results[k] for k in ('img', 'gt_bboxes', 'gt_labels')
         ]
         h, w, c = img.shape
         while True:
             mode = random.choice(self.sample_mode)
+            state = dict(mode=mode)
             if mode == 1:
-                return results
+                return results, state
 
             min_iou = mode
             for i in range(50):
@@ -524,7 +557,48 @@ class MinIoURandomCrop(object):
                 results['img'] = img
                 results['gt_bboxes'] = boxes
                 results['gt_labels'] = labels
-                return results
+
+                state['new_w'] = new_w
+                state['new_h'] = new_h
+                state['left'] = left
+                state['top'] = top
+                return results, state
+
+    @staticmethod
+    def _call_with_state(results, state):
+        img, boxes, labels = [
+            results[k] for k in ('img', 'gt_bboxes', 'gt_labels')
+        ]
+        mode = state['mode']
+        if mode == 1:
+            return results, state
+
+        new_w = state['new_w']
+        new_h = state['new_h']
+        left = state['left']
+        top = state['top']
+
+        patch = np.array(
+            (int(left), int(top), int(left + new_w), int(top + new_h)))
+
+        # center of boxes should inside the crop img
+        center = (boxes[:, :2] + boxes[:, 2:]) / 2
+        mask = (center[:, 0] > patch[0]) * (
+                center[:, 1] > patch[1]) * (center[:, 0] < patch[2]) * (
+                       center[:, 1] < patch[3])
+        boxes = boxes[mask]
+        labels = labels[mask]
+
+        # adjust boxes
+        img = img[patch[1]:patch[3], patch[0]:patch[2]]
+        boxes[:, 2:] = boxes[:, 2:].clip(max=patch[2:])
+        boxes[:, :2] = boxes[:, :2].clip(min=patch[:2])
+        boxes -= np.tile(patch[:2], 2)
+
+        results['img'] = img
+        results['gt_bboxes'] = boxes
+        results['gt_labels'] = labels
+        return results, state
 
     def __repr__(self):
         repr_str = self.__class__.__name__

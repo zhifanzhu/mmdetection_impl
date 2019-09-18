@@ -1,3 +1,4 @@
+import inspect
 import os.path as osp
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -264,15 +265,43 @@ class SeqVIDDataset(Dataset):
         end_ind = min(end_ind, start_ind + self.seq_len)
         return list(range(start_ind, end_ind))
 
+    def pipeline_with_state(self, data, state_list):
+        if state_list is None:
+            state_list = []
+            for t in self.pipeline.transforms:
+                if 'state' in inspect.getfullargspec(t).args:
+                    data, state = t(data)
+                    assert state is not None
+                    state_list.append(state)
+                else:
+                    data = t(data)
+                    state_list.append(None)
+                if data is None:
+                    raise ValueError('None data not allowed in seq dataset.')
+            return data, state_list
+        else:
+            for state, t in zip(state_list, self.pipeline.transforms):
+                if state is None:
+                    data = t(data)
+                else:
+                    data, _ = t(data, state)
+                if data is None:
+                    raise ValueError('None data not allowed in seq dataset.')
+        return data
+
     def prepare_train_img(self, idx):
         frame_ids = self.select_clip(idx)  # list of int
         img_infos = self.get_frame_info(idx, frame_ids)
         ann_infos = self.get_ann_info(idx, frame_ids)  # list of ann_info
         seq_results = []
-        for img_info, ann_info in zip(img_infos, ann_infos):
+        for i, (img_info, ann_info) in enumerate(zip(img_infos, ann_infos)):
             results = dict(img_info=img_info, ann_info=ann_info)
             self.pre_pipeline(results)
-            results_dict = self.pipeline(results)
+            if i == 0:
+                results_dict, trans_states = self.pipeline_with_state(
+                    results, None)
+            else:
+                results_dict = self.pipeline_with_state(results, trans_states)
             seq_results.append(results_dict)
         seq_results_collated = seq_collate(seq_results)
 

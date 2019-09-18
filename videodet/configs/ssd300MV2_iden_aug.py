@@ -82,24 +82,24 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=2,
-    workers_per_gpu=0,
+    imgs_per_gpu=4,
+    workers_per_gpu=3,
     train=dict(
         type=dataset_type,
-        seq_len=3,
-        ann_file=data_root + 'ImageSets/VID/VID_train_video_debug.txt',
+        seq_len=12,
+        ann_file=data_root + 'ImageSets/VID/VID_train_videos_144.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
         seq_len=24,
-        ann_file=data_root + 'ImageSets/VID/VID_val_video_debug.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos_mini.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
         seq_len=24,
-        ann_file=data_root + 'ImageSets/VID/VID_val_video_debug.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
@@ -115,7 +115,7 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=1,
+    interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
@@ -126,7 +126,7 @@ evaluation = dict(interval=1, num_evals=1000, shuffle=True)
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/ssd300MV2_iden_debug'
+work_dir = './workvids/ssd300MV2_iden'
 load_from = './zoo/SSDMobileV2DetVidEpoch24.pth'
 resume_from = None
 workflow = [('train', 1)]
