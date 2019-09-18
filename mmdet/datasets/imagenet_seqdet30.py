@@ -1,15 +1,14 @@
 import inspect
 import os.path as osp
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
 import collections
 import torch.nn.functional as F
 from torch.utils.data.dataloader import default_collate
+from mmdet.datasets.pipelines import RandomRatioCrop
 
 from mmcv.parallel.data_container import DataContainer
 
-import random
 import time
 import mmcv
 import numpy as np
@@ -21,7 +20,7 @@ from .registry import DATASETS
 
 
 @DATASETS.register_module
-class SeqVIDDataset(Dataset):
+class SeqDET30Dataset(Dataset):
 
     CLASSES = ('n02691156', 'n02419796', 'n02131653', 'n02834778', 'n01503061', 'n02924116',
                'n02958343', 'n02402425', 'n02084071', 'n02121808', 'n02503517', 'n02118333',
@@ -34,7 +33,6 @@ class SeqVIDDataset(Dataset):
                  ann_file,
                  pipeline,
                  seq_len,
-                 skip=None,
                  min_size=None,
                  data_root=None,
                  img_prefix=None,
@@ -47,7 +45,6 @@ class SeqVIDDataset(Dataset):
         self.seg_prefix = seg_prefix
         self.proposal_file = proposal_file
         self.test_mode = test_mode
-        self.skip = skip
         self.seq_len = seq_len
 
         # join paths if data_root is specified
@@ -64,7 +61,7 @@ class SeqVIDDataset(Dataset):
                                               self.proposal_file)
         # load annotations (and proposals)
         begin_time = time.time()
-        self.vid_infos = self.load_annotations(self.ann_file)
+        self.img_infos = self.load_annotations(self.ann_file)
         print('load_annotations time: {:.1f}s from {}'
               .format(time.time() - begin_time, ann_file))
         if proposal_file is not None:
@@ -81,102 +78,78 @@ class SeqVIDDataset(Dataset):
         self.min_size = min_size
 
     def __len__(self):
-        return len(self.vid_infos)
+        return len(self.img_infos)
 
     def load_annotations(self, ann_file):
-        vid_infos = []
-        vid_ids = mmcv.list_from_file(ann_file)
-
-        def _train_get_vid_id(_id_line):
-            _4d_8d, _start_ind, _end_ind, _num_frames = _id_line.split(' ')
-            return _4d_8d, int(_start_ind), int(_end_ind), int(_num_frames)
-
-        def _val_get_vid_id(_id_line):
-            _vid_id, _start_ind, _end_ind, _num_frames = id_line.split(' ')
-            return _vid_id, int(_start_ind), int(_end_ind), int(_num_frames)
-
-        if vid_ids[0].split('/')[0] == 'train':
-            vid_id_func = _train_get_vid_id
-        elif vid_ids[0].split('/')[0] == 'val':
-            vid_id_func = _val_get_vid_id
-        else:
-            raise ValueError("Unknown prefix in annoation txt file.")
-
-        for id_line in vid_ids:
-            # Probe first frame to get info
-            vid_id, start_ind, end_ind, num_frames = vid_id_func(id_line)
-            foldername = f'Data/VID/{vid_id}.JPEG'
-            xml_path = Path(self.img_prefix
-                            )/f'Annotations/VID/{vid_id}/{start_ind:06d}.xml'
+        img_infos = []
+        img_ids = mmcv.list_from_file(ann_file)
+        for id_line in img_ids:
+            img_id, pos = id_line.split(' ')
+            filename = 'Data/DET/{}.JPEG'.format(img_id)
+            xml_path = osp.join(self.img_prefix, 'Annotations/DET',
+                                '{}.xml'.format(img_id))
             tree = ET.parse(xml_path)
             root = tree.getroot()
             size = root.find('size')
             width = int(size.find('width').text)
             height = int(size.find('height').text)
-            vid_infos.append(
-                dict(id=vid_id,
-                     filename=foldername,
-                     width=width,
-                     height=height,
-                     start_ind=start_ind,
-                     end_ind=end_ind,
-                     num_frames=num_frames))
-        return vid_infos
+            img_infos.append(
+                dict(id=img_id, filename=filename, width=width, height=height))
+        return img_infos
 
-    def get_ann_info(self, idx, frame_ids):
-        vid_id = self.vid_infos[idx]['id']
-        anns = []
-        for frame_id in frame_ids:
-            xml_path = Path(self.img_prefix
-                            )/f'Annotations/VID/{vid_id}/{frame_id:06d}.xml'
-            tree = ET.parse(xml_path)
-            root = tree.getroot()
-            bboxes = []
-            labels = []
-            bboxes_ignore = []
-            labels_ignore = []
-            for obj in root.findall('object'):
-                name = obj.find('name').text
-                label = self.cat2label[name]
-                bnd_box = obj.find('bndbox')
-                bbox = [
-                    int(bnd_box.find('xmin').text),
-                    int(bnd_box.find('ymin').text),
-                    int(bnd_box.find('xmax').text),
-                    int(bnd_box.find('ymax').text)
-                ]
-                ignore = False
-                if self.min_size:
-                    assert not self.test_mode
-                    w = bbox[2] - bbox[0]
-                    h = bbox[3] - bbox[1]
-                    if w < self.min_size or h < self.min_size:
-                        ignore = True
-                if ignore:
-                    bboxes_ignore.append(bbox)
-                    labels_ignore.append(label)
-                else:
-                    bboxes.append(bbox)
-                    labels.append(label)
-            if not bboxes:
-                bboxes = np.zeros((0, 4))
-                labels = np.zeros((0, ))
+    def get_ann_info(self, idx):
+        img_id = self.img_infos[idx]['id']
+        xml_path = osp.join(self.img_prefix, 'Annotations/DET',
+                            '{}.xml'.format(img_id))
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        bboxes = []
+        labels = []
+        bboxes_ignore = []
+        labels_ignore = []
+        for obj in root.findall('object'):
+            name = obj.find('name').text
+            if name not in self.cat2label:
+                continue
+            label = self.cat2label[name]
+            bnd_box = obj.find('bndbox')
+            bbox = [
+                int(bnd_box.find('xmin').text),
+                int(bnd_box.find('ymin').text),
+                int(bnd_box.find('xmax').text),
+                int(bnd_box.find('ymax').text)
+            ]
+            ignore = False
+            if self.min_size:
+                assert not self.test_mode
+                w = bbox[2] - bbox[0]
+                h = bbox[3] - bbox[1]
+                if w < self.min_size or h < self.min_size:
+                    ignore = True
+            if ignore:
+                bboxes_ignore.append(bbox)
+                labels_ignore.append(label)
             else:
-                bboxes = np.array(bboxes, ndmin=2) - 1
-                labels = np.array(labels)
-            if not bboxes_ignore:
-                bboxes_ignore = np.zeros((0, 4))
-                labels_ignore = np.zeros((0, ))
-            else:
-                bboxes_ignore = np.array(bboxes_ignore, ndmin=2) - 1
-                labels_ignore = np.array(labels_ignore)
-            ann = dict(
-                bboxes=bboxes.astype(np.float32),
-                labels=labels.astype(np.int64),
-                bboxes_ignore=bboxes_ignore.astype(np.float32),
-                labels_ignore=labels_ignore.astype(np.int64))
-            anns.append(ann)
-        return anns
+                bboxes.append(bbox)
+                labels.append(label)
+        if not bboxes:
+            bboxes = np.zeros((0, 4))
+            labels = np.zeros((0, ))
+        else:
+            bboxes = np.array(bboxes, ndmin=2) - 1
+            labels = np.array(labels)
+        if not bboxes_ignore:
+            bboxes_ignore = np.zeros((0, 4))
+            labels_ignore = np.zeros((0, ))
+        else:
+            bboxes_ignore = np.array(bboxes_ignore, ndmin=2) - 1
+            labels_ignore = np.array(labels_ignore)
+        ann = dict(
+            bboxes=bboxes.astype(np.float32),
+            labels=labels.astype(np.int64),
+            bboxes_ignore=bboxes_ignore.astype(np.float32),
+            labels_ignore=labels_ignore.astype(np.int64))
+        return ann
 
     def pre_pipeline(self, results):
         results['img_prefix'] = self.img_prefix
@@ -184,6 +157,14 @@ class SeqVIDDataset(Dataset):
         results['proposal_file'] = self.proposal_file
         results['bbox_fields'] = []
         results['mask_fields'] = []
+
+    def _filter_imgs(self, min_size=32):
+        """Filter images too small."""
+        valid_inds = []
+        for i, img_info in enumerate(self.img_infos):
+            if min(img_info['width'], img_info['height']) >= min_size:
+                valid_inds.append(i)
+        return valid_inds
 
     def _set_group_flag(self):
         """Set flag according to image aspect ratio.
@@ -193,8 +174,8 @@ class SeqVIDDataset(Dataset):
         """
         self.flag = np.zeros(len(self), dtype=np.uint8)
         for i in range(len(self)):
-            vid_info = self.vid_infos[i]
-            if vid_info['width'] / vid_info['height'] > 1:
+            img_info = self.img_infos[i]
+            if img_info['width'] / img_info['height'] > 1:
                 self.flag[i] = 1
 
     def _rand_another(self, idx):
@@ -203,67 +184,13 @@ class SeqVIDDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.test_mode:
-            return self.prepare_test_img(idx)
+            raise ValueError("Not allowed")
         while True:
             data = self.prepare_train_img(idx)
             if data is None:
                 idx = self._rand_another(idx)
                 continue
             return data
-
-    def get_frame_info(self, idx, frame_ids):
-        vid_info = self.vid_infos[idx]
-        vid_id = vid_info['id']
-        width = vid_info['width']
-        height = vid_info['height']
-        img_infos = []
-        for frame_id in frame_ids:
-            img_id = f'{vid_id}/{frame_id:06d}'
-            filename = f'Data/VID/{img_id}.JPEG'
-            img_infos.append(
-                dict(id=img_id, filename=filename, width=width, height=height))
-        return img_infos
-
-    def select_clip(self, idx):
-        vid_info = self.vid_infos[idx]
-        start_ind = vid_info['start_ind']
-        end_ind = vid_info['end_ind']
-        num_frames = vid_info['num_frames']
-        frame_ids = []
-
-        if num_frames == self.seq_len:
-            return list(range(start_ind, end_ind))
-        elif num_frames < self.seq_len:
-            # [1, 2, 3], seq_len = 7 -> [1, 1, 2, 2, 3, 3, 3]
-            repeat = self.seq_len // num_frames
-            residue = self.seq_len % num_frames
-            for frame_id in range(start_ind, end_ind):
-                for _ in range(repeat):
-                    frame_ids.append(frame_id)
-            for _ in range(residue):
-                frame_ids.append(end_ind - 1)
-        else:
-            if self.skip:
-                if isinstance(self.skip, collections.abc.Sequence):
-                    skip = random.choice(self.skip)
-                else:
-                    skip = self.skip
-            if self.skip and self.seq_len * skip < num_frames:
-                start = random.randint(start_ind,
-                                       end_ind - self.seq_len * skip)
-                frame_ids = list(range(start, end_ind, skip))[:self.seq_len]
-            else:
-                start = np.random.randint(start_ind, end_ind - self.seq_len)
-                frame_ids = list(range(start, start + self.seq_len))
-
-        return frame_ids
-
-    def select_test_clip(self, idx):
-        vid_info = self.vid_infos[idx]
-        start_ind = vid_info['start_ind']
-        end_ind = vid_info['end_ind']
-        end_ind = min(end_ind, start_ind + self.seq_len)
-        return list(range(start_ind, end_ind))
 
     def pipeline_with_state(self, data, state_list):
         if state_list is None:
@@ -290,36 +217,16 @@ class SeqVIDDataset(Dataset):
         return data
 
     def prepare_train_img(self, idx):
-        frame_ids = self.select_clip(idx)  # list of int
-        img_infos = self.get_frame_info(idx, frame_ids)
-        ann_infos = self.get_ann_info(idx, frame_ids)  # list of ann_info
+        img_info = self.img_infos[idx]
+        ann_info = self.get_ann_info(idx)
+        results = dict(img_info=img_info, ann_info=ann_info)
         seq_results = []
-        for i, (img_info, ann_info) in enumerate(zip(img_infos, ann_infos)):
-            results = dict(img_info=img_info, ann_info=ann_info)
-            self.pre_pipeline(results)
+        for i in range(self.seq_len):
             if i == 0:
                 results_dict, trans_states = self.pipeline_with_state(
                     results, None)
             else:
                 results_dict = self.pipeline_with_state(results, trans_states)
-            seq_results.append(results_dict)
-        seq_results_collated = seq_collate(seq_results)
-
-        # Check at least one frame has annotation, since we did not use _filter_imgs()
-        # during loading annotaion.
-        sum_gts = sum([len(v) for v in seq_results_collated['gt_bboxes'].data])
-        if sum_gts == 0:
-            return None
-        return seq_results_collated
-
-    def prepare_test_img(self, idx):
-        frame_ids = self.select_test_clip(idx)  # list of int
-        img_infos = self.get_frame_info(idx, frame_ids)
-        seq_results = []
-        for img_info in img_infos:
-            results = dict(img_info=img_info)
-            self.pre_pipeline(results)
-            results_dict = self.pipeline(results)
             seq_results.append(results_dict)
         seq_results_collated = seq_collate(seq_results)
         return seq_results_collated
