@@ -82,6 +82,8 @@ def anchor_target_tracking_single(flat_anchors,
                                   cfg,
                                   sampling=True,
                                   unmap_outputs=True):
+    """ Strategy: use gt_deltas as gt_bboxes, e.g. sample(), sample_result=gt_bboxes.
+    """
     inside_flags = anchor_inside_flags(flat_anchors, valid_flags,
                                        img_meta['img_shape'][:2],
                                        cfg.allowed_border)
@@ -99,8 +101,8 @@ def anchor_target_tracking_single(flat_anchors,
                                              gt_bboxes_ignore=None,
                                              gt_labels=None)
         bbox_sampler = PseudoSampler()
-        sampling_result = bbox_sampler.sample(assign_result, anchors,
-                                              gt_bboxes)
+        # sampling_result = bbox_sampler.sample(assign_result, anchors, gt_bboxes)
+        sampling_result = bbox_sampler.sample(assign_result, anchors, gt_deltas)
 
     bbox_targets = torch.zeros_like(anchors)
     bbox_weights = torch.zeros_like(anchors)
@@ -111,7 +113,7 @@ def anchor_target_tracking_single(flat_anchors,
         # pos_bbox_targets = bbox2delta(sampling_result.pos_bboxes,
         #                               sampling_result.pos_gt_bboxes,
         #                               target_means, target_stds)
-        pos_bbox_targets = gt_deltas
+        pos_bbox_targets = sampling_result.pos_gt_bboxes
         bbox_targets[pos_inds, :] = pos_bbox_targets
         bbox_weights[pos_inds, :] = 1.0
 
