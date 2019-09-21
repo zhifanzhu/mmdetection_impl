@@ -166,9 +166,12 @@ class SSDMobileNetV2(MobileNetV2):
             input_size: only support 300
             frozen_stages: int, [0, 18], representing layer1 to layer19
             out_layers: tuple of str, str has to be:
-                1) 'layer15' representing 'layer15/expansion_output',
-                    stride of 16 (size 32 in 512x512 input)
-                2) 'layer19', stride of 32 (size 16 in 512x512 input).
+                1) 'layer4', stride 4 output, for FPN
+                2) 'layer7', stride 8 output, for FPN
+                2) 'layer14', stride 16 output, for FPN
+                3) 'layer15' representing 'layer15/expansion_output',
+                    stride 16, for SSD.
+                2) 'layer19', stride 32 for SSD and FPN.
             with_extra: bool
             google_stype: bool
         """
@@ -179,7 +182,8 @@ class SSDMobileNetV2(MobileNetV2):
         self.input_size = input_size
         self.frozen_stages = frozen_stages
         self.out_layers = out_layers
-        assert {'layer15', 'layer19'} == set(out_layers)
+        assert {'layer4', 'layer7', 'layer14', 'layer15', 'layer19'
+                }.intersection(set(out_layers)) == set(out_layers)
         self.with_extra = with_extra
 
         if self.with_extra:
@@ -234,23 +238,29 @@ class SSDMobileNetV2(MobileNetV2):
 
     def forward(self, x):
         outs = []
+        has_4 = 'layer4' in self.out_layers
+        has_7 = 'layer7' in self.out_layers
+        has_14 = 'layer14' in self.out_layers
         has_15 = 'layer15' in self.out_layers
         has_19 = 'layer19' in self.out_layers
         for i, layer in enumerate(self.features):
+            x = layer(x)
+            if i == 3 and has_4:
+                outs.append(x)
+            if i == 6 and has_7:
+                outs.append(x)
+            if i == 13 and has_14:
+                outs.append(x)
+
             # layer15/expansion_output
-            if i == 14 and has_15:
+            if i == 13 and has_15:
                 for i_sub, conv_op in enumerate(layer.conv):
                     x = conv_op(x)
                     if i_sub == 0:
                         outs.append(x)
-                continue
-            # layer19
-            if i == 18 and has_19:
-                x = layer(x)
-                outs.append(x)
-                continue
 
-            x = layer(x)
+            if i == 18 and has_19:
+                outs.append(x)
 
         if self.with_extra:
             for i, layer in enumerate(self.extra):

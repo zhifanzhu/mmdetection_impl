@@ -16,6 +16,7 @@ from .two_stage import TwoStageDetector
 from .seq_base import SeqBaseDetector
 from .seq_single_stage import SeqSingleStageDetector
 from .seq_retinanet import SeqRetinaNet
+from .seq_ssd_dnt import SeqSSDDnT
 
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
@@ -23,4 +24,5 @@ __all__ = [
     'DoubleHeadRCNN', 'RetinaNet', 'FCOS', 'GridRCNN', 'MaskScoringRCNN',
     'RepPointsDetector',
     'SeqBaseDetector', 'SeqSingleStageDetector', 'SeqRetinaNet',
+    'SeqSSDDnT',
 ]

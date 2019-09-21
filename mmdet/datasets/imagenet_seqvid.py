@@ -133,10 +133,12 @@ class SeqVIDDataset(Dataset):
             root = tree.getroot()
             bboxes = []
             labels = []
+            trackids = []
             bboxes_ignore = []
             labels_ignore = []
             for obj in root.findall('object'):
                 name = obj.find('name').text
+                trackid = obj.find('trackid').text
                 label = self.cat2label[name]
                 bnd_box = obj.find('bndbox')
                 bbox = [
@@ -158,12 +160,15 @@ class SeqVIDDataset(Dataset):
                 else:
                     bboxes.append(bbox)
                     labels.append(label)
+                    trackids.append(trackid)
             if not bboxes:
                 bboxes = np.zeros((0, 4))
                 labels = np.zeros((0, ))
+                trackids = np.zeros((0, ))
             else:
                 bboxes = np.array(bboxes, ndmin=2) - 1
                 labels = np.array(labels)
+                trackids = np.array(trackids)
             if not bboxes_ignore:
                 bboxes_ignore = np.zeros((0, 4))
                 labels_ignore = np.zeros((0, ))
@@ -173,6 +178,7 @@ class SeqVIDDataset(Dataset):
             ann = dict(
                 bboxes=bboxes.astype(np.float32),
                 labels=labels.astype(np.int64),
+                trackids=trackids.astype(np.int64),
                 bboxes_ignore=bboxes_ignore.astype(np.float32),
                 labels_ignore=labels_ignore.astype(np.int64))
             anns.append(ann)

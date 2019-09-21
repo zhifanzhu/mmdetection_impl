@@ -9,10 +9,11 @@ from .rpn_head import RPNHead
 from .ssd_head import SSDHead
 from .retina_rpn import RetinaRPN
 from .ssdlite_head import SSDLiteHead
+from .ssd_dnt_head import SSDDnTHead
 
 __all__ = [
     'AnchorHead', 'GuidedAnchorHead', 'FeatureAdaption', 'RPNHead',
     'GARPNHead', 'RetinaHead', 'GARetinaHead', 'SSDHead', 'FCOSHead',
     'RepPointsHead',
-    'RetinaRPN', 'SSDLiteHead',
+    'RetinaRPN', 'SSDLiteHead', 'SSDDnTHead'
 ]

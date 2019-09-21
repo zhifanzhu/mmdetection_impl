@@ -88,7 +88,7 @@ class SeqBaseDetector(nn.Module):
 
         assert num_augs == 1
         imgs = imgs[0]
-        img_metas  = img_metas[0]
+        img_metas = img_metas[0]
         if imgs.dim() == 5:
             # Do reshape
             batch, seq_len, chan, height, width = imgs.shape

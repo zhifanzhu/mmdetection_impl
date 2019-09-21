@@ -118,6 +118,60 @@ class LoadAnnotations(object):
 
 
 @PIPELINES.register_module
+class LoadAnnotationsWithTrack(object):
+
+    def __init__(self,
+                 with_bbox=True,
+                 with_label=True,
+                 with_track=True,
+                 skip_img_without_anno=True):
+        self.with_bbox = with_bbox
+        self.with_label = with_label
+        self.with_track = with_track
+        self.skip_img_without_anno = skip_img_without_anno
+
+    def _load_bboxes(self, results):
+        ann_info = results['ann_info']
+        results['gt_bboxes'] = ann_info['bboxes']
+        if len(results['gt_bboxes']) == 0 and self.skip_img_without_anno:
+            file_path = osp.join(results['img_prefix'],
+                                 results['img_info']['filename'])
+            warnings.warn(
+                'Skip the image "{}" that has no valid gt bbox'.format(
+                    file_path))
+            return None
+        results['gt_bboxes_ignore'] = ann_info.get('bboxes_ignore', None)
+        results['bbox_fields'].extend(['gt_bboxes', 'gt_bboxes_ignore'])
+        return results
+
+    def _load_labels(self, results):
+        results['gt_labels'] = results['ann_info']['labels']
+        return results
+
+    def _load_trackids(self, results):
+        results['gt_trackids'] = results['ann_info']['trackids']
+        return results
+
+    def __call__(self, results):
+        if self.with_bbox:
+            results = self._load_bboxes(results)
+            if results is None:
+                return None
+        if self.with_label:
+            results = self._load_labels(results)
+        if self.with_track:
+            results = self._load_trackids(results)
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += ('(with_bbox={}, with_label={}, with_mask={},'
+                     ' with_seg={})').format(self.with_bbox, self.with_label,
+                                             self.with_mask, self.with_seg)
+        return repr_str
+
+
+@PIPELINES.register_module
 class LoadProposals(object):
 
     def __init__(self, num_max_proposals=None):
