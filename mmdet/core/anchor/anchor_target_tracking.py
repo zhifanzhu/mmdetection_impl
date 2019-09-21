@@ -32,7 +32,6 @@ def anchor_target_tracking(anchor_list,
     num_level_anchors = [anchors.size(0) for anchors in anchor_list[0]]
     # num_level_anchors : list [5776, 2166, 600, 150, 36, 4]
     # concat all level anchors and flags to a single tensor
-    # Already done in cls_regs
     for i in range(num_imgs):
         assert len(anchor_list[i]) == len(valid_flag_list[i])
         anchor_list[i] = torch.cat(anchor_list[i])
