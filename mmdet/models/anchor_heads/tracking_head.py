@@ -284,7 +284,9 @@ class TrackingHead(AnchorHead):
                     dtype=track_preds[0].dtype,
                     device=track_preds[0].device))
         cls_scores = [c[valid_gt_ind, ...].contiguous() for c in cls_scores]
+        track_preds = [tr[valid_gt_ind, ...].contiguous() for tr in track_preds]
         gt_bboxes_keep_t0 = [gt_bboxes_keep_t0[i] for i in valid_gt_ind]
+        gt_deltas_list = [gt_deltas_list[i] for i in valid_gt_ind]
         img_metas = [img_metas[i] for i in valid_gt_ind]
 
         featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]

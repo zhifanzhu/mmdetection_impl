@@ -78,11 +78,11 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=16,
+    imgs_per_gpu=8,
     workers_per_gpu=3,
     train=dict(
         type=dataset_type,
-        seq_len=2,
+        seq_len=6,
         ann_file=data_root + 'ImageSets/VID/VID_train_videos.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
