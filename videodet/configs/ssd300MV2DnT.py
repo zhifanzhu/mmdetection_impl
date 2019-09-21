@@ -49,9 +49,9 @@ train_pipeline = [
     dict(type='LoadImageFromFile', to_float32=True),
     dict(type='LoadAnnotationsWithTrack', with_bbox=True, with_track=True, skip_img_without_anno=False),
     dict(type='Resize', img_scale=(300, 300), keep_ratio=False),
-    dict(type='SeqRandomFlip', flip_ratio=0.0),
     dict(type='Normalize', **img_norm_cfg),
-    dict(type='DefaultFormatBundle'),
+    dict(type='SeqRandomFlip', flip_ratio=0.0),
+    dict(type='DefaultFormatBundleWithTrack'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_trackids']),
 ]
 test_pipeline = [
@@ -73,7 +73,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         seq_len=2,
-        ann_file=data_root + 'ImageSets/VID/VID_train_video.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_train_videos.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
     val=dict(
