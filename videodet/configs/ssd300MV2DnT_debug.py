@@ -51,7 +51,7 @@ train_pipeline = [
     dict(type='Resize', img_scale=(300, 300), keep_ratio=False),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='SeqRandomFlip', flip_ratio=0.0),
-    dict(type='DefaultFormatBundle'),
+    dict(type='DefaultFormatBundleWithTrack'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_trackids']),
 ]
 test_pipeline = [
@@ -68,7 +68,7 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=2,
+    imgs_per_gpu=4,
     workers_per_gpu=0,
     train=dict(
         type=dataset_type,
