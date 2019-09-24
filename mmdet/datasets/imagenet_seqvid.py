@@ -88,8 +88,11 @@ class SeqVIDDataset(Dataset):
         vid_ids = mmcv.list_from_file(ann_file)
 
         def _train_get_vid_id(_id_line):
-            _4d_8d, _start_ind, _end_ind, _num_frames = _id_line.split(' ')
-            return _4d_8d, int(_start_ind), int(_end_ind), int(_num_frames)
+            _4d_8d, _1, _start_ind, _num_raw_frames = _id_line.split(' ')
+            _start_ind = int(_start_ind) - 1
+            _end_ind = int(_num_raw_frames) - 1
+            _num_frames = _end_ind - _start_ind + 1
+            return _4d_8d, _start_ind, _end_ind, _num_frames
 
         def _val_get_vid_id(_id_line):
             _vid_id, _start_ind, _end_ind, _num_frames = id_line.split(' ')
@@ -239,7 +242,7 @@ class SeqVIDDataset(Dataset):
 
         if num_frames == self.seq_len:
             return list(range(start_ind, end_ind))
-        elif num_frames < self.seq_len:
+        if num_frames < self.seq_len:
             # [1, 2, 3], seq_len = 7 -> [1, 1, 2, 2, 3, 3, 3]
             repeat = self.seq_len // num_frames
             residue = self.seq_len % num_frames
@@ -248,19 +251,23 @@ class SeqVIDDataset(Dataset):
                     frame_ids.append(frame_id)
             for _ in range(residue):
                 frame_ids.append(end_ind - 1)
-        else:
-            if self.skip:
-                if isinstance(self.skip, collections.abc.Sequence):
-                    skip = random.choice(self.skip)
-                else:
-                    skip = self.skip
-            if self.skip and self.seq_len * skip < num_frames:
-                start = random.randint(start_ind,
-                                       end_ind - self.seq_len * skip)
-                frame_ids = list(range(start, end_ind, skip))[:self.seq_len]
+            return frame_ids
+
+        # num_frames > self.seq_len
+        if self.skip:
+            if isinstance(self.skip, collections.abc.Sequence):
+                skip = random.choice(self.skip)
             else:
-                start = np.random.randint(start_ind, end_ind - self.seq_len)
-                frame_ids = list(range(start, start + self.seq_len))
+                skip = self.skip
+        if self.skip and self.seq_len * skip < num_frames:
+            # start = random.randint(start_ind,
+            #                        end_ind - self.seq_len * skip)
+            start = start_ind
+            frame_ids = list(range(start, end_ind, skip))[:self.seq_len]
+        else:
+            # start = np.random.randint(start_ind, end_ind - self.seq_len)
+            start = start_ind
+            frame_ids = list(range(start, start + self.seq_len))
 
         return frame_ids
 
