@@ -250,7 +250,7 @@ class SeqVIDDataset(Dataset):
                 for _ in range(repeat):
                     frame_ids.append(frame_id)
             for _ in range(residue):
-                frame_ids.append(end_ind)
+                frame_ids.append(end_ind - 1)
             return frame_ids
 
         # num_frames > self.seq_len
