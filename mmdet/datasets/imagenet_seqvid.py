@@ -89,7 +89,7 @@ class SeqVIDDataset(Dataset):
 
         def _train_get_vid_id(_id_line):
             _4d_8d, _1, _start_ind, _num_raw_frames = _id_line.split(' ')
-            _start_ind = int(_start_ind) - 1
+            _start_ind = int(_start_ind)
             _end_ind = int(_num_raw_frames) - 1
             _num_frames = _end_ind - _start_ind + 1
             return _4d_8d, _start_ind, _end_ind, _num_frames
