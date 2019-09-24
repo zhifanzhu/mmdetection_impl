@@ -48,8 +48,8 @@ train_pipeline = [
     dict(type='LoadImageFromFile', to_float32=True),
     dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
     dict(type='Resize', img_scale=(300, 300), keep_ratio=False),
-    dict(type='RandomFlip', flip_ratio=0.0),
     dict(type='Normalize', **img_norm_cfg),
+    dict(type='RandomFlip', flip_ratio=0.0),
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
 ]
