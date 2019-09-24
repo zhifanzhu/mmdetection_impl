@@ -258,6 +258,9 @@ class SSDMobileNetV2(MobileNetV2):
                     x = conv_op(x)
                     if i_sub == 0:
                         outs.append(x)
+            if i == 14 and has_15:
+                # Skip 15th layer since we've processed it
+                continue
 
             if i == 18 and has_19:
                 outs.append(x)
