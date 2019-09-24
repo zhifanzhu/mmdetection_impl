@@ -241,6 +241,8 @@ class SeqVIDDataset(Dataset):
         frame_ids = []
 
         if num_frames == self.seq_len:
+            if self.seq_len == 1:
+                return [start_ind]
             return list(range(start_ind, end_ind))
         if num_frames < self.seq_len:
             # [1, 2, 3], seq_len = 7 -> [1, 1, 2, 2, 3, 3, 3]
