@@ -90,8 +90,8 @@ class SeqVIDDataset(Dataset):
         def _train_get_vid_id(_id_line):
             _4d_8d, _1, _start_ind, _num_raw_frames = _id_line.split(' ')
             _start_ind = int(_start_ind)
-            _end_ind = int(_num_raw_frames) - 1
-            _num_frames = _end_ind - _start_ind + 1
+            _end_ind = int(_num_raw_frames)
+            _num_frames = _end_ind - _start_ind
             return _4d_8d, _start_ind, _end_ind, _num_frames
 
         def _val_get_vid_id(_id_line):
@@ -241,8 +241,6 @@ class SeqVIDDataset(Dataset):
         frame_ids = []
 
         if num_frames == self.seq_len:
-            if self.seq_len == 1:
-                return [start_ind]
             return list(range(start_ind, end_ind))
         if num_frames < self.seq_len:
             # [1, 2, 3], seq_len = 7 -> [1, 1, 2, 2, 3, 3, 3]
@@ -252,7 +250,7 @@ class SeqVIDDataset(Dataset):
                 for _ in range(repeat):
                     frame_ids.append(frame_id)
             for _ in range(residue):
-                frame_ids.append(end_ind - 1)
+                frame_ids.append(end_ind)
             return frame_ids
 
         # num_frames > self.seq_len
