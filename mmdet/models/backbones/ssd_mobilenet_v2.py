@@ -244,26 +244,36 @@ class SSDMobileNetV2(MobileNetV2):
         has_15 = 'layer15' in self.out_layers
         has_19 = 'layer19' in self.out_layers
         for i, layer in enumerate(self.features):
-            x = layer(x)
             if i == 3 and has_4:
+                x = layer(x)
                 outs.append(x)
+                continue
+
             if i == 6 and has_7:
+                x = layer(x)
                 outs.append(x)
+                continue
+
             if i == 13 and has_14:
+                x = layer(x)
                 outs.append(x)
+                continue
 
             # layer15/expansion_output
-            if i == 13 and has_15:
+            if i == 14 and has_15:
                 for i_sub, conv_op in enumerate(layer.conv):
                     x = conv_op(x)
                     if i_sub == 0:
                         outs.append(x)
-            if i == 14 and has_15:
-                # Skip 15th layer since we've processed it
                 continue
 
             if i == 18 and has_19:
+                x = layer(x)
                 outs.append(x)
+                continue
+
+            x = layer(x)
+            # End for
 
         if self.with_extra:
             for i, layer in enumerate(self.extra):
