@@ -159,13 +159,15 @@ class SSDMobileNetV2(MobileNetV2):
                  frozen_stages=-1,
                  out_layers=('layer15', 'layer19'),
                  with_extra=True,
+                 norm_eval=False,
                  google_stype=True):
         """
 
         Args:
             input_size: only support 300
             frozen_stages: int, [0, 18], representing layer1 to layer19
-            out_layers: tuple of str, str has to be:
+                This would freeze BN weights as well as running stats.
+            out_layers: tple of str, str has to be:
                 1) 'layer4', stride 4 output, for FPN
                 2) 'layer7', stride 8 output, for FPN
                 2) 'layer14', stride 16 output, for FPN
@@ -173,6 +175,8 @@ class SSDMobileNetV2(MobileNetV2):
                     stride 16, for SSD.
                 2) 'layer19', stride 32 for SSD and FPN.
             with_extra: bool
+            fix_batchnorm: bool, this will fix the running_stat of ALL BN layer.
+                To freeze the weights/bias of BN, one need to use fronzen_stages as well.
             google_stype: bool
         """
         super(SSDMobileNetV2, self).__init__(
@@ -185,6 +189,7 @@ class SSDMobileNetV2(MobileNetV2):
         assert {'layer4', 'layer7', 'layer14', 'layer15', 'layer19'
                 }.intersection(set(out_layers)) == set(out_layers)
         self.with_extra = with_extra
+        self.norm_eval = norm_eval
 
         if self.with_extra:
             if google_stype:
@@ -211,6 +216,14 @@ class SSDMobileNetV2(MobileNetV2):
                 m.eval()
                 for param in m.parameters():
                     param.requires_grad = False
+
+        def set_bn_to_eval(m):
+            classname = m.__class__.__name__
+            if classname.find('BatchNorm') != -1:
+                m.eval()
+
+        if self.norm_eval:
+            self.apply(set_bn_to_eval)
 
     def init_weights(self, pretrained=None):
         if isinstance(pretrained, str):

@@ -10,6 +10,12 @@ from ..registry import HEADS
 from .anchor_head import AnchorHead
 
 
+def set_bn_to_eval(m):
+    classname = m.__class__.__name__
+    if classname.find('BatchNorm') != -1:
+        m.eval()
+
+
 def SeperableConv2d(in_channels,
                     out_channels,
                     kernel_size=1,
@@ -35,6 +41,7 @@ class SSDLiteHead(AnchorHead):
     def __init__(self,
                  input_size=300,
                  num_classes=81,
+                 norm_eval=False,
                  in_channels=(576, 1280, 512, 256, 256, 128),
                  anchor_strides=(16, 32, 64, 128, 150, 300),
                  basesize_ratio_range=(0.1, 0.9),
@@ -46,6 +53,7 @@ class SSDLiteHead(AnchorHead):
         self.num_classes = num_classes
         self.in_channels = in_channels
         self.cls_out_channels = num_classes
+        self.norm_eval = norm_eval
         num_anchors = [len(ratios) * 2 + 2 for ratios in anchor_ratios]
         # num_anchors = [4, 6, 6, 6, 4, 4], (if 1 then 4, if 2 then 6)
         reg_convs = []
@@ -112,6 +120,8 @@ class SSDLiteHead(AnchorHead):
         self.use_sigmoid_cls = False
         self.cls_focal_loss = False
         self.fp16_enabled = False
+        if self.norm_eval:
+            self.apply(set_bn_to_eval)
 
     def init_weights(self):
         for m in self.modules():
