@@ -8,7 +8,7 @@ model = dict(
         frozen_stages=3,
         out_layers=('layer4', 'layer7', 'layer14', 'layer19'),
         with_extra=False,
-        norm_eval=False,
+        norm_eval=True,
         ),
     neck=dict(
         type='FPN',
