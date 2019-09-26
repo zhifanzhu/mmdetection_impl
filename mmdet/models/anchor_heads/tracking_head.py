@@ -10,7 +10,7 @@ from mmcv.cnn import xavier_init
 from mmdet.core import (AnchorGenerator, multi_apply,
                         anchor_target_tracking)
 from mmdet.models.backbones.ssd_mobilenet_v2 import ExtraConv
-from mmdet.ops import PointwiseCorrelation
+from mmdet.ops import Correlation
 from mmdet.core.bbox import bbox2delta
 from ..losses import smooth_l1_loss
 from ..registry import HEADS
@@ -34,13 +34,17 @@ class DnTLayer(nn.Module):
 
     def __init__(self,
                  displacements=(4, 4, 4),
-                 strides=(1, 1, 1)):
+                 strides=(2, 1, 1)):
         super(DnTLayer, self).__init__()
         self.point_corrs = nn.ModuleList([
-            PointwiseCorrelation(disp, s)
+            Correlation(pad_size=disp, kernel_size=1, max_displacement=disp,
+                                 stride1=s, stride2=s)
             for disp, s in zip(displacements, strides)
         ])
-        self.base_conv = ExtraConv(243, 256, stride=1, insert_1x1_conv=True)
+        corr_chans = sum([
+            (2 * (d // s) + 1)**2
+            for d, s in zip(displacements, strides)])
+        self.base_conv = ExtraConv(corr_chans, 256, stride=1, insert_1x1_conv=True)
         # One more layer for 19x19 -> 10x10
         self.extra = nn.ModuleList([
             ExtraConv(256, 256, stride=2, insert_1x1_conv=True),
@@ -78,17 +82,12 @@ class DnTLayer(nn.Module):
         interp_func = partial(F.interpolate, size=(19, 19), mode='nearest')
         corr_feats = []
         for t in range(0, c3.size(0) - 1):
-            c3_cur = interp_func(c3[t])
-            c3_nxt = interp_func(c3[t+1])
-            c3_corr = self.point_corrs[0](c3_cur, c3_nxt)
+            c3_corr = self.point_corrs[0](c3[t], c3[t+1])
             c4_corr = self.point_corrs[1](c4[t], c4[t+1])
             c5_cur = interp_func(c5[t])
             c5_nxt = interp_func(c5[t+1])
             c5_corr = self.point_corrs[2](c5_cur, c5_nxt)
-            corr_feat = [
-                # (b, H, W, (2d+1), (2d+1)) -> (b, (2d+1)^2, H, W)
-                cf.view(cf.size(0), cf.size(1), cf.size(2), -1).permute(0, 3, 1, 2)
-                for cf in [c3_corr, c4_corr, c5_corr]]
+            corr_feat = [c3_corr, c4_corr, c5_corr]
             corr_feat = torch.cat(corr_feat, dim=1)  # cat c3, c4, c5
             corr_feats.append(corr_feat)
         corr_feats = torch.cat(corr_feats, dim=0)
