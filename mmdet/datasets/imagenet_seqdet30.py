@@ -200,7 +200,8 @@ class SeqDET30Dataset(Dataset):
         return np.random.choice(pool)
 
     def __getitem__(self, idx):
-        idx = min(idx * self.divisor, len(self) - 1)
+        idx = np.random.randint(idx * self.divisor, (idx + 1) * self.divisor)
+        idx = min(idx, len(self) - 1)
         if self.test_mode:
             raise ValueError("Not allowed")
         while True:
