@@ -160,7 +160,7 @@ class SSDMobileNetV2(MobileNetV2):
                  out_layers=('layer15', 'layer19'),
                  with_extra=True,
                  norm_eval=False,
-                 google_stype=True):
+                 google_style=True):
         """
 
         Args:
@@ -175,9 +175,9 @@ class SSDMobileNetV2(MobileNetV2):
                     stride 16, for SSD.
                 2) 'layer19', stride 32 for SSD and FPN.
             with_extra: bool
-            fix_batchnorm: bool, this will fix the running_stat of ALL BN layer.
+            norm_eval: bool, this will fix the running_stat of ALL BN layer.
                 To freeze the weights/bias of BN, one need to use fronzen_stages as well.
-            google_stype: bool
+            google_style: bool
         """
         super(SSDMobileNetV2, self).__init__(
             n_class=1,
@@ -192,7 +192,7 @@ class SSDMobileNetV2(MobileNetV2):
         self.norm_eval = norm_eval
 
         if self.with_extra:
-            if google_stype:
+            if google_style:
                 self.extra = nn.ModuleList([
                     ExtraConv(1280, 512, stride=2, insert_1x1_conv=True),
                     ExtraConv(512, 256, stride=2, insert_1x1_conv=True),
