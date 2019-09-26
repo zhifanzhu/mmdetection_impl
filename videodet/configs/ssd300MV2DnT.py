@@ -7,7 +7,9 @@ model = dict(
         type='SSDMobileNetV2',
         input_size=input_size,
         out_layers=('layer7', 'layer14', 'layer15', 'layer19'),
-        frozen_stages=-1),
+        frozen_stages=-1,
+        norm_eval=True,
+    ),
     neck=None,
     temporal_module=dict(
         type='Identity'),
@@ -16,6 +18,7 @@ model = dict(
         input_size=input_size,
         in_channels=(576, 1280, 512, 256, 256, 128),
         num_classes=31,
+        norm_eval=True,
         anchor_strides=(16, 32, 64, 128, 150, 300),
         basesize_ratio_range=(0.2, 0.9),
         anchor_ratios=([2], [2, 3], [2, 3], [2, 3], [2], [2]),
@@ -79,12 +82,12 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=8,
+    imgs_per_gpu=4,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
         skip=(1, 3, 5),
-        seq_len=6,
+        seq_len=8,
         ann_file=data_root + 'ImageSets/VID/VID_train_frames_3.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
