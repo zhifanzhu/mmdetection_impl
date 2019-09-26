@@ -182,7 +182,7 @@ class SSDMobileNetV2(MobileNetV2):
         super(SSDMobileNetV2, self).__init__(
             n_class=1,
             width_mult=1.0)
-        assert input_size == 300
+        # assert input_size == 300
         self.input_size = input_size
         self.frozen_stages = frozen_stages
         self.out_layers = out_layers

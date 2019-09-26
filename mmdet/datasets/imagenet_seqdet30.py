@@ -5,7 +5,6 @@ import xml.etree.ElementTree as ET
 import collections
 import torch.nn.functional as F
 from torch.utils.data.dataloader import default_collate
-from mmdet.datasets.pipelines import RandomRatioCrop
 
 from mmcv.parallel.data_container import DataContainer
 
