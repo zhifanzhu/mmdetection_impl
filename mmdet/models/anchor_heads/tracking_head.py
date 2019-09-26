@@ -106,6 +106,7 @@ class DnTLayer(nn.Module):
 class TrackingHead(AnchorHead):
 
     def __init__(self,
+                 loss_scale=1.0,
                  input_size=300,
                  num_classes=81,
                  in_channels=(512, 1024, 512, 256, 256, 256),
@@ -115,6 +116,7 @@ class TrackingHead(AnchorHead):
                  target_means=(.0, .0, .0, .0),
                  target_stds=(1.0, 1.0, 1.0, 1.0)):
         super(AnchorHead, self).__init__()
+        self.loss_scale = loss_scale
         self.input_size = input_size
         self.num_classes = num_classes
         self.in_channels = in_channels
@@ -196,7 +198,7 @@ class TrackingHead(AnchorHead):
 
     def loss_single(self, track_pred, track_targets, track_weights,
                     num_total_samples, cfg):
-        loss_track = smooth_l1_loss(
+        loss_track = self.loss_scale * smooth_l1_loss(
             track_pred,
             track_targets,
             track_weights,
