@@ -19,6 +19,7 @@ We implemented 1) and 2).
 
 """
 
+
 class STMNCell(nn.Module):
     """Basic STMN recurrent network cell.
 

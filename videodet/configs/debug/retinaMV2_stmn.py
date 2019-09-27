@@ -1,6 +1,6 @@
 # model settings
 model = dict(
-    type='SingleStageDetector',
+    type='SeqSingleStageDetector',
     pretrained='zoo/mobilenet_v2.pth.tar',
     backbone=dict(
         type='SSDMobileNetV2',
@@ -10,9 +10,19 @@ model = dict(
         with_extra=False,
         norm_eval=True,
         ),
+    temporal_module=dict(
+        type='RNNDecoder',
+        in_channels=[24, 32, 96, 1280],
+        rnncell_type='STMNCell',
+        rnn_cfgs=[
+            dict(in_channels=1280,
+                 hidden_size=256,
+                 kernel_size=3)],
+        out_layers_type=[0, 0, 0, 1],
+        neck_first=False),
     neck=dict(
         type='FPN',
-        in_channels=[24, 32, 96, 1280],
+        in_channels=[24, 32, 96, 256],
         out_channels=256,
         start_level=1,
         add_extra_convs=True,
@@ -54,14 +64,14 @@ test_cfg = dict(
     nms=dict(type='nms', iou_thr=0.5),
     max_per_img=100)
 # dataset settings
-dataset_type = 'StillVIDDataset'
+dataset_type = 'SeqVIDDataset'
 data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
-    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='RandomFlip', flip_ratio=0.0),  # OFF flip
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
@@ -83,25 +93,28 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=2,
+    imgs_per_gpu=3,
     workers_per_gpu=0,
     train=dict(
         type=dataset_type,
+        seq_len=4,
         ann_file=data_root + 'ImageSets/VID/VID_train_15frames_debug.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames_debug.txt',
+        seq_len=24,
+        ann_file=data_root + 'ImageSets/VID/VID_val_video_debug.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames_debug.txt',
+        seq_len=24,
+        ann_file=data_root + 'ImageSets/VID/VID_val_video_debug.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=1e-3, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=1e-4, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -109,11 +122,11 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[16, 20])
+    step=[8, 11])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=50,
+    interval=1,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
@@ -121,10 +134,10 @@ log_config = dict(
 # yapf:enable
 evaluation = dict(interval=1, num_evals=5000, shuffle=True)
 # runtime settings
-total_epochs = 24
+total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/retinaMV2_debug'
+work_dir = './workvids/retinaMV2_stmn'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

@@ -290,7 +290,8 @@ class SeqVIDDataset(Dataset):
                     data = t(data)
                     state_list.append(None)
                 if data is None:
-                    raise ValueError('None data not allowed in seq dataset.')
+                    return None, state_list
+                    # raise ValueError('None data not allowed in seq dataset.')
             return data, state_list
         else:
             for state, t in zip(state_list, self.pipeline.transforms):
@@ -299,7 +300,8 @@ class SeqVIDDataset(Dataset):
                 else:
                     data, _ = t(data, state)
                 if data is None:
-                    raise ValueError('None data not allowed in seq dataset.')
+                    return None
+                    # raise ValueError('None data not allowed in seq dataset.')
             return data
 
     def prepare_train_img(self, idx):
@@ -315,6 +317,8 @@ class SeqVIDDataset(Dataset):
                     results, None)
             else:
                 results_dict = self.pipeline_with_state(results, trans_states)
+            if results_dict is None:
+                return None
             seq_results.append(results_dict)
         seq_results_collated = seq_collate(seq_results)
 
