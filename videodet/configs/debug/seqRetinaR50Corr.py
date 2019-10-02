@@ -9,6 +9,15 @@ model = dict(
         out_indices=(0, 1, 2, 3),
         frozen_stages=4,
         style='pytorch'),
+    temporal_module=dict(
+        type='CorrelationAdaptor',
+        in_channels=[256, 512, 1024, 2048],
+        adapt_layer=3,
+        displacements=(32, 16, 8),
+        strides=(4, 2, 1),
+        kernel_size=3,
+        deformable_groups=4,
+        neck_first=False),
     neck=dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
@@ -16,14 +25,6 @@ model = dict(
         start_level=1,
         add_extra_convs=True,
         num_outs=5),
-    temporal_module=dict(
-        type='CorrelationAdaptor',
-        in_channels=256,
-        out_channels=256,
-        displacements=(8, 8, 4, 2),
-        strides=(2, 1, 1, 1),
-        kernel_size=3,
-        deformable_groups=4),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -69,7 +70,7 @@ train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
     dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
-    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='RandomFlip', flip_ratio=0.0),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
@@ -96,7 +97,8 @@ data = dict(
     train=dict(
         type=dataset_type,
         seq_len=3,
-        ann_file=data_root + 'ImageSets/VID/VID_train_video_debug.txt',
+        skip=(1, 3, 5),
+        ann_file=data_root + 'ImageSets/VID/VID_train_15frames_debug.txt',
         img_prefix=data_root,
         pipeline=train_pipeline),
     val=dict(
@@ -130,7 +132,7 @@ log_config = dict(
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=1, num_evals=2000, shuffle=True)
+evaluation = dict(interval=1, num_evals=1000, shuffle=True)
 # runtime settings
 total_epochs = 12
 device_ids = range(8)

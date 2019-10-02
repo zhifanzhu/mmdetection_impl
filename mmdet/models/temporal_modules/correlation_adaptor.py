@@ -1,19 +1,16 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import normal_init
-from mmdet.ops import PointwiseCorrelation, DeformConv
+from mmdet.ops import Correlation, DeformConv
 
 from ..registry import TEMPORAL_MODULE
 
 """
-[torch.Size([1, 256, 64, 64]),
- torch.Size([1, 256, 32, 32]),
- torch.Size([1, 256, 16, 16]),
- torch.Size([1, 256, 8, 8]),
- torch.Size([1, 256, 4, 4])]
- 
-Only perform corr on first 4 layers,
-independent corr, they don't affect other layer.
+Given input of (128, 64, 32), first calculate corr on them,
+then on cat to make 32x32 feat map,
+then conv to produce 16x16,
+then use it as offset field to dconv in_channels[adapt_layer].
+Perform corr before neck. 
 """
 
 
@@ -21,54 +18,93 @@ independent corr, they don't affect other layer.
 class CorrelationAdaptor(nn.Module):
 
     def __init__(self,
-                 in_channels,
-                 out_channels,
-                 displacements=(8, 8, 4, 2),
-                 strides=(2, 1, 1, 1),
+                 in_channels=(256, 512, 1024, 2048),
+                 adapt_layer=3,
+                 # out_adapt_channel=256,
+                 displacements=(32, 16, 8),
+                 strides=(4, 2, 1),
                  kernel_size=3,
-                 deformable_groups=4):
+                 deformable_groups=4,
+                 neck_first=False):
+        """
+
+        Args:
+            in_channels: [256, 512, 1024, 2048] for retina res50.
+            displacements:
+            strides:
+            kernel_size:
+            deformable_groups:
+            neck_first:
+        """
+
         super(CorrelationAdaptor, self).__init__()
+        self.adapt_layer = adapt_layer
+        self.neck_first = neck_first
+
         assert len(displacements) == len(strides)
-        offset_channels = kernel_size * kernel_size * 2
-        self.point_corrs = nn.ModuleList([
-            PointwiseCorrelation(disp, s)
+        self.corrs = nn.ModuleList([
+            Correlation(pad_size=disp, kernel_size=1, max_displacement=disp,
+                        stride1=s, stride2=s)
             for disp, s in zip(displacements, strides)
         ])
-        self.conv_offsets = nn.ModuleList([
+        offset_channels = kernel_size * kernel_size * 2
+        # num_corr_channels = 867 , too high dim ?
+        num_corr_channels = int(sum([(2*(d/s) + 1)**2
+                                     for d, s in zip(displacements, strides)]))
+        bottleneck = 256
+        self.corr_conv = nn.Sequential(
             nn.Conv2d(
-                (2*disp+1)*(2*disp+1),
-                deformable_groups * offset_channels,
-                kernel_size=1,
-                bias=False)
-            for disp in displacements
-        ])
-        self.conv_adaptions = nn.ModuleList([
-            DeformConv(
-                in_channels,
-                out_channels,
-                kernel_size=kernel_size,
+                in_channels=num_corr_channels,
+                out_channels=bottleneck,
+                kernel_size=3,
                 padding=(kernel_size - 1) // 2,
-                deformable_groups=deformable_groups)
-            for _ in displacements
-        ])
+                stride=2),
+            nn.ReLU(inplace=True))
+
+        self.conv_offset = nn.Conv2d(
+            bottleneck,
+            deformable_groups * offset_channels,
+            kernel_size=1,
+            bias=False)
+        self.conv_adaption = DeformConv(
+            in_channels[adapt_layer],
+            in_channels[adapt_layer],
+            kernel_size=kernel_size,
+            padding=(kernel_size - 1) // 2,
+            deformable_groups=deformable_groups)
         self.relu = nn.ReLU(inplace=True)
 
     def init_weights(self):
-        for conv_offset, conv_adaption in zip(
-                self.conv_offsets, self.conv_adaptions):
-            normal_init(conv_offset, std=0.01)
-            normal_init(conv_adaption, std=0.01)
+
+        def _init_conv(m):
+            classname = m.__class__.__name__
+            if classname.find('Conv') != -1:
+                normal_init(m, std=0.01)
+        self.apply(_init_conv)
 
     # TODO(zhifan) use previous in_dict during test.
     def forward(self, input_list, in_dict=None, is_train=False):
+        time, batch, _, _, _ = input_list[0].shape
         outs = []
-        num_adapt_layers = len(self.conv_offsets)
-        for level, inputs in enumerate(input_list[:num_adapt_layers]):
-            feats = self.forward_single(inputs, level)
-            outs.append(feats)
-        for inputs in input_list[num_adapt_layers:]:
-            time, batch, c, h, w = inputs.shape
-            outs.append(inputs.view([time*batch, c, h, w]))
+        for l, inputs in enumerate(input_list[:self.adapt_layer]):
+            outs.append(inputs.view(time*batch,
+                                    inputs.size(2),
+                                    inputs.size(3),
+                                    inputs.size(4)))
+
+        corr_c2 = self.forward_corr(input_list[0], level=0)
+        corr_c3 = self.forward_corr(input_list[1], level=1)
+        corr_c4 = self.forward_corr(input_list[2], level=2)
+        corr_cat = torch.cat([corr_c2, corr_c3, corr_c4], dim=1)  # [(T-1)*B, c_new, h ,w]
+        corr_feat = self.corr_conv(corr_cat)
+        offset = self.conv_offset(corr_feat)
+        feat_c5 = input_list[3]
+        feat_c5_input = feat_c5[1:].view(
+            (time - 1) * batch, feat_c5.size(2), feat_c5.size(3), feat_c5.size(4))
+        feat_adapt = self.relu(self.conv_adaption(feat_c5_input, offset))
+        feat_adapt = torch.cat([feat_c5[0], feat_adapt], dim=0)
+        outs.append(feat_adapt)
+
         if is_train:
             return outs, None
         else:
@@ -78,21 +114,15 @@ class CorrelationAdaptor(nn.Module):
             )
             return outs, out_dict
 
-    def forward_single(self, inputs, level):
+    def forward_corr(self, inputs, level):
         time, batch, c, h, w = inputs.shape
         if time <= 1:
             return inputs.view(-1, c, h, w)
 
         corr_feats = []
         for t in range(1, len(inputs)):
-            # corr_feat = self.point_corrs[level](inputs[t-1], inputs[t])
-            corr_feat = self.point_corrs[level](inputs[t], inputs[t-1])  # changed on 09.14
-            corr_feat = corr_feat.reshape(batch, h, w, -1).permute(0, 3, 1, 2)
+            corr_feat = self.corrs[level](inputs[t], inputs[t-1])
             corr_feats.append(corr_feat)
-        # Parallelize offset and dconv computation, though no speedup.
         corr_feats = torch.cat(corr_feats)
-        offset = self.conv_offsets[level](corr_feats)
-        feat_inputs = inputs[1:].view((time - 1) * batch, c, h, w)
-        feats = self.relu(self.conv_adaptions[level](feat_inputs, offset))
-        feats = torch.cat([inputs[0], feats], dim=0)
-        return feats
+        return corr_feats
+
