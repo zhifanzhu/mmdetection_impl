@@ -92,17 +92,22 @@ class CorrelationAdaptor(nn.Module):
                                     inputs.size(3),
                                     inputs.size(4)))
 
-        corr_c2 = self.forward_corr(input_list[0], level=0)
-        corr_c3 = self.forward_corr(input_list[1], level=1)
-        corr_c4 = self.forward_corr(input_list[2], level=2)
-        corr_cat = torch.cat([corr_c2, corr_c3, corr_c4], dim=1)  # [(T-1)*B, c_new, h ,w]
-        corr_feat = self.corr_conv(corr_cat)
-        offset = self.conv_offset(corr_feat)
-        feat_c5 = input_list[3]
-        feat_c5_input = feat_c5[1:].view(
-            (time - 1) * batch, feat_c5.size(2), feat_c5.size(3), feat_c5.size(4))
-        feat_adapt = self.relu(self.conv_adaption(feat_c5_input, offset))
-        feat_adapt = torch.cat([feat_c5[0], feat_adapt], dim=0)
+        if time > 1:
+            corr_c2 = self.forward_corr(input_list[0], level=0)
+            corr_c3 = self.forward_corr(input_list[1], level=1)
+            corr_c4 = self.forward_corr(input_list[2], level=2)
+            corr_cat = torch.cat([corr_c2, corr_c3, corr_c4], dim=1)  # [(T-1)*B, c_new, h ,w]
+            corr_feat = self.corr_conv(corr_cat)
+            offset = self.conv_offset(corr_feat)
+            feat_c5 = input_list[3]
+            feat_c5_input = feat_c5[1:].view(
+                (time - 1) * batch, feat_c5.size(2), feat_c5.size(3), feat_c5.size(4))
+            feat_adapt = self.relu(self.conv_adaption(feat_c5_input, offset))
+            feat_adapt = torch.cat([feat_c5[0], feat_adapt], dim=0)
+        else:
+            feat_c5 = input_list[3]
+            feat_adapt = input_list[3].view(
+                batch, feat_c5.size(2), feat_c5.size(3), feat_c5.size(4))
         outs.append(feat_adapt)
 
         if is_train:
