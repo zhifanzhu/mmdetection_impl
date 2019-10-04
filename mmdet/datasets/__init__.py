@@ -14,6 +14,7 @@ from .imagenet_stillvid import StillVIDDataset
 from .imagenet_det30 import DET30Dataset
 from .imagenet_seqvid import SeqVIDDataset
 from .imagenet_seqdet30 import SeqDET30Dataset
+from .imagenet_vid_fixframes import FixFramesVIDDataset
 
 __all__ = [
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'VOCDataset',
@@ -22,4 +23,5 @@ __all__ = [
     'WIDERFaceDataset', 'DATASETS', 'build_dataset',
     'VisDroneDataset',
     'StillVIDDataset', 'DET30Dataset', 'SeqVIDDataset', 'SeqDET30Dataset',
+    'FixFramesVIDDataset'
 ]
