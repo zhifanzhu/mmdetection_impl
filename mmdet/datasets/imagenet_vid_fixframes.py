@@ -246,14 +246,14 @@ class FixFramesVIDDataset(Dataset):
 
     def select_clip(self, idx):
         vid_info = self.vid_infos[idx]
-        frames = vid_info['frames']
+        frames = vid_info['frames'].copy()
         num_frames = len(frames)
 
         if num_frames == self.seq_len:
             return frames
         if num_frames < self.seq_len:
             # Pad last
-            return frames.extend([frames[-1] for _ in range(self.seq_len - num_frames)])
+            return frames + [frames[-1] for _ in range(self.seq_len - num_frames)]
 
         # num_frames > self.seq_len, random select a seq_len
         start = np.random.randint(0, num_frames - self.seq_len + 1)
