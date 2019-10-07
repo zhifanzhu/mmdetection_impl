@@ -95,7 +95,7 @@ seqdet_train_pipeline = [
     #     max_crop_ratio=(0.9, 0.9)),
     dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
     dict(type='Normalize', **img_norm_cfg),
-    # dict(type='SeqRandomFlip', flip_ratio=0.5),
+    dict(type='SeqRandomFlip', flip_ratio=0.5),
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
 ]
