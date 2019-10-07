@@ -119,7 +119,7 @@ data = dict(
     workers_per_gpu=2,
     train=[
         dict(
-            type='SeqVIDDataset',
+            type='FixFramesVIDDataset',
             seq_len=8,
             ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
             img_prefix=data_root,
