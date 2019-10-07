@@ -18,12 +18,14 @@ class RetinaHead(AnchorHead):
                  scales_per_octave=3,
                  conv_cfg=None,
                  norm_cfg=None,
+                 freeze_all=False,
                  **kwargs):
         self.stacked_convs = stacked_convs
         self.octave_base_scale = octave_base_scale
         self.scales_per_octave = scales_per_octave
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
+        self.freeze_all = freeze_all
         octave_scales = np.array(
             [2**(i / scales_per_octave) for i in range(scales_per_octave)])
         anchor_scales = octave_scales * octave_base_scale
@@ -61,6 +63,13 @@ class RetinaHead(AnchorHead):
             padding=1)
         self.retina_reg = nn.Conv2d(
             self.feat_channels, self.num_anchors * 4, 3, padding=1)
+
+        if self.freeze_all:
+            def _freeze_conv(m):
+                classname = m.__class__.__name__
+                if classname.find('Conv') != -1:
+                    m.requires_grad = False
+            self.apply(_freeze_conv)
 
     def init_weights(self):
         for m in self.cls_convs:
