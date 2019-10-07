@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import normal_init
-from mmdet.ops import Correlation, DeformConv
+from mmdet.ops import Correlation, DeformConv, ModulatedDeformConv
 
 from ..registry import TEMPORAL_MODULE
 
@@ -25,7 +25,8 @@ class CorrelationAdaptor(nn.Module):
                  strides=(4, 2, 1),
                  kernel_size=3,
                  deformable_groups=4,
-                 neck_first=False):
+                 neck_first=False,
+                 with_modulated_dcn=False):
         """
 
         Args:
@@ -40,6 +41,7 @@ class CorrelationAdaptor(nn.Module):
         super(CorrelationAdaptor, self).__init__()
         self.adapt_layer = adapt_layer
         self.neck_first = neck_first
+        self.with_modulated_dcn = with_modulated_dcn
 
         assert len(displacements) == len(strides)
         self.corrs = nn.ModuleList([
@@ -47,7 +49,13 @@ class CorrelationAdaptor(nn.Module):
                         stride1=s, stride2=s)
             for disp, s in zip(displacements, strides)
         ])
-        offset_channels = kernel_size * kernel_size * 2
+        if self.with_modulated_dcn:
+            offset_channels = kernel_size * kernel_size * 3
+            conv_op = ModulatedDeformConv
+        else:
+            offset_channels = kernel_size * kernel_size * 2
+            conv_op = DeformConv
+
         # num_corr_channels = 867 , too high dim ?
         num_corr_channels = int(sum([(2*(d/s) + 1)**2
                                      for d, s in zip(displacements, strides)]))
@@ -66,7 +74,7 @@ class CorrelationAdaptor(nn.Module):
             deformable_groups * offset_channels,
             kernel_size=1,
             bias=False)
-        self.conv_adaption = DeformConv(
+        self.conv_adaption = conv_op(
             in_channels[adapt_layer],
             in_channels[adapt_layer],
             kernel_size=kernel_size,
@@ -98,11 +106,18 @@ class CorrelationAdaptor(nn.Module):
             corr_c4 = self.forward_corr(input_list[2], level=2)
             corr_cat = torch.cat([corr_c2, corr_c3, corr_c4], dim=1)  # [(T-1)*B, c_new, h ,w]
             corr_feat = self.corr_conv(corr_cat)
-            offset = self.conv_offset(corr_feat)
             feat_c5 = input_list[3]
             feat_c5_input = feat_c5[1:].view(
                 (time - 1) * batch, feat_c5.size(2), feat_c5.size(3), feat_c5.size(4))
-            feat_adapt = self.relu(self.conv_adaption(feat_c5_input, offset))
+            if self.with_modulated_dcn:
+                offset_mask = self.conv_offset(corr_feat)
+                offset = offset_mask[:, :18, :, :]
+                mask = offset_mask[:, -9:, :, :].sigmoid()
+                feat_adapt = self.relu(
+                    self.conv_adaption(feat_c5_input, offset, mask))
+            else:
+                offset = self.conv_offset(corr_feat)
+                feat_adapt = self.relu(self.conv_adaption(feat_c5_input, offset))
             feat_adapt = torch.cat([feat_c5[0], feat_adapt], dim=0)
         else:
             feat_c5 = input_list[3]
