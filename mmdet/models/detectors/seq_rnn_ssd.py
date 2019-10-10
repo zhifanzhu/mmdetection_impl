@@ -45,8 +45,9 @@ class SeqRNNSSDMobileNet(SeqBaseDetector):
             self.temporal_module.init_weights()
         self.bbox_head.init_weights()
 
-    def extract_base_feat(self, img):
-        x = self.backbone.extract_feats(img, endpont='layer15')
+    def extract_feat(self, img):
+        """ Extract base features. """
+        x = self.backbone.extract_feats(img, endpoint='layer15')
         if self.with_neck and self.neck_first:
             x = self.neck(x)
         return x
@@ -88,7 +89,7 @@ class SeqRNNSSDMobileNet(SeqBaseDetector):
                       gt_labels,
                       gt_bboxes_ignore=None):
         batch = img.size(0) // seq_len
-        x = self.extract_base_feat(img)  # [[T*B, c1, h1, w1]*4]
+        x = self.extract_feat(img)  # [[T*B, c1, h1, w1]*4]
         if self.with_temporal_module:
             x_seq = [v.view([seq_len, batch, *v.shape[1:]])
                      for v in x]
@@ -96,8 +97,8 @@ class SeqRNNSSDMobileNet(SeqBaseDetector):
             # x = [[T*B, c, h, *w]*5]
 
         x = self.extract_final_feat(x)
-        # if self.with_neck and not self.neck_first:
-        #     x = self.neck(x)
+        if self.with_neck and not self.neck_first:
+            x = self.neck(x)
 
         outs = self.bbox_head(x)
 

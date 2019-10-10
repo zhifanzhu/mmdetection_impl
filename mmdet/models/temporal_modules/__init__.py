@@ -4,6 +4,7 @@ from .lstm import BottleneckLSTMDecoder
 from .concat_correlation_adaptor import ConcatCorrelationAdaptor
 from .simple_concat import SimpleConcat
 from .rnn_decoder import RNNDecoder
+from .rnn_decoder_noinit import NoInitRNNDecoder
 
 from .stmn import STMNCell
 from .aligned_stmn import AlignedSTMNCell
@@ -11,5 +12,5 @@ from .aligned_stmn import AlignedSTMNCell
 __all__ = [
     'Identity', 'BottleneckLSTMDecoder', 'RNNDecoder',
     'ConcatCorrelationAdaptor', 'SimpleConcat',
-    'STMNCell', 'AlignedSTMNCell'
+    'STMNCell', 'AlignedSTMNCell', 'NoInitRNNDecoder'
 ]

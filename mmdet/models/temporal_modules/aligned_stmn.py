@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
+from mmcv.cnn import normal_init
+from mmdet.ops import Correlation, DeformConv
+
 
 """
 See stmn.py,
@@ -12,12 +15,15 @@ here we add *matchtrans* to it.
 class AlignedSTMNCell(nn.Module):
     """Basic STMN recurrent network cell.
 
+    Now in_channels must equalt to hidden_size
+
     """
 
     def __init__(self,
                  in_channels,
                  hidden_size,
-                 kernel_size=3):
+                 kernel_size=3,
+                 displacement=4):
         super(AlignedSTMNCell, self).__init__()
         padding = kernel_size // 2
         self.input_size = in_channels
@@ -38,6 +44,33 @@ class AlignedSTMNCell(nn.Module):
             kernel_size,
             padding=padding)
 
+        # bottleneck = 256
+        offset_channels = kernel_size * kernel_size * 2
+        corr_channels = (2 * displacement + 1) ** 2
+        self.correlation = Correlation(
+            pad_size=displacement, kernel_size=1, max_displacement=displacement,
+            stride1=1, stride2=1)
+        # self.corr_conv = nn.Sequential(
+        #     nn.Conv2d(
+        #         in_channels=corr_channels,
+        #         out_channels=bottleneck,
+        #         kernel_size=kernel_size,
+        #         padding=(kernel_size - 1) // 2,
+        #         stride=1),
+        #     nn.ReLU(inplace=True))
+        self.conv_offset = nn.Conv2d(
+            corr_channels,
+            offset_channels,
+            kernel_size=1,
+            bias=False)
+        self.conv_align = DeformConv(
+            in_channels=in_channels,
+            out_channels=in_channels,
+            kernel_size=kernel_size,
+            padding=(kernel_size - 1) //2,
+            deformable_groups=1)
+        self.relu = nn.ReLU(inplace=True)
+
     def init_weights(self):
         init.orthogonal(self.reset_gate.weight)
         init.orthogonal(self.update_gate.weight)
@@ -45,6 +78,9 @@ class AlignedSTMNCell(nn.Module):
         init.constant(self.reset_gate.bias, 0.)
         init.constant(self.update_gate.bias, 0.)
         init.constant(self.out_gate.bias, 0.)
+        # normal_init(self.corr_conv[0], std=0.01)
+        normal_init(self.conv_offset, std=0.01)
+        normal_init(self.conv_align, std=0.01)
 
     @staticmethod
     def _linear_scale(inputs, std_multiplier=3.0):
@@ -66,7 +102,8 @@ class AlignedSTMNCell(nn.Module):
 
     def forward(self, inputs, in_state):
         # data size is [batch, channel, height, width]
-        stacked_inputs = torch.cat([inputs, in_state], dim=1)
+        aligned_memory = self.align_features(prev_feat=in_state, cur_feat=inputs)
+        stacked_inputs = torch.cat([inputs, aligned_memory], dim=1)
         update = self._linear_scale(F.relu(self.update_gate(stacked_inputs)))
         reset = self._linear_scale(F.relu(self.reset_gate(stacked_inputs)))
         out_inputs = F.relu(self.out_gate(torch.cat([inputs, in_state * reset], dim=1)))
@@ -74,6 +111,13 @@ class AlignedSTMNCell(nn.Module):
         out_feat = new_state
 
         return out_feat, new_state
+
+    def align_features(self, prev_feat, cur_feat):
+        corr_feat = self.correlation(cur_feat, prev_feat)
+        # corr_feat = self.corr_conv(corr_feat)
+        offset = self.conv_offset(corr_feat)
+        aligned_feat = self.conv_align(prev_feat, offset)
+        return aligned_feat
 
     def init_state(self, in_shape, device):
         # get batch and spatial sizes
