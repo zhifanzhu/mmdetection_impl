@@ -250,6 +250,9 @@ class SSDMobileNetV2(MobileNetV2):
                     xavier_init(m, distribution='uniform')
 
     def forward(self, x):
+        return self.extract_feats(x, endpoint=None)
+
+    def extract_feats(self, x, endpoint=None):
         outs = []
         has_4 = 'layer4' in self.out_layers
         has_7 = 'layer7' in self.out_layers
@@ -260,16 +263,22 @@ class SSDMobileNetV2(MobileNetV2):
             if i == 3 and has_4:
                 x = layer(x)
                 outs.append(x)
+                if endpoint == 'layer4':
+                    break
                 continue
 
             if i == 6 and has_7:
                 x = layer(x)
                 outs.append(x)
+                if endpoint == 'layer7':
+                    break
                 continue
 
             if i == 13 and has_14:
                 x = layer(x)
                 outs.append(x)
+                if endpoint == 'layer14':
+                    break
                 continue
 
             # layer15/expansion_output
@@ -278,17 +287,21 @@ class SSDMobileNetV2(MobileNetV2):
                     x = conv_op(x)
                     if i_sub == 0:
                         outs.append(x)
+                if endpoint == 'layer15':
+                    break
                 continue
 
             if i == 18 and has_19:
                 x = layer(x)
                 outs.append(x)
+                if endpoint == 'layer19':
+                    break
                 continue
 
             x = layer(x)
             # End for
 
-        if self.with_extra:
+        if self.with_extra and endpoint is None:
             for i, layer in enumerate(self.extra):
                 x = layer(x)
                 outs.append(x)

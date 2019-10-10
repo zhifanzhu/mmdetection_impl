@@ -4,19 +4,12 @@ import torch.nn.functional as F
 from torch.nn import init
 
 """
-STMN is very similar to ConvGRU, except
-1) use relu instead of sigmoid and tanh
-2) use linear_scale after z and r, in paper they called it
-    BN_star, but it has no trainable parameter at all.
-3) MatchTrans
-4) Init weights using `swapped out conv layers`
-
-We implemented 1) and 2).
-
+See stmn.py,
+here we add *matchtrans* to it.
 """
 
 
-class STMNCell(nn.Module):
+class AlignedSTMNCell(nn.Module):
     """Basic STMN recurrent network cell.
 
     """
@@ -25,7 +18,7 @@ class STMNCell(nn.Module):
                  in_channels,
                  hidden_size,
                  kernel_size=3):
-        super(STMNCell, self).__init__()
+        super(AlignedSTMNCell, self).__init__()
         padding = kernel_size // 2
         self.input_size = in_channels
         self.hidden_size = hidden_size
