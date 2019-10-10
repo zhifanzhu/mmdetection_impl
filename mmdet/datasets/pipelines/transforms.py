@@ -632,6 +632,9 @@ class MinIoURandomCrop(object):
         h, w, c = img.shape
         while True:
             mode = random.choice(self.sample_mode)
+            # Force return origin for no annotation.
+            if len(boxes) == 0:
+                mode = 1
             if mode == 1:
                 return results
 
