@@ -127,6 +127,7 @@ class SeqRNNSSDMobileNet(SeqBaseDetector):
                      for v in x]
             x, out_dict = self.temporal_module(x_seq, in_dict=None, is_train=True)
 
+        x = self.extract_final_feat(x)
         if self.with_neck and not self.neck_first:
             x = self.neck(x)
 
@@ -147,6 +148,7 @@ class SeqRNNSSDMobileNet(SeqBaseDetector):
             x, out_dict = self.temporal_module(x, in_dict=in_dict,
                                                is_train=False)
 
+        x = self.extract_final_feat(x)
         if self.with_neck and not self.neck_first:
             x = self.neck(x)
 
