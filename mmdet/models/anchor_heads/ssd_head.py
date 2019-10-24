@@ -147,8 +147,10 @@ class SSDHead(AnchorHead):
 
         # anchor_list: (list for every level featmap)
         # list(batch) of list(featmap_sizes) of Tensor([38x38x4,4])
+        device = cls_scores[0].device
+
         anchor_list, valid_flag_list = self.get_anchors(
-            featmap_sizes, img_metas)
+            featmap_sizes, img_metas, device=device)
         cls_reg_targets = anchor_target(
             anchor_list,
             valid_flag_list,
