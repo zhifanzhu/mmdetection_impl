@@ -2,7 +2,7 @@
 input_size = 512
 model = dict(
     type='SingleStageDetector',
-    pretrained='open-mmlab://vgg16_caffe',
+    pretrained='./zoo/vgg16_caffe-292e1171.pth',
     backbone=dict(
         type='SSDVGGAtt',
         input_size=input_size,
