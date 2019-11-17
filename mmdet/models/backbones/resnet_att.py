@@ -10,6 +10,7 @@ from mmdet.models.plugins import GeneralizedAttention
 from mmdet.ops import ContextBlock, DeformConv, ModulatedDeformConv
 from ..registry import BACKBONES
 from ..utils import build_conv_layer, build_norm_layer
+from mmdet.models.plugins import AttentionTransform
 
 
 class BasicBlock(nn.Module):
@@ -428,6 +429,8 @@ class ResNetAtt(nn.Module):
         self.stage_blocks = stage_blocks[:num_stages]
         self.inplanes = 64
 
+        self.att_transformer = AttentionTransform(x_len=128, y_len=128)
+
         self._make_stem_layer(in_channels)
 
         self.res_layers = []
@@ -516,6 +519,8 @@ class ResNetAtt(nn.Module):
                         constant_init(m.norm3, 0)
                     elif isinstance(m, BasicBlock):
                         constant_init(m.norm2, 0)
+
+            self.att_transformer.init_weights()
         else:
             raise TypeError('pretrained must be a str or None')
 
@@ -533,6 +538,9 @@ class ResNetAtt(nn.Module):
         for i, layer_name in enumerate(self.res_layers):
             res_layer = getattr(self, layer_name)
             x = res_layer(x)
+            # Apply attention sampler
+            if i == 0:
+                x = self.att_transformer(x)
             if i in self.out_indices:
                 outs.append(x)
         return tuple(outs)
