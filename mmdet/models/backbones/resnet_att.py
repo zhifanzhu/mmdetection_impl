@@ -330,6 +330,7 @@ def make_res_layer(block,
     return nn.Sequential(*layers)
 
 
+# TODO(zhifan): Clean-up
 @BACKBONES.register_module
 class ResNetAtt(nn.Module):
     """ResNet backbone.
