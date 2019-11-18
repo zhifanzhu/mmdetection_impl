@@ -35,8 +35,8 @@ class GridFC(nn.Module):
         self.x_len = x_len
         self.y_len = y_len
 
-        x_scale = 2.0 / x_len
-        y_scale = 2.0 / y_len
+        x_scale = 2.0 / (x_len - 1)
+        y_scale = 2.0 / (y_len - 1)
         self.identity_x = torch.arange(x_len).view(
             1, x_len, 1).float().to(
             device).requires_grad_(False)
