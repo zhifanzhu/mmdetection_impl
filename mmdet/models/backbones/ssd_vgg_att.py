@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from mmcv.cnn import VGG, constant_init, kaiming_init, normal_init, xavier_init
 from mmcv.runner import load_checkpoint
 from mmdet.models.plugins import AttentionTransform
-from mmdet.ops import DeformConv
+from mmdet.ops import DeformConv, DeformConvPack
 
 from ..registry import BACKBONES
 
@@ -82,18 +82,12 @@ class SSDVGGAtt(VGG):
 
         self.use_dconv = use_dconv
         if use_dconv:
-            offset_channels = 18
-            self.conv_offset = nn.Conv2d(
-                512,
-                offset_channels,
-                kernel_size=1,
-                bias=False)
-            self.att_conv = DeformConv(
-                512,
-                512,
+            self.features[21] = DeformConvPack(
+                in_channels=512,
+                out_channels=512,
                 kernel_size=3,
-                padding=1,
-                deformable_groups=1)
+                stride=1,
+                padding=1)
         else:
             self.att_transformer = AttentionTransform(x_len=64, y_len=64)
 
@@ -118,9 +112,7 @@ class SSDVGGAtt(VGG):
         else:
             raise TypeError('pretrained must be a str or None')
 
-        if self.use_dconv:
-            constant_init(self.conv_offset, 0)
-        else:
+        if not self.use_dconv:
             self.att_transformer.init_weights()
         for m in self.extra.modules():
             if isinstance(m, nn.Conv2d):
@@ -135,12 +127,9 @@ class SSDVGGAtt(VGG):
             if i in self.out_feature_indices:
                 # apply attention
                 if i == 22:
-                    if self.use_dconv:
-                        offset = self.conv_offset(x)
-                        x = self.att_conv(x, offset)
-                        # x = F.relu(x)
-                    else:
+                    if not self.use_dconv:
                         x = self.att_transformer(x)
+                        x = F.relu(x)
                 outs.append(x)
         for i, layer in enumerate(self.extra):
             x = F.relu(layer(x), inplace=True)
