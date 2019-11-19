@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from mmcv.cnn import VGG, constant_init, kaiming_init, normal_init, xavier_init
 from mmcv.runner import load_checkpoint
 from mmdet.models.plugins import AttentionTransform
-from mmdet.ops import DeformConvPack
+from mmdet.ops import DeformConv
 
 from ..registry import BACKBONES
 
@@ -82,9 +82,17 @@ class SSDVGGAtt(VGG):
 
         self.use_dconv = use_dconv
         if use_dconv:
-            self.att_transformer = DeformConvPack(
-                in_channels=512,
-                out_channels=512,
+            offset_channels = 18
+            self.conv_offset = nn.Conv2d(
+                512,
+                offset_channels,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                dilation=1)
+            self.att_conv = DeformConv(
+                512,
+                512,
                 kernel_size=3,
                 stride=1,
                 padding=1,
@@ -116,7 +124,7 @@ class SSDVGGAtt(VGG):
             raise TypeError('pretrained must be a str or None')
 
         if self.use_dconv:
-            self.att_transformer.init_offset()
+            constant_init(self.conv_offset, 0)
         else:
             self.att_transformer.init_weights()
         for m in self.extra.modules():
@@ -132,7 +140,11 @@ class SSDVGGAtt(VGG):
             if i in self.out_feature_indices:
                 # apply attention
                 if i == 22:
-                    x = self.att_transformer(x)
+                    if self.use_dconv:
+                        offset = self.conv_offset(x)
+                        x = self.att_conv(x, offset)
+                    else:
+                        x = self.att_transformer(x)
                 outs.append(x)
         for i, layer in enumerate(self.extra):
             x = F.relu(layer(x), inplace=True)
