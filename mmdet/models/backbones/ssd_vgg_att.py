@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from mmcv.cnn import VGG, constant_init, kaiming_init, normal_init, xavier_init
 from mmcv.runner import load_checkpoint
 from mmdet.models.plugins import AttentionTransform
+from mmdet.ops import DeformConvPack
 
 from ..registry import BACKBONES
 
@@ -53,6 +54,7 @@ class SSDVGGAtt(VGG):
                  with_last_pool=False,
                  ceil_mode=True,
                  out_indices=(3, 4),
+                 use_dconv=False,
                  out_feature_indices=(22, 34),
                  l2_norm_scale=20.):
         # TODO: in_channels for mmcv.VGG
@@ -78,7 +80,19 @@ class SSDVGGAtt(VGG):
             str(len(self.features)), nn.ReLU(inplace=True))
         self.out_feature_indices = out_feature_indices
 
-        self.att_transformer = AttentionTransform(x_len=64, y_len=64)
+        self.use_dconv = use_dconv
+        if use_dconv:
+            self.att_transformer = DeformConvPack(
+                in_channels=512,
+                out_channels=512,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                dilation=1,
+                deformable_groups=1,
+                bias=False)
+        else:
+            self.att_transformer = AttentionTransform(x_len=64, y_len=64)
 
         self.inplanes = 1024
         self.extra = self._make_extra_layers(self.extra_setting[input_size])
@@ -101,7 +115,10 @@ class SSDVGGAtt(VGG):
         else:
             raise TypeError('pretrained must be a str or None')
 
-        self.att_transformer.init_weights()
+        if self.use_dconv:
+            self.att_transformer.init_offset()
+        else:
+            self.att_transformer.init_weights()
         for m in self.extra.modules():
             if isinstance(m, nn.Conv2d):
                 xavier_init(m, distribution='uniform')
