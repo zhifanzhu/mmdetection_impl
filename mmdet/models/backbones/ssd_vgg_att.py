@@ -86,19 +86,14 @@ class SSDVGGAtt(VGG):
             self.conv_offset = nn.Conv2d(
                 512,
                 offset_channels,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-                dilation=1)
+                kernel_size=1,
+                bias=False)
             self.att_conv = DeformConv(
                 512,
                 512,
                 kernel_size=3,
-                stride=1,
                 padding=1,
-                dilation=1,
-                deformable_groups=1,
-                bias=False)
+                deformable_groups=1)
         else:
             self.att_transformer = AttentionTransform(x_len=64, y_len=64)
 
@@ -143,6 +138,7 @@ class SSDVGGAtt(VGG):
                     if self.use_dconv:
                         offset = self.conv_offset(x)
                         x = self.att_conv(x, offset)
+                        # x = F.relu(x)
                     else:
                         x = self.att_transformer(x)
                 outs.append(x)
