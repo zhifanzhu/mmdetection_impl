@@ -430,7 +430,7 @@ class ResNetAtt(nn.Module):
         self.stage_blocks = stage_blocks[:num_stages]
         self.inplanes = 64
 
-        self.att_transformer = AttentionTransform(x_len=128, y_len=128)
+        self.att_transformer = AttentionTransform(local=True)
 
         self._make_stem_layer(in_channels)
 

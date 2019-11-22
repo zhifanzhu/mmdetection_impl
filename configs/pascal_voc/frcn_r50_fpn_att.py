@@ -132,7 +132,7 @@ data = dict(
     workers_per_gpu=2,
     train=dict(
         type='RepeatDataset',
-        times=3,
+        times=1,
         dataset=dict(
             type=dataset_type,
             ann_file=[
@@ -159,14 +159,14 @@ lr_config = dict(policy='step', step=[3])  # actual epoch = 3 * 3 = 9
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=50,
+    interval=100,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 4  # actual epoch = 4 * 3 = 12
+total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/frcn_r50_fpn_att'

@@ -3,6 +3,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# alternative : do cumsum
+def map_axis_gen(att):
+    # att.shape : [b, 1, h, w]
+    map_sx, _ = torch.max(att, 3)
+    map_sx = map_sx.unsqueeze(3)
+    map_sy, _ = torch.max(att, 2)
+    map_sy = map_sy.unsqueeze(2)
+    sum_sx = torch.sum(map_sx, (1, 2), keepdim=True)
+    sum_sy = torch.sum(map_sy, (1, 3), keepdim=True)
+    map_sx = torch.div(map_sx, sum_sx)  # [1, 1, 32, 1]
+    map_sy = torch.div(map_sy, sum_sy)  # [1, 1, 1, 32]
+    return map_sx, map_sy
+
+
 class TriAtt(nn.Module):
     def __init__(self):
         super(TriAtt, self).__init__()
@@ -52,20 +66,6 @@ class GridFC(nn.Module):
         nn.init.constant_(self.fc_x.bias, 0)
         nn.init.constant_(self.fc_y.bias, 0)
 
-    # alternative : do cumsum
-    @staticmethod
-    def map_axis_gen(att):
-        # att.shape : [b, 1, h, w]
-        map_sx, _ = torch.max(att, 3)
-        map_sx = map_sx.unsqueeze(3)
-        map_sy, _ = torch.max(att, 2)
-        map_sy = map_sy.unsqueeze(2)
-        sum_sx = torch.sum(map_sx, (1, 2), keepdim=True)
-        sum_sy = torch.sum(map_sy, (1, 3), keepdim=True)
-        map_sx = torch.div(map_sx, sum_sx)  # [1, 1, 32, 1]
-        map_sy = torch.div(map_sy, sum_sy)  # [1, 1, 1, 32]
-        return map_sx, map_sy
-
     def forward(self, att):
         """
         In reality, most of the time x_len == y_len, but we keep them
@@ -74,7 +74,7 @@ class GridFC(nn.Module):
         batch = att.size(0)
         x_len = self.x_len
         y_len = self.y_len
-        att_x, att_y = self.map_axis_gen(att)
+        att_x, att_y = map_axis_gen(att)
 
         index_x = self.fc_x(att_x.view(batch, -1)).view(batch, x_len, 1)
         index_y = self.fc_y(att_y.view(batch, -1)).view(batch, y_len, 1)
@@ -88,19 +88,73 @@ class GridFC(nn.Module):
         one_vector_x = torch.ones_like(index_x).cuda()
         one_vector_y = torch.ones_like(index_y).cuda()
         # generate meshgrid like
+        # TODO(zhifan): did I mis calculate the order? see GridConv
         grid_x = torch.matmul(one_vector_x, index_x.transpose(1, 2)).unsqueeze(-1)
         grid_y = torch.matmul(index_y, one_vector_y.transpose(1, 2)).unsqueeze(-1)
         grid = torch.cat([grid_x, grid_y], dim=3)
         return grid
 
 
+class GridConv(nn.Module):
+    def __init__(self):
+        super(GridConv, self).__init__()
+        self.conv1d_x = nn.Conv1d(1, 1, 3, padding=1)
+        self.conv1d_y = nn.Conv1d(1, 1, 3, padding=1)
+
+    def init_weight(self):
+        nn.init.xavier_normal_(self.conv1d_x.weight)
+        nn.init.xavier_normal_(self.conv1d_y.weight)
+        nn.init.constant_(self.conv1d_x.bias, 0)
+        nn.init.constant_(self.conv1d_y.bias, 0)
+
+    def forward(self, att):
+        """
+        In reality, most of the time x_len == y_len, but we keep them
+        seperate.
+        """
+        device = att.device
+        batch = att.size(0)
+
+        att_x, att_y = map_axis_gen(att)
+        x_len = att_x.size(2)
+        y_len = att_y.size(3)
+        x_scale = 2.0 / (x_len - 1)
+        y_scale = 2.0 / (y_len - 1)
+
+        identity_x = torch.arange(x_len, device=device).view(
+            1, x_len, 1).float().requires_grad_(False)
+        identity_y = torch.arange(y_len, device=device).view(
+            1, y_len, 1).float().requires_grad_(False)
+        identity_x = identity_x * x_scale - 1.0
+        identity_y = identity_y * y_scale - 1.0
+
+        index_x = self.conv1d_x(att_x.view(batch, 1, -1)).view(batch, x_len, 1)
+        index_y = self.conv1d_y(att_y.view(batch, 1, -1)).view(batch, y_len, 1)
+        index_x = index_x + identity_x  # h(x) = x + f(x) for easier learning?
+        index_y = index_y + identity_y
+        index_x = torch.clamp(index_x, min=-1.0, max=1.0)
+        index_y = torch.clamp(index_y, min=-1.0, max=1.0)
+
+        one_vector_x = torch.ones_like(index_y, device=device)
+        one_vector_y = torch.ones_like(index_x, device=device)
+        # generate meshgrid like
+        grid_x = torch.matmul(index_x, one_vector_x.transpose(1, 2)).unsqueeze(-1)
+        grid_y = torch.matmul(one_vector_y, index_y.transpose(1, 2)).unsqueeze(-1)
+        grid = torch.cat([grid_x, grid_y], dim=3)
+        return grid
+
+
 class AttentionTransform(nn.Module):
     def __init__(self,
-                 x_len,
-                 y_len):
+                 local=False,
+                 x_len=None,
+                 y_len=None):
         super(AttentionTransform, self).__init__()
         self.tri_att = TriAtt()
-        self.grid_func = GridFC(x_len=x_len, y_len=y_len)
+        if local:
+            self.grid_func = GridConv()
+        else:
+            self.grid_func = GridFC(x_len=x_len, y_len=y_len)
         # self.init_weights()
 
     def init_weights(self):
