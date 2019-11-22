@@ -135,11 +135,8 @@ data = dict(
         times=1,
         dataset=dict(
             type=dataset_type,
-            ann_file=[
-                data_root + 'VOC2007/ImageSets/Main/trainval.txt',
-                data_root + 'VOC2012/ImageSets/Main/trainval.txt'
-            ],
-            img_prefix=[data_root + 'VOC2007/', data_root + 'VOC2012/'],
+            ann_file=data_root + 'VOC2007/ImageSets/Main/trainval.txt',
+            img_prefix=data_root + 'VOC2007/',
             pipeline=train_pipeline)),
     val=dict(
         type=dataset_type,
