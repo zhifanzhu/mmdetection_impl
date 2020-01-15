@@ -182,7 +182,7 @@ evaluation = dict(interval=1, num_evals=5000*4, shuffle=True)
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/faster_rcnn_r50_caffe_c4_dev_vid15frames'
+work_dir = './workvids/faster_rcnn_r50_caffe_c4_dev_vid15frames'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
