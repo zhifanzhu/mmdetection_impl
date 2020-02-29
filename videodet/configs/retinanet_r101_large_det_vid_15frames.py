@@ -129,7 +129,7 @@ log_config = dict(
 # yapf:enable
 evaluation = dict(interval=1, num_evals=5000*4, shuffle=True)
 # runtime settings
-total_epochs = 12
+total_epochs = 16
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'

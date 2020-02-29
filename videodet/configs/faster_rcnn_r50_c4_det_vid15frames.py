@@ -45,7 +45,7 @@ model = dict(
         with_avg_pool=True,
         roi_feat_size=7,
         in_channels=2048,
-        num_classes=81,
+        num_classes=31,
         target_means=[0., 0., 0., 0.],
         target_stds=[0.1, 0.1, 0.2, 0.2],
         reg_class_agnostic=False,
@@ -134,7 +134,7 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=2,
+    imgs_per_gpu=4,
     workers_per_gpu=2,
     train=[
         dict(
@@ -159,7 +159,7 @@ data = dict(
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=0.01/8, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.01/4, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -182,7 +182,7 @@ evaluation = dict(interval=1, num_evals=5000*4, shuffle=True)
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/faster_rcnn_r50_caffe_c4_dev_vid15frames'
+work_dir = './workvids/faster_rcnn_r50_caffe_c4_dev_vid15frames'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
