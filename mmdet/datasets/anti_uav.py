@@ -82,17 +82,18 @@ class AntiUavDataset(Dataset):
         ir_width = 640
         ir_height = 512
         for video in videos:
-            video_root = osp.join(self.img_prefix,
-                                  video)
+            video_root = video
             rgb_root = osp.join(video_root, 'RGB')
-            num_frames = len(os.listdir(rgb_root))
+            num_frames = len(os.listdir(osp.join(self.img_prefix, rgb_root)))
             if num_frames_per_clip < 0:
                 step = 1
             else:
                 step = num_frames // num_frames_per_clip
+                if step <= 0:
+                    step = 1
             for i in range(0, num_frames, step):
-                # img_id : img_prefix/2019xxx/RGB/0001
-                img_id = '/'.join([rgb_root, f"{i:06d}"])
+                # img_id : 2019xxx/RGB/0001
+                img_id = '/'.join([rgb_root, f"{i:04d}"])
                 filename = img_id + '.jpg'
                 img_infos.append(
                     dict(frame_id=i, vid_root=video_root,
@@ -107,6 +108,7 @@ class AntiUavDataset(Dataset):
     def get_ann_info(self, idx):
         vid_root = self.img_infos[idx]['vid_root']
         frame_id = self.img_infos[idx]['frame_id']
+        vid_root = osp.join(self.img_prefix, vid_root)
         rgb_json_path = osp.join(vid_root, 'RGB_label.json')
         with open(rgb_json_path) as fp:
             rgb_data = json.load(fp)
@@ -114,9 +116,12 @@ class AntiUavDataset(Dataset):
 
         # Only one object, i.e. tracking dataset
         box = rgb_boxes[frame_id]
-        xmin, ymin, box_w, box_h = box
-        labels = ['Drone', ]
-        bboxes = [[xmin, ymin, xmin + box_w, ymin + box_h]]
+        if len(box) != 0:
+            xmin, ymin, box_w, box_h = box
+            labels = [self.cat2label['Drone'], ]
+            bboxes = [[xmin, ymin, xmin + box_w, ymin + box_h]]
+        else:
+            bboxes = None
         if not bboxes:
             bboxes = np.zeros((0, 4))
             labels = np.zeros((0, ))

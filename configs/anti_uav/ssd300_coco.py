@@ -17,7 +17,7 @@ model = dict(
         type='SSDHead',
         input_size=input_size,
         in_channels=(512, 1024, 512, 256, 256, 256),
-        num_classes=81,
+        num_classes=2,
         anchor_strides=(8, 16, 32, 64, 100, 300),
         basesize_ratio_range=(0.15, 0.9),
         anchor_ratios=([2], [2, 3], [2, 3], [2, 3], [2], [2]),
@@ -105,14 +105,14 @@ data = dict(
         pipeline=test_pipeline))
 # optimizer
 optimizer = dict(type='SGD', lr=2e-3, momentum=0.9, weight_decay=5e-4)
-optimizer_config = dict()
+optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
     policy='step',
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[16, 22])
+    step=[8, 11])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -123,7 +123,7 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 24
+total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/antiuav/ssd300_coco'
