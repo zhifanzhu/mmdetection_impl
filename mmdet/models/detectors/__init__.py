@@ -21,11 +21,17 @@ from .seq_retinanet import SeqRetinaNet
 from .seq_ssd_dnt import SeqSSDDnT
 from .seq_rnn_ssd import SeqRNNSSDMobileNet
 
+from .pair_base import PairBaseDetector
+from .pair_single_stage import PairSingleStageDetector
+from .pair_retina import PairRetinaNet
+
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
     'FastRCNN', 'FasterRCNN', 'MaskRCNN', 'CascadeRCNN', 'HybridTaskCascade',
     'DoubleHeadRCNN', 'RetinaNet', 'FCOS', 'GridRCNN', 'MaskScoringRCNN',
     'RepPointsDetector', 'FOVEA',
     'SeqBaseDetector', 'SeqSingleStageDetector', 'SeqRetinaNet',
-    'SeqSSDDnT', 'SeqRNNSSDMobileNet'
+    'SeqSSDDnT', 'SeqRNNSSDMobileNet',
+    'PairBaseDetector', 'PairSingleStageDetector',
+    'PairRetinaNet',
 ]

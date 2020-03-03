@@ -14,6 +14,7 @@ from .imagenet_det30 import DET30Dataset
 from .imagenet_seqvid import SeqVIDDataset
 from .imagenet_seqdet30 import SeqDET30Dataset
 from .imagenet_vid_fixframes import FixFramesVIDDataset
+from .imagenet_pairvid import PairVIDDataset
 from .anti_uav import AntiUavDataset
 
 __all__ = [
@@ -21,7 +22,8 @@ __all__ = [
     'CityscapesDataset', 'GroupSampler', 'DistributedGroupSampler',
     'build_dataloader', 'ConcatDataset', 'RepeatDataset', 'WIDERFaceDataset',
     'DATASETS', 'build_dataset',
+    'AntiUavDataset',
     'VisDroneDataset',
     'StillVIDDataset', 'DET30Dataset', 'SeqVIDDataset', 'SeqDET30Dataset',
-    'FixFramesVIDDataset', 'AntiUavDataset'
+    'FixFramesVIDDataset', 'PairVIDDataset',
 ]
