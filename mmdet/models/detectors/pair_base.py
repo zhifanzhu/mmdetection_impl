@@ -103,7 +103,7 @@ class PairBaseDetector(nn.Module):
         if return_loss:
             return self.forward_train(img, img_meta, **kwargs)
         else:
-            return self.forward_test(img, img_meta, kwargs['img_prev'], **kwargs)
+            return self.forward_test(img, img_meta, kwargs.pop('img_prev'), **kwargs)
 
     def show_result(self, data, result, dataset=None, score_thr=0.3):
         if isinstance(result, tuple):

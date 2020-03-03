@@ -84,7 +84,7 @@ class PairSingleStageDetector(PairBaseDetector):
         TODO(zhifan) delete img_prev for optimization?
         """
         x = self.extract_feat(img)
-        is_first = img_meta['is_first']
+        is_first = img_meta[0]['is_first']
         if not is_first:
             x = self.pair_module(x, self.prev_memory, is_train=False)
 
