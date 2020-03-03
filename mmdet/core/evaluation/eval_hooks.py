@@ -411,48 +411,11 @@ class NonDistSeqEvalmAPHook(Hook):
         runner.log_buffer.ready = True
 
 
-class NonDistPairEvalmAPHook(Hook):
+class NonDistPairEvalmAPHook(NonDistEvalHook):
 
-    def __init__(self, dataset, interval=1, num_evals=-1, shuffle=False):
-        assert shuffle is False, "Shuffle must be true in Pair mode"
-        if isinstance(dataset, Dataset):
-            self.dataset = dataset
-        elif isinstance(dataset, dict):
-            self.dataset = datasets.build_dataset(dataset, {'test_mode': True})
-        else:
-            raise TypeError(
-                'dataset must be a Dataset object or a dict, not {}'.format(
-                    type(dataset)))
-        self.interval = interval
-        self.num_evals = num_evals
-        if self.num_evals < 0:
-            self.num_evals = len(self.dataset)
-        self.shuffle = shuffle
-        if hasattr(self.dataset, 'coco') and self.shuffle and self.num_evals > 0:
-            raise NotImplementedError
-
-    def after_train_epoch(self, runner):
-        if not self.every_n_epochs(runner, self.interval):
-            return
-        runner.model.eval()
-        range_idxs = list(range(len(self.dataset)))
-        range_idxs = range_idxs[:self.num_evals]
-        prog_bar = mmcv.ProgressBar(len(range_idxs))
-        results = []
-        for idx in range_idxs:
-            data = self.dataset[idx]
-            data_gpu = scatter(
-                collate([data], samples_per_gpu=1),
-                [torch.cuda.current_device()])[0]
-
-            with torch.no_grad():
-                result, out_dict = runner.model(
-                    return_loss=False, rescale=True, **data_gpu)
-            results.extend(result)
-
-            prog_bar.update()
-
-        self.evaluate(runner, results, range_idxs=range_idxs)
+    def __init__(self, **kwargs):
+        super(NonDistPairEvalmAPHook, self).__init__(kwargs)
+        assert self.shuffle is False, "Shuffle must be true in Pair mode"
 
     def evaluate(self, runner, results, range_idxs=None):
         gt_bboxes = []
@@ -461,7 +424,7 @@ class NonDistPairEvalmAPHook(Hook):
         if range_idxs is None:
             range_idxs = range(len(self.dataset))
         for i in range_idxs:
-            img_info = self.dataset.img_info[i]
+            img_info = self.dataset.img_infos[i]
             frame_ind = img_info['frame_ind']
             ann = self.dataset.get_ann_info(i, frame_ind)
             bboxes = ann['bboxes']
