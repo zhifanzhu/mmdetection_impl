@@ -77,8 +77,6 @@ class PairVIDDataset(Dataset):
         self.cat2label = {cat: i + 1 for i, cat in enumerate(self.CLASSES)}
         self.min_size = min_size
 
-        self.img_prev = None  # Side-effect that we have to use during testing.
-
     def __len__(self):
         return len(self.img_infos)
 
@@ -284,6 +282,9 @@ class PairVIDDataset(Dataset):
         Test time, no data shuffle. As this happens in MSRA & MaskTrackRCNN
         Currently, we don't use keyframe mode.
 
+        Dataloader does not pass 'img_prev' to model, it's up to model to choose
+        to store 'img_prev', or intermediate result. Thus no side-effect happens.
+
         Testpipeline:
             dict(type='LoadImageFromFile'),
             dict(
@@ -313,9 +314,4 @@ class PairVIDDataset(Dataset):
         self.pre_pipeline(results)
         results['is_first'] = is_first
         results = self.pipeline(results)
-        if is_first:
-            results['img_prev'] = results['img'].copy()
-        else:
-            results['img_prev'] = self.img_prev
-        self.img_prev = results['img']
         return results

@@ -78,7 +78,7 @@ class PairBaseDetector(nn.Module):
             logger = logging.getLogger()
             logger.info('load model from: {}'.format(pretrained))
 
-    def forward_test(self, imgs, img_metas, imgs_prev, **kwargs):
+    def forward_test(self, imgs, img_metas, **kwargs):
         for var, name in [(imgs, 'imgs'), (img_metas, 'img_metas')]:
             if not isinstance(var, list):
                 raise TypeError('{} must be a list, but got {}'.format(
@@ -94,7 +94,7 @@ class PairBaseDetector(nn.Module):
         assert imgs_per_gpu == 1
 
         if num_augs == 1:
-            return self.simple_test(imgs[0], img_metas[0], imgs_prev[0], **kwargs)
+            return self.simple_test(imgs[0], img_metas[0], **kwargs)
         else:
             return self.aug_test(imgs, img_metas, **kwargs)
 
@@ -103,7 +103,7 @@ class PairBaseDetector(nn.Module):
         if return_loss:
             return self.forward_train(img, img_meta, **kwargs)
         else:
-            return self.forward_test(img, img_meta, kwargs.pop('img_prev'), **kwargs)
+            return self.forward_test(img, img_meta, **kwargs)
 
     def show_result(self, data, result, dataset=None, score_thr=0.3):
         if isinstance(result, tuple):

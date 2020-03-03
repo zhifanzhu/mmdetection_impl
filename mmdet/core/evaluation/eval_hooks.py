@@ -414,7 +414,7 @@ class NonDistSeqEvalmAPHook(Hook):
 class NonDistPairEvalmAPHook(Hook):
 
     def __init__(self, dataset, interval=1, num_evals=-1, shuffle=False):
-        assert shuffle is True, "Shuffle must be true in Pair mode"
+        assert shuffle is False, "Shuffle must be true in Pair mode"
         if isinstance(dataset, Dataset):
             self.dataset = dataset
         elif isinstance(dataset, dict):

@@ -79,10 +79,7 @@ class PairSingleStageDetector(PairBaseDetector):
             *loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
         return losses
 
-    def simple_test(self, img, img_meta, img_prev, rescale=False):
-        """ img_prev is passed in, but we may choose to not use it.
-        TODO(zhifan) delete img_prev for optimization?
-        """
+    def simple_test(self, img, img_meta, rescale=False):
         x = self.extract_feat(img)
         is_first = img_meta[0]['is_first']
         if not is_first:
