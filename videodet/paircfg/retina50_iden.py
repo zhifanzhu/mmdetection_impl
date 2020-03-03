@@ -131,5 +131,5 @@ dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './workpairs/retinanet_iden'
 load_from = './zoo/retinanet_r50_fpn_2x_20190616-75574209.pth'
-resume_from = None
+resume_from = './workvids/retinanet_r50_det_vid15frames/epoch_12.pth'
 workflow = [('train', 1)]
