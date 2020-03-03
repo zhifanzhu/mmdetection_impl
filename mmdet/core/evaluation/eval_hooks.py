@@ -446,7 +446,7 @@ class NonDistPairEvalmAPHook(Hook):
                 [torch.cuda.current_device()])[0]
 
             with torch.no_grad():
-                result, out_dict = runner.model(
+                result = runner.model(
                     return_loss=False, rescale=True, **data_gpu)
             results.extend(result)
 
@@ -461,7 +461,7 @@ class NonDistPairEvalmAPHook(Hook):
         if range_idxs is None:
             range_idxs = range(len(self.dataset))
         for i in range_idxs:
-            img_info = self.dataset.img_info[i]
+            img_info = self.dataset.img_infos[i]
             frame_ind = img_info['frame_ind']
             ann = self.dataset.get_ann_info(i, frame_ind)
             bboxes = ann['bboxes']
