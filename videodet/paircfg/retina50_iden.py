@@ -1,6 +1,6 @@
 # model settings
 model = dict(
-    type='RetinaNet',
+    type='PairRetinaNet',
     pretrained='torchvision://resnet50',
     backbone=dict(
         type='ResNet',
@@ -16,6 +16,8 @@ model = dict(
         start_level=1,
         add_extra_convs=True,
         num_outs=5),
+    pair_module=dict(
+        type='Identity'),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -59,7 +61,7 @@ img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='LoadAnnotations', with_bbox=True),
+    dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
     dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
@@ -94,12 +96,12 @@ data = dict(
         pipeline=train_pipeline),
     val=dict(
         type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
         type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
@@ -115,7 +117,7 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=50,
+    interval=100,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')

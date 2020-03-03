@@ -247,33 +247,33 @@ class PairVIDDataset(Dataset):
         foldername = img_info['foldername']
         num_frames = img_info['num_frames']
         ann_info = self.get_ann_info(idx, frame_ind)
-        filename = osp.join(self.img_prefix, foldername, f"{frame_ind:06d}.JPEG")
+        filename = osp.join(foldername, f"{frame_ind:06d}.JPEG")
         img_info['filename'] = filename
         results = dict(img_info=img_info, ann_info=ann_info)
+        self.pre_pipeline(results)
+        results = self.pipeline(results)
 
-        ref_frame_ind = min(
-            max(frame_ind + np.random.randint(self.min_offset, self.max_offset+1),
+        ref_frame_ind = max(
+            min(frame_ind + np.random.randint(self.min_offset, self.max_offset+1),
                 num_frames - 1), 0)
         ref_ann_info = self.get_ann_info(idx, ref_frame_ind)
-        ref_filename = osp.join(self.img_prefix, foldername, f"{ref_frame_ind:06d}.JPEG")
+        ref_filename = osp.join(foldername, f"{ref_frame_ind:06d}.JPEG")
         img_info['filename'] = ref_filename
         ref_results = dict(img_info=img_info, ann_info=ref_ann_info)
 
         # if self.proposals is not None:
         #     results['proposals'] = self.proposals[idx]
 
-        self.pre_pipeline(results)
         self.pre_pipeline(ref_results)
-        results = self.pipeline(results)
         ref_results = self.pipeline(ref_results)
 
-        results['ref_filename'] = ref_results['filename']
+        # results['ref_filename'] = ref_results['filename']
         results['ref_img'] = ref_results['img']
         # results['ref_bboxes'] = ref_results['gt_bboxes']
         # results['ref_labels'] = ref_results['gt_labels']
 
-        # Check at least one frame has annotation, since we did not use _filter_imgs()
-        # during loading annotaion.
+        if len(results['gt_bboxes'].data) == 0:
+            return None
         return results
 
     def prepare_test_img(self, idx):
