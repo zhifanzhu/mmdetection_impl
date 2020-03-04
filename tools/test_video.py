@@ -23,7 +23,7 @@ def single_gpu_test(model, data_loader, num_evals, show=False):
     model.eval()
     results = []
     dataset = data_loader.dataset
-    prog_bar = mmcv.ProgressBar(len(dataset))
+    prog_bar = mmcv.ProgressBar(num_evals)
     for i, data in enumerate(data_loader):
         if i == num_evals:
             break
