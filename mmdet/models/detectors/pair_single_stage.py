@@ -82,7 +82,9 @@ class PairSingleStageDetector(PairBaseDetector):
     def simple_test(self, img, img_meta, rescale=False):
         x = self.extract_feat(img)
         is_first = img_meta[0]['is_first']
-        if not is_first:
+        if is_first:
+            x = x
+        else:
             x = self.pair_module(x, self.prev_memory, is_train=False)
 
         if self.with_neck and not self.neck_first:

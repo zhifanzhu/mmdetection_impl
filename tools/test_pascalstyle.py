@@ -23,7 +23,7 @@ def single_gpu_test(model, data_loader, num_evals, show=False):
     model.eval()
     results = []
     dataset = data_loader.dataset
-    prog_bar = mmcv.ProgressBar(len(dataset))
+    prog_bar = mmcv.ProgressBar(num_evals)
     for i, data in enumerate(data_loader):
         if i == num_evals:
             break
@@ -46,7 +46,7 @@ def multi_gpu_test(model, data_loader, num_evals, tmpdir=None):
     dataset = data_loader.dataset
     rank, world_size = get_dist_info()
     if rank == 0:
-        prog_bar = mmcv.ProgressBar(len(dataset))
+        prog_bar = mmcv.ProgressBar(num_evals)
     for i, data in enumerate(data_loader):
         if i == num_evals:
             break
@@ -107,11 +107,11 @@ def collect_results(result_part, size, tmpdir=None):
         return ordered_results
 
 
-def get_pascal_gts(dataset):
+def get_pascal_gts(dataset, num_evals):
     gt_bboxes = []
     gt_labels = []
     gt_ignore = []
-    for i in range(len(dataset)):
+    for i in range(num_evals):
         ann = dataset.get_ann_info(i)
         bboxes = ann['bboxes']
         labels = ann['labels']
@@ -253,7 +253,7 @@ def main():
 
     rank, _ = get_dist_info()
     if rank == 0:
-        gt_bboxes, gt_labels, gt_ignore, dataset_name = get_pascal_gts(dataset)
+        gt_bboxes, gt_labels, gt_ignore, dataset_name = get_pascal_gts(dataset, num_evals)
         print('\nStarting evaluate {}'.format(dataset_name))
         eval_map(outputs, gt_bboxes, gt_labels, gt_ignore,
                  scale_ranges=None, iou_thr=0.5, dataset=dataset_name,

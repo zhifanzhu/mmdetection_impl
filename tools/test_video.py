@@ -41,28 +41,7 @@ def single_gpu_test(model, data_loader, num_evals, show=False):
 
 
 def multi_gpu_test(model, data_loader, num_evals, tmpdir=None):
-    model.eval()
-    results = []
-    dataset = data_loader.dataset
-    rank, world_size = get_dist_info()
-    if rank == 0:
-        prog_bar = mmcv.ProgressBar(len(dataset))
-    for i, data in enumerate(data_loader):
-        if i == num_evals:
-            break
-        with torch.no_grad():
-            result = model(return_loss=False, rescale=True, **data)
-        results.append(result)
-
-        if rank == 0:
-            batch_size = data['img'][0].size(0)
-            for _ in range(batch_size * world_size):
-                prog_bar.update()
-
-    # collect results from all ranks
-    results = collect_results(results, len(dataset), tmpdir)
-
-    return results
+    raise NotImplementedError
 
 
 def collect_results(result_part, size, tmpdir=None):
@@ -107,11 +86,11 @@ def collect_results(result_part, size, tmpdir=None):
         return ordered_results
 
 
-def get_pascal_gts(dataset):
+def get_pascal_gts(dataset, num_evals):
     gt_bboxes = []
     gt_labels = []
     gt_ignore = []
-    for i in range(len(dataset)):
+    for i in range(num_evals):
         img_info = dataset.img_infos[i]
         frame_ind = img_info['frame_ind']
         ann = dataset.get_ann_info(i, frame_ind)
@@ -255,7 +234,7 @@ def main():
 
     rank, _ = get_dist_info()
     if rank == 0:
-        gt_bboxes, gt_labels, gt_ignore, dataset_name = get_pascal_gts(dataset)
+        gt_bboxes, gt_labels, gt_ignore, dataset_name = get_pascal_gts(dataset, num_evals)
         print('\nStarting evaluate {}'.format(dataset_name))
         eval_map(outputs, gt_bboxes, gt_labels, gt_ignore,
                  scale_ranges=None, iou_thr=0.5, dataset=dataset_name,
