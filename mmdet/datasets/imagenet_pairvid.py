@@ -89,6 +89,11 @@ class PairVIDDataset(Dataset):
         val file would be: VID_val_videos.txt
             val/ILSVRC2015_val_00000000 1 0 464
             val/ILSVRC2015_val_00000001 465 0 464
+
+        For train:
+            one img_info is one frame in a video
+        For val:
+            one img_info is a whole video.
         """
         img_infos = []
         img_ids = mmcv.list_from_file(ann_file)
@@ -100,13 +105,15 @@ class PairVIDDataset(Dataset):
             return _4d_8d, _frame_ind, _num_frames
 
         def _val_get_vid_id(_id_line):
-            _vid_id, _frame_ind, _0, _num_frames = _id_line.split(' ')
-            return _vid_id, int(_frame_ind), int(_num_frames)
+            _vid_id, _cum, _0, _num_frames = _id_line.split(' ')
+            return _vid_id, 0, int(_num_frames)
 
+        is_eval = False
         if img_ids[0].split('/')[0] == 'train':
             vid_id_func = _train_get_vid_id
         elif img_ids[0].split('/')[0] == 'val':
             vid_id_func = _val_get_vid_id
+            is_eval = True
         else:
             raise ValueError("Unknown prefix in annoation txt file.")
 
@@ -121,16 +128,32 @@ class PairVIDDataset(Dataset):
             size = root.find('size')
             width = int(size.find('width').text)
             height = int(size.find('height').text)
-            img_infos.append(
-                dict(video=video,
-                     foldername=foldername,
-                     height=height,
-                     width=width,
-                     frame_ind=frame_ind,
-                     num_frames=num_frames))
+            if is_eval:
+                for frame_ind in range(0, num_frames):
+                    img_infos.append(
+                        dict(video=video,
+                             foldername=foldername,
+                             height=height,
+                             width=width,
+                             frame_ind=frame_ind,
+                             num_frames=num_frames))
+            else:
+                img_infos.append(
+                    dict(video=video,
+                         foldername=foldername,
+                         height=height,
+                         width=width,
+                         frame_ind=frame_ind,
+                         num_frames=num_frames))
+
         return img_infos
 
     def get_ann_info(self, idx, frame_id):
+        """
+        Although img_info['frame_ind'] contains frame_ind for 'idx', we still need a
+        parameter frame_id because frame_id might be different from that in 'img_info',
+        e.g.  reference frame 's frame_ind
+        """
         video = self.img_infos[idx]['video']
         xml_path = Path(self.img_prefix
                         )/f'Annotations/VID/{video}/{frame_id:06d}.xml'
