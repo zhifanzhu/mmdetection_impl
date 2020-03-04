@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 
 import time
 import mmcv
+from mmcv.parallel import DataContainer as DC
 import numpy as np
 from torch.utils.data import Dataset
 
@@ -205,9 +206,11 @@ class PairDET30Dataset(Dataset):
         img_info = self.img_infos[idx]
         ann_info = self.get_ann_info(idx)
         results = dict(img_info=img_info, ann_info=ann_info)
-        self.pipeline(results)
+        self.pre_pipeline(results)
         results = self.pipeline(results)
-        results['ref_img'] = results['img'].data.copy()
+        results['ref_img'] = DC(results['img'].data.clone(), stack=True)
+        if len(results['gt_bboxes'].data) == 0:
+            return None
         return results
 
 

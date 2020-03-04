@@ -17,8 +17,7 @@ model = dict(
         add_extra_convs=True,
         num_outs=5),
     pair_module=dict(
-        type='Identity',
-        neck_first=True),
+        type='Identity'),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -57,7 +56,7 @@ test_cfg = dict(
     max_per_img=100)
 # dataset settings
 vid_dataset_type = 'PairVIDDataset'
-det_dataset_type = 'PairDETDataset'
+det_dataset_type = 'PairDET30Dataset'
 data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
