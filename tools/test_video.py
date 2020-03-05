@@ -240,6 +240,9 @@ def main():
                  scale_ranges=None, iou_thr=0.5, dataset=dataset_name,
                  print_summary=True)
 
+    # Always output to json for analysing.
+    if args.json_out is None:
+        args.json_out = args.config[:-3] + 'results'
     # Save predictions in the COCO json format
     if args.json_out and rank == 0:
         if not isinstance(outputs[0], dict):
