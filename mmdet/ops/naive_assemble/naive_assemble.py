@@ -26,7 +26,6 @@ _ext = cpp_extension.load(
     ],
     extra_cflags=cxx_args,
     extra_cuda_cflags=nvcc_args,
-    verbose=True,
 )
 
 class NaiveAssembleFunction(Function):

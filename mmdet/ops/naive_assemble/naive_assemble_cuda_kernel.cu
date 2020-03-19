@@ -48,7 +48,7 @@ __global__ void naive_assemble_forward(
                     int prev_y = y + i;
                     int prev_x = x + j;
                     if (prev_y >= 0 && prev_y < H && prev_x >= 0 && prev_x < W) {
-                        int flat_idx = b * C * HW + (i * D + j) * HW + y * W + x;
+                        int flat_idx = b * P * HW + (i * D + j) * HW + y * W + x;
                         float coef = cur_prev_aff[flat_idx];
                         if (coef > 0)
                             mass += coef;
@@ -69,7 +69,7 @@ __global__ void naive_assemble_forward(
                         int prev_y = y + i;
                         int prev_x = x + j;
                         if (prev_y >= 0 && prev_y < H && prev_x >= 0 && prev_x < W) {
-                            int flat_idx = b * C * HW + (i * D + j) * HW + y * W + x;
+                            int flat_idx = b * P * HW + (i * D + j) * HW + y * W + x;
                             float a = cur_prev_aff[flat_idx];
                             if (a > 0) {
                                 a = a / mass;
