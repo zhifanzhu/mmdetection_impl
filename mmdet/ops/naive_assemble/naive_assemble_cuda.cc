@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <iostream>
 
-#include "correlation_cuda_kernel.cuh"
+#include "naive_assemble_cuda_kernel.cuh"
 
 int naive_assemble_forward_cuda(
         at::Tensor& cur_prev_aff,  // [B, D^2, H, W]
@@ -62,7 +62,7 @@ int naive_assemble_backward_cuda(
   gradAff.resize_({batchSize, D_sqr, inputHeight, inputWidth});
   gradFeat.resize_({batchSize, nInputChannels, inputHeight, inputWidth});
 
-  gradAdd.fill_(0);
+  gradAff.fill_(0);
   gradFeat.fill_(0);
 
   int success = naive_assemble_backward_cuda_kernel(gradOutput,
