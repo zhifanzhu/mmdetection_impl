@@ -26,6 +26,7 @@ _ext = cpp_extension.load(
     ],
     extra_cflags=cxx_args,
     extra_cuda_cflags=nvcc_args,
+    verbose=True,
 )
 
 class NaiveAssembleFunction(Function):
@@ -40,7 +41,7 @@ class NaiveAssembleFunction(Function):
 
         with torch.cuda.device_of(cur_prev_aff):
             output = feat.new()
-            masked_cpa = torch.new()
+            masked_cpa = feat.new()
 
             _ext.forward(cur_prev_aff, feat, output, k, masked_cpa)
 

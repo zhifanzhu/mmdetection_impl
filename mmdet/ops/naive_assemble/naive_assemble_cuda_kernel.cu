@@ -41,8 +41,10 @@ __global__ void naive_assemble_forward(
 
             // Init a mass counter for normalization
             float mass = 0.0; 
-            for (int i = -k; i <= k; ++i) {
-                for (int j = -k; i <= k; ++j) {
+            for (int ii = -k; ii <= k; ++ii) {
+                for (int jj = -k; jj <= k; ++jj) {
+                    int i = ii + k;
+                    int j = jj + k;
                     int prev_y = y + i;
                     int prev_x = x + j;
                     if (prev_y >= 0 && prev_y < H && prev_x >= 0 && prev_x < W) {
@@ -60,8 +62,10 @@ __global__ void naive_assemble_forward(
                 int feat_flat_idx = b * C * HW + c * HW + y * W + x;
                 val = feat[feat_flat_idx];
             } else {
-                for (int i = -k; i <= k; ++i) {
-                    for (int j = -k; j <= k; ++j) {
+                for (int ii = -k; ii <= k; ++ii) {
+                    for (int jj = -k; jj <= k; ++jj) {
+                        int i = ii + k;
+                        int j = jj + k;
                         int prev_y = y + i;
                         int prev_x = x + j;
                         if (prev_y >= 0 && prev_y < H && prev_x >= 0 && prev_x < W) {
@@ -108,8 +112,10 @@ __global__ void naive_assemble_backward_Feat(
         for (int c = 0; c < C; ++c ) {
             float grad_cum = 0.0;
             int gradFeat_ind = b * C * HW + c * HW + y * W + x;
-            for (int i = -k; i <= k; ++i) {
-                for (int j = -k; j <= k; ++j) {
+            for (int ii = -k; ii <= k; ++ii) {
+                for (int jj = -k; jj <= k; ++jj) {
+                    int i = ii + k;
+                    int j = jj + k;
                     int m = y - i;
                     int n = x - j;
                     int gradOutput_ind = b * C * HW + c * HW + m * W + n;
