@@ -6,6 +6,7 @@ import tempfile
 import glob
 import re
 import numpy as np
+import pickle
 
 import mmcv
 import torch
@@ -132,6 +133,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='MMDet test detector')
     parser.add_argument('config', help='test config file path')
     parser.add_argument('--checkpoint', help='checkpoint file')
+    parser.add_argument('--out', help='output result file')
     parser.add_argument(
         '--num-evals', type=int, default=-1, help='number of images to eval')
     parser.add_argument(
@@ -241,8 +243,12 @@ def main():
                  print_summary=True)
 
     # Always output to json for analysing.
-    if args.json_out is None:
-        args.json_out = args.config[:-3] + 'results'
+    if args.out is None:
+        args.out = osp.join(
+            cfg.work_dir,
+            args.config.split('/')[-1].replace('.py', '_results.pkl'))
+    with open(args.out, 'wb') as f:
+        pickle.dump(outputs, f, pickle.HIGHEST_PROTOCOL)
     # Save predictions in the COCO json format
     if args.json_out and rank == 0:
         if not isinstance(outputs[0], dict):
@@ -256,3 +262,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
