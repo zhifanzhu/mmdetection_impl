@@ -15,6 +15,7 @@ class ConcatUpdate(nn.Module):
     """ Update Net like """
     def __init__(self,
                  in_channels):
+        super(ConcatUpdate, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(
                 in_channels=2 * in_channels,
@@ -38,7 +39,7 @@ class ConcatUpdate(nn.Module):
                 stride=1,
             ),
             nn.Conv2d(
-                in_channels=16,
+                in_channels=3,
                 out_channels=2,
                 kernel_size=3,
                 padding=1,
@@ -66,6 +67,7 @@ class RFU(nn.Module):
     def __init__(self,
                  corr_disp,
                  in_channels):
+        super(RFU, self).__init__()
         self.corr = Correlation(corr_disp, kernel_size=1,
                                 max_displacement=corr_disp, stride1=1, stride2=1)
         self.assemble = NaiveAssemble(corr_disp)
