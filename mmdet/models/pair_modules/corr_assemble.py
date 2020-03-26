@@ -65,18 +65,24 @@ class ConcatUpdate(nn.Module):
 class RFU(nn.Module):
     def __init__(self,
                  corr_disp,
-                 in_channels):
+                 in_channels,
+                 use_add=False):
         self.corr = Correlation(corr_disp, kernel_size=1,
                                 max_displacement=corr_disp, stride1=1, stride2=1)
         self.assemble = NaiveAssemble(corr_disp)
         self.update_net = ConcatUpdate(in_channels)
 
+        self.use_add = use_add
+
     def init_weights(self):
         self.update_net.init_weights()
 
     def forward(self, feat, feat_ref, is_train=False):
-        aff = self.corr(feat, feat_ref)
-        aligned_ref = self.assemble(aff, feat_ref)
+        if not self.use_add:
+            aff = self.corr(feat, feat_ref)
+            aligned_ref = self.assemble(aff, feat_ref)
+        else:
+            aligned_ref = feat + feat_ref
         updated_cur_feat = self.update_net(feat, aligned_ref)
         return updated_cur_feat
 
@@ -93,9 +99,13 @@ class CorrAssemble(nn.Module):
 
     def __init__(self,
                  disp,
-                 neck_first):
+                 neck_first,
+
+                 use_add=False,
+                 ):
         super(CorrAssemble, self).__init__()
-        self.rfu_64 = RFU(disp, 256)
+        self.rfu_64 = RFU(disp, 256, use_add)
+        self.neck_first = neck_first
 
     def init_weights(self):
         self.rfu_64.init_weights()
