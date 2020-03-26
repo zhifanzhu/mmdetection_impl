@@ -14,6 +14,9 @@
 #include <ATen/Dispatch.h>
 #include <ATen/cuda/CUDAApplyUtils.cuh>
 
+inline int GET_BLOCKS(const int N) 
+{ return (N + CUDA_NUM_THREADS - 1) / CUDA_NUM_THREADS; }
+
 template<typename scalar_t>
 __global__ void naive_assemble_forward(
         scalar_t* __restrict__ output,
@@ -41,14 +44,12 @@ __global__ void naive_assemble_forward(
 
             // Init a mass counter for normalization
             float mass = 0.0; 
-            for (int ii = -k; ii <= k; ++ii) {
-                for (int jj = -k; jj <= k; ++jj) {
-                    int i = ii + k;
-                    int j = jj + k;
+            for (int i = -k; i <= k; ++i) {
+                for (int j = -k; j <= k; ++j) {
                     int prev_y = y + i;
                     int prev_x = x + j;
                     if (prev_y >= 0 && prev_y < H && prev_x >= 0 && prev_x < W) {
-                        int flat_idx = b * P * HW + (i * D + j) * HW + y * W + x;
+                        int flat_idx = b * P * HW + ((i+k) * D + (j+k)) * HW + y * W + x;
                         float coef = cur_prev_aff[flat_idx];
                         if (coef > 0)
                             mass += coef;
@@ -59,23 +60,26 @@ __global__ void naive_assemble_forward(
             float val = 0.0;
             if (mass > -bound && mass < bound) {
                 // Avoid div by 0
+                int flat_idx = b * P * HW + (k * D + k) * HW + y * W + x;
                 int feat_flat_idx = b * C * HW + c * HW + y * W + x;
                 val = feat[feat_flat_idx];
+                if (c == 0)
+                    masked_cpa[flat_idx] += 1.0;
             } else {
-                for (int ii = -k; ii <= k; ++ii) {
-                    for (int jj = -k; jj <= k; ++jj) {
-                        int i = ii + k;
-                        int j = jj + k;
+                for (int i = -k; i <= k; ++i) {
+                    for (int j = -k; j <= k; ++j) {
                         int prev_y = y + i;
                         int prev_x = x + j;
                         if (prev_y >= 0 && prev_y < H && prev_x >= 0 && prev_x < W) {
-                            int flat_idx = b * P * HW + (i * D + j) * HW + y * W + x;
+                            int flat_idx = b * P * HW + ((i+k) * D + (j+k)) * HW + y * W + x;
                             float a = cur_prev_aff[flat_idx];
                             if (a > 0) {
                                 a = a / mass;
                                 int feat_flat_idx = b * C * HW + c * HW + prev_y * W + prev_x;
                                 float fc = feat[feat_flat_idx];
                                 val += a * fc;
+                                if (c == 0)
+                                    masked_cpa[flat_idx] += a;
                             }
                         }
                     }
@@ -84,6 +88,7 @@ __global__ void naive_assemble_forward(
             int out_idx = b * C * HW + c * HW + y * W + x;
             output[out_idx ] = val;
         }
+        __syncthreads();
     }
 }
 
@@ -112,18 +117,17 @@ __global__ void naive_assemble_backward_Feat(
         for (int c = 0; c < C; ++c ) {
             float grad_cum = 0.0;
             int gradFeat_ind = b * C * HW + c * HW + y * W + x;
-            for (int ii = -k; ii <= k; ++ii) {
-                for (int jj = -k; jj <= k; ++jj) {
-                    int i = ii + k;
-                    int j = jj + k;
+            for (int i = -k; i <= k; ++i) {
+                for (int j = -k; j <= k; ++j) {
                     int m = y - i;
                     int n = x - j;
-                    int gradOutput_ind = b * C * HW + c * HW + m * W + n;
-                    int flat_ind = b * P * HW + (i * D + j) * HW + m * W + n;
-                    float mask = masked_cpa[flat_ind];
-                    float g_o = gradOutput[gradOutput_ind];
-                    float g_f = gradFeat[gradFeat_ind];
-                    grad_cum += mask * g_o * g_f;
+                    if (m >= 0 && m < H && n >= 0 && n < W ) {
+                        int gradOutput_ind = b * C * HW + c * HW + m * W + n;
+                        int flat_ind = b * P * HW + ((i+k) * D + (j+k)) * HW + m * W + n;
+                        float mask = masked_cpa[flat_ind];
+                        float g_o = gradOutput[gradOutput_ind];
+                        grad_cum += mask * g_o;
+                    }
                 }
             }
             gradFeat[gradFeat_ind] = grad_cum;
@@ -153,7 +157,7 @@ int naive_assemble_forward_cuda_kernel(at::Tensor& output,
    int inputWidth = iw;
 
    dim3 threadsPerBlock(THREADS_PER_BLOCK);
-   dim3 totalBlocksCorr(batchSize, inputHeight, inputWidth);
+   dim3 totalBlocksCorr(GET_BLOCKS(batchSize * inputHeight * inputWidth));
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(feat.type(), "naive_assemble_forward", ([&] {
 
@@ -202,7 +206,7 @@ int naive_assemble_backward_cuda_kernel(
     int outputHeight = goh;
 
     dim3 threadsPerBlock(THREADS_PER_BLOCK);
-    dim3 totalBlocksCorr(batchSize, outputHeight, outputWidth);
+    dim3 totalBlocksCorr(GET_BLOCKS(batchSize * outputHeight * outputWidth));
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(feat.type(), "naive_assemble_backward_Feat", ([&] {
         naive_assemble_backward_Feat<scalar_t><<<totalBlocksCorr, threadsPerBlock, 0, stream>>> (

@@ -21,6 +21,7 @@ int naive_assemble_forward_cuda(
 
   output.resize_({batchSize, nInputChannels, inputHeight, inputWidth});
   masked_cpa.resize_({batchSize, cur_prev_aff.size(1), inputHeight, inputWidth});
+  masked_cpa.fill_(0);
 
   int success = naive_assemble_forward_cuda_kernel(
     output,
