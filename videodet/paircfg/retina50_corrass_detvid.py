@@ -20,6 +20,7 @@ model = dict(
         num_outs=5),
     pair_module=dict(
         type='CorrAssemble',
+        disp=4,
         neck_first=True),
     bbox_head=dict(
         type='RetinaHead',
