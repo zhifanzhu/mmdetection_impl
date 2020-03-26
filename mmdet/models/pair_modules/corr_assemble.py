@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import normal_init
-from mmdet.ops import Correlation, NaiveAssemble
+from mmdet.ops import Correlation, FastAssemble
 
 from ..registry import PAIR_MODULE
 
@@ -71,7 +71,7 @@ class RFU(nn.Module):
         super(RFU, self).__init__()
         self.corr = Correlation(corr_disp, kernel_size=1,
                                 max_displacement=corr_disp, stride1=1, stride2=1)
-        self.assemble = NaiveAssemble(corr_disp)
+        self.assemble = FastAssemble(corr_disp)
         self.update_net = ConcatUpdate(in_channels)
 
         self.use_add = use_add
@@ -82,6 +82,7 @@ class RFU(nn.Module):
     def forward(self, feat, feat_ref, is_train=False):
         if not self.use_add:
             aff = self.corr(feat, feat_ref)
+            aff = aff / (torch.sum(aff, dim=1) + 1e-7)
             aligned_ref = self.assemble(aff, feat_ref)
         else:
             aligned_ref = feat + feat_ref
