@@ -81,7 +81,7 @@ class PairSingleStageDetector(PairBaseDetector):
 
     def simple_test(self, img, img_meta, rescale=False):
         x = self.extract_feat(img)
-        x_cache = x.clone()
+        x_cache = x
         is_first = img_meta[0]['is_first']
         if is_first:
             x = x
