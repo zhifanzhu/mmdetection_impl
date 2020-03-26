@@ -81,6 +81,7 @@ class PairSingleStageDetector(PairBaseDetector):
 
     def simple_test(self, img, img_meta, rescale=False):
         x = self.extract_feat(img)
+        x_cache = x.clone()
         is_first = img_meta[0]['is_first']
         if is_first:
             x = x
@@ -90,7 +91,8 @@ class PairSingleStageDetector(PairBaseDetector):
         if self.with_neck and not self.neck_first:
             x = self.neck(x)
 
-        self.prev_memory = x
+        # self.prev_memory = x
+        self.prev_memory = x_cache
 
         outs = self.bbox_head(x)
         bbox_inputs = outs + (img_meta, self.test_cfg, rescale)
