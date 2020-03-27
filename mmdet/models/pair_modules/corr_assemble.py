@@ -82,7 +82,7 @@ class RFU(nn.Module):
     def forward(self, feat, feat_ref, is_train=False):
         if not self.use_add:
             aff = self.corr(feat, feat_ref)
-            aff = aff / (torch.sum(aff, dim=1) + 1e-7)
+            aff = aff / (torch.sum(aff, dim=1, keepdim=True) + 1e-7)
             aligned_ref = self.assemble(aff, feat_ref)
         else:
             aligned_ref = feat + feat_ref
