@@ -53,6 +53,8 @@ class ConcatUpdate(nn.Module):
             if classname.find('Conv') != -1:
                 normal_init(m, std=0.01)
         self.apply(_init_conv)
+        nn.init.const_(self.conv[-1].bias[0], 1.0)
+        nn.init.const_(self.conv[-1].bias[1], 0.0)
 
     def forward(self, feat, aligned_ref):
         cat = torch.cat([feat, aligned_ref], dim=1)
@@ -67,6 +69,7 @@ class RFU(nn.Module):
     def __init__(self,
                  corr_disp,
                  in_channels,
+                 use_softmax_norm=False,
                  use_add=False):
         super(RFU, self).__init__()
         self.corr = Correlation(corr_disp, kernel_size=1,
@@ -74,6 +77,7 @@ class RFU(nn.Module):
         self.assemble = FastAssemble(corr_disp)
         self.update_net = ConcatUpdate(in_channels)
 
+        self.use_softmax_norm = use_softmax_norm
         self.use_add = use_add
 
     def init_weights(self):
@@ -82,7 +86,10 @@ class RFU(nn.Module):
     def forward(self, feat, feat_ref, is_train=False):
         if not self.use_add:
             aff = self.corr(feat, feat_ref)
-            aff = aff / (torch.sum(aff, dim=1, keepdim=True) + 1e-7)
+            if self.use_softmax_norm:
+                aff = torch.softmax(aff, dim=1)
+            else:
+                aff = aff / (torch.sum(aff, dim=1, keepdim=True) + 1e-7)
             aligned_ref = self.assemble(aff, feat_ref)
         else:
             aligned_ref = feat + feat_ref
@@ -104,10 +111,11 @@ class CorrAssemble(nn.Module):
                  disp,
                  neck_first,
 
+                 use_softmax_norm=False,
                  use_add=False,
                  ):
         super(CorrAssemble, self).__init__()
-        self.rfu_64 = RFU(disp, 256, use_add)
+        self.rfu_64 = RFU(disp, 256, use_softmax_norm, use_add)
         self.neck_first = neck_first
 
     def init_weights(self):

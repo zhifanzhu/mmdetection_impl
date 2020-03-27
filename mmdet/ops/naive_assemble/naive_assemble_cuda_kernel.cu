@@ -27,15 +27,13 @@ __global__ void naive_assemble_forward(
         const int C,
         const int H,
         const int W,
-        const int k
+        const int k)
 {
     int b = blockIdx.x;
     int y = blockIdx.y;
     int x = blockIdx.z;
     int c = threadIdx.x;
     int HW = H*W;
-    float bound = 1e-7;
-
     int D = 2 * k + 1;
 
     for (; c < C; c += THREADS_PER_BLOCK) {
@@ -81,7 +79,7 @@ __global__ void naive_assemble_backward_Feat(
 
     int D = 2 * k + 1;
 
-    for (; c < C; c ++ THREADS_PER_BLOCK ) {
+    for (; c < C; c += THREADS_PER_BLOCK ) {
         float grad_cum = 0.0;
         int gradFeat_ind = b * C * HW + c * HW + y * W + x;
         for (int i = -k; i <= k; ++i) {
