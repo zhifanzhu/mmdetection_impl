@@ -11,8 +11,7 @@ int naive_assemble_forward_cuda(
         at::Tensor& cur_prev_aff,  // [B, D^2, H, W]
         at::Tensor& feat,          // [B, C, H, W]
         at::Tensor& output,
-        int k,
-        at::Tensor& masked_cpa)
+        int k)
 {
   int batchSize = feat.size(0);
   int nInputChannels = feat.size(1);
@@ -20,8 +19,6 @@ int naive_assemble_forward_cuda(
   int inputWidth = feat.size(3);
 
   output.resize_({batchSize, nInputChannels, inputHeight, inputWidth});
-  masked_cpa.resize_({batchSize, cur_prev_aff.size(1), inputHeight, inputWidth});
-  masked_cpa.fill_(0);
 
   int success = naive_assemble_forward_cuda_kernel(
     output,
@@ -33,7 +30,6 @@ int naive_assemble_forward_cuda(
     inputHeight,
     inputWidth,
     k,     
-    masked_cpa,
 	at::cuda::getCurrentCUDAStream()
   );
 
@@ -52,8 +48,7 @@ int naive_assemble_backward_cuda(
         at::Tensor& gradOutput, 
         at::Tensor& gradAff,
         at::Tensor& gradFeat,
-        int k,
-        at::Tensor& masked_cpa)
+        int k)
 {
   int batchSize = feat.size(0);
   int nInputChannels = feat.size(1);
@@ -77,7 +72,6 @@ int naive_assemble_backward_cuda(
                                                 gradAff,
                                                 gradFeat,
                                                 k,
-                                                masked_cpa,
 												at::cuda::getCurrentCUDAStream()
                                                 //at::globalContext().getCurrentCUDAStream()
                                                );
