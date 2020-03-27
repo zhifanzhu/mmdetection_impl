@@ -10,6 +10,7 @@ from .roi_pool import RoIPool, roi_pool
 from .sigmoid_focal_loss import SigmoidFocalLoss, sigmoid_focal_loss
 from .pointwise_correlation import PointwiseCorrelation
 from .correlation_package import Correlation
+from .naive_assemble import NaiveAssemble
 from .fast_assemble import FastAssemble
 
 __all__ = [
