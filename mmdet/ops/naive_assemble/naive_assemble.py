@@ -35,16 +35,13 @@ class NaiveAssembleFunction(Function):
                 cur_prev_aff,
                 feat,
                 k):
-        # ctx.save_for_backward(cur_prev_aff, feat)
+        ctx.save_for_backward(cur_prev_aff, feat)
         ctx.k = k
 
         with torch.cuda.device_of(cur_prev_aff):
             output = feat.new()
-            masked_cpa = feat.new()
 
-            _ext.forward(cur_prev_aff, feat, output, k, masked_cpa)
-
-        ctx.save_for_backward(cur_prev_aff, feat, masked_cpa)
+            _ext.forward(cur_prev_aff, feat, output, k)
 
         return output
 
@@ -52,7 +49,7 @@ class NaiveAssembleFunction(Function):
     @once_differentiable
     def backward(ctx, grad_output):
         grad_output = grad_output.contiguous()
-        cur_prev_aff, feat, masked_cpa = ctx.saved_tensors
+        cur_prev_aff, feat = ctx.saved_tensors
 
         with torch.cuda.device_of(cur_prev_aff):
             grad_cur_prev_aff = cur_prev_aff.new()
@@ -61,7 +58,7 @@ class NaiveAssembleFunction(Function):
             _ext.backward(
                 cur_prev_aff, feat,
                 grad_output, grad_cur_prev_aff, grad_feat,
-                ctx.k, masked_cpa)
+                ctx.k)
 
         return grad_cur_prev_aff, grad_feat, None
 

@@ -15,7 +15,6 @@ int naive_assemble_forward_cuda_kernel(at::Tensor& output,
         int iw,
 
         int k,
-        at::Tensor& masked_cpa,
         cudaStream_t stream);
 
 
@@ -32,5 +31,4 @@ int naive_assemble_backward_cuda_kernel(
         at::Tensor& gradAff,
         at::Tensor& gradFeat,
         int k,
-        at::Tensor& masked_cpa,
         cudaStream_t stream);

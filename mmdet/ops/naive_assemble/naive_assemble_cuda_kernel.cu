@@ -27,8 +27,7 @@ __global__ void naive_assemble_forward(
         const int C,
         const int H,
         const int W,
-        const int k,
-        scalar_t* __restrict__ masked_cpa) 
+        const int k
 {
     int b = blockIdx.x;
     int y = blockIdx.y;
@@ -52,8 +51,6 @@ __global__ void naive_assemble_forward(
                         int feat_flat_idx = b * C * HW + c * HW + prev_y * W + prev_x;
                         float fc = feat[feat_flat_idx];
                         val += a * fc;
-                        if (c == 0)
-                            masked_cpa[flat_idx] += a;
                     }
                 }
             }
@@ -74,7 +71,7 @@ __global__ void naive_assemble_backward_Feat(
         const int P,
         scalar_t* gradFeat,
         const int k,
-        const scalar_t* __restrict__ masked_cpa) // TODO: replace masked_cpa as aff?
+        const scalar_t* __restrict__ aff)
 {
     int b = blockIdx.x;
     int y = blockIdx.y;
@@ -94,9 +91,9 @@ __global__ void naive_assemble_backward_Feat(
                 if (m >= 0 && m < H && n >= 0 && n < W ) {
                     int gradOutput_ind = b * C * HW + c * HW + m * W + n;
                     int flat_ind = b * P * HW + ((i+k) * D + (j+k)) * HW + m * W + n;
-                    float mask = masked_cpa[flat_ind];
+                    float coef = aff[flat_ind];
                     float g_o = gradOutput[gradOutput_ind];
-                    grad_cum += mask * g_o;
+                    grad_cum += coef * g_o;
                 }
             }
         }
@@ -115,8 +112,7 @@ int naive_assemble_forward_cuda_kernel(at::Tensor& output,
                                        int iw,
 
                                        int k,
-                                       at::Tensor& masked_cpa,
-                                       cudaStream_t stream) 
+                                       cudaStream_t stream)
 {
    int batchSize = ib;
 
@@ -135,7 +131,7 @@ int naive_assemble_forward_cuda_kernel(at::Tensor& output,
                          cur_prev_aff.data<scalar_t>(), nAffChannels,
                          feat.data<scalar_t>(), 
                          batchSize, nInputChannels, inputHeight, inputWidth,
-                         k, masked_cpa.data<scalar_t>());
+                         k);
   }));
 
   cudaError_t err = cudaGetLastError();
@@ -163,7 +159,6 @@ int naive_assemble_backward_cuda_kernel(
                                     at::Tensor& gradAff,
                                     at::Tensor& gradFeat,
                                     int k,
-                                    at::Tensor& masked_cpa,
                                     cudaStream_t stream)
 {
     int batchSize = gob;
@@ -181,7 +176,7 @@ int naive_assemble_backward_cuda_kernel(
         naive_assemble_backward_Feat<scalar_t><<<totalBlocksCorr, threadsPerBlock, 0, stream>>> (
             gradOutput.data<scalar_t>(), batchSize, nOutputChannels, outputHeight, outputWidth,
             nAffChannels, gradFeat.data<scalar_t>(),
-            k, masked_cpa.data<scalar_t>());
+            k, cur_prev_aff.data<scalar_t>());
     }));
 
   // check for errors
