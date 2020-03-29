@@ -65,17 +65,74 @@ class ConcatUpdate(nn.Module):
         return out
 
 
+class ConcatSkip(nn.Module):
+    """ Update Net like """
+    def __init__(self,
+                 in_channels):
+        super(ConcatUpdate, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(
+                in_channels=2 * in_channels,
+                out_channels=256,
+                kernel_size=1,
+                padding=0,
+                stride=1,
+            ),
+            nn.Conv2d(
+                in_channels=256,
+                out_channels=16,
+                kernel_size=3,
+                padding=1,
+                stride=1,
+            ),
+            nn.Conv2d(
+                in_channels=16,
+                out_channels=3,
+                kernel_size=3,
+                padding=1,
+                stride=1,
+            ),
+            nn.Conv2d(
+                in_channels=3,
+                out_channels=1,
+                kernel_size=3,
+                padding=1,
+                stride=1,
+            )
+        )
+
+    def init_weights(self):
+        def _init_conv(m):
+            classname = m.__class__.__name__
+            if classname.find('Conv') != -1:
+                normal_init(m, std=0.01)
+        self.apply(_init_conv)
+        nn.init.const_(self.conv[-1].bias, 0.0)
+
+    def forward(self, feat, aligned_ref):
+        cat = torch.cat([feat, aligned_ref], dim=1)
+        score = self.conv(cat)
+        out = feat + score * aligned_ref
+        return out
+
+
 class RFU(nn.Module):
     def __init__(self,
                  corr_disp,
                  in_channels,
                  use_softmax_norm=False,
-                 use_add=False):
+                 use_add=False,
+                 use_concat_skip=False,
+                 ):
         super(RFU, self).__init__()
         self.corr = Correlation(corr_disp, kernel_size=1,
                                 max_displacement=corr_disp, stride1=1, stride2=1)
         self.assemble = FastAssemble(corr_disp)
-        self.update_net = ConcatUpdate(in_channels)
+        if use_concat_skip:
+            self.update_net = ConcatSkip(in_channels)
+        else:
+            self.update_net = ConcatUpdate(in_channels)
+
 
         self.use_softmax_norm = use_softmax_norm
         self.use_add = use_add
@@ -113,9 +170,10 @@ class CorrAssemble(nn.Module):
 
                  use_softmax_norm=False,
                  use_add=False,
+                 use_concat_skip=False,
                  ):
         super(CorrAssemble, self).__init__()
-        self.rfu_64 = RFU(disp, 256, use_softmax_norm, use_add)
+        self.rfu_64 = RFU(disp, 256, use_softmax_norm, use_add, use_concat_skip)
         self.neck_first = neck_first
 
     def init_weights(self):
