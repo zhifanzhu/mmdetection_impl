@@ -143,7 +143,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workpairs/retinanet_corrasUseAdd_detvid_smallLR'
+work_dir = './workpairs/retinanet_corrasUseAdd_skip_detvid_smallLR'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
