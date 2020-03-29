@@ -69,7 +69,7 @@ class ConcatSkip(nn.Module):
     """ Update Net like """
     def __init__(self,
                  in_channels):
-        super(ConcatUpdate, self).__init__()
+        super(ConcatSkip, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(
                 in_channels=2 * in_channels,
