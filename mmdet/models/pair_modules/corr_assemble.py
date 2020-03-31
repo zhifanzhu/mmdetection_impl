@@ -133,7 +133,6 @@ class RFU(nn.Module):
         else:
             self.update_net = ConcatUpdate(in_channels)
 
-
         self.use_softmax_norm = use_softmax_norm
         self.use_add = use_add
 
