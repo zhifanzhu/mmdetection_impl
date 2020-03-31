@@ -168,6 +168,7 @@ class CorrAssemble(nn.Module):
                  disp,
                  neck_first,
 
+                 layers=(0,),
                  use_softmax_norm=False,
                  use_add=False,
                  use_concat_skip=False,
@@ -175,16 +176,15 @@ class CorrAssemble(nn.Module):
         super(CorrAssemble, self).__init__()
         self.rfu_64 = RFU(disp, 256, use_softmax_norm, use_add, use_concat_skip)
         self.neck_first = neck_first
+        self.trans_layers = [True if l in layers else False for l in range(5)]
 
     def init_weights(self):
         self.rfu_64.init_weights()
 
     def forward(self, feat, feat_ref, is_train=False):
         out = [
-            self.rfu_64(feat[0], feat_ref[0], is_train),
-            feat[1],
-            feat[2],
-            feat[3],
-            feat[4],
+            self.rfu_64(feat[l], feat_ref[l], is_train)
+            if t else feat[l]
+            for l, t in enumerate(self.trans_layers)
         ]
         return out
