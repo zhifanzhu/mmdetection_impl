@@ -187,3 +187,37 @@ class CorrAssemble(nn.Module):
             for l, t in enumerate(self.trans_layers)
         ]
         return out
+
+
+@PAIR_MODULE.register_module
+class MultiCorrAssemble(nn.Module):
+    """
+    Stand Alone rfu for each layer
+    """
+
+    def __init__(self,
+                 disp,
+                 neck_first,
+
+                 layers=(0,),
+                 use_add=False,
+                 ):
+        super(CorrAssemble, self).__init__()
+        self.neck_first = neck_first
+
+        self.rfu_list = nn.ModuleList()
+        for _ in layers:
+            self.rfu_list.append(RFU(disp, 256, False, use_add, False))
+        self.trans_layers = [True if l in layers else False for l in range(5)]
+
+    def init_weights(self):
+        for rfu in self.rfu_list:
+            rfu.init_weights()
+
+    def forward(self, feat, feat_ref, is_train=False):
+        out = [
+            self.rfu_list[l](feat[l], feat_ref[l], is_train)
+            if t else feat[l]
+            for l, t in enumerate(self.trans_layers)
+        ]
+        return out
