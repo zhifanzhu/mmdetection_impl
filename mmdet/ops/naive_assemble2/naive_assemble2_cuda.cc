@@ -26,7 +26,7 @@ int naive_assemble2_forward_cuda(
   int paddedInputHeight = inputHeight + 2 * pad_size;
   int paddedInputWidth = inputWidth + 2 * pad_size;
 
-  update.resize_({batchSize, paddedInputHeight, paddedInputWidth, nInputChannels});
+  update.resize_({batchSize,nInputChannels, inputHeight, inputWidth});
   rInput2.resize_({batchSize, paddedInputHeight, paddedInputWidth, nInputChannels});
   /* Aff.resize_({batchSize, nAffChannels, affHeight, affWidth}); */
 
