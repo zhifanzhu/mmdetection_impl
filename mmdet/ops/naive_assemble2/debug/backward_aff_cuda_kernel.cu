@@ -9,9 +9,63 @@ using namespace std;
 const int CUDA_NUM_THREADS = 512;
 const int kMaxGridNum = 65535;
 
-inline int GET_BLOCKS(const int N)
+#define CUDA_NUM_THREADS 1024
+#define THREADS_PER_BLOCK 32
+#define FULL_MASK 0xffffffff
+
+template<typename scalar_t>
+__forceinline__ __device__ scalar_t warpReduceSum(scalar_t val) {
+        for (int offset = 16; offset > 0; offset /= 2)
+                val += __shfl_down_sync(FULL_MASK, val, offset);
+        return val;
+}
+
+template<typename scalar_t>
+__forceinline__ __device__ scalar_t blockReduceSum(scalar_t val) {
+
+        static __shared__ scalar_t shared[32];
+        int lane = threadIdx.x % warpSize;
+        int wid = threadIdx.x / warpSize;
+
+        val = warpReduceSum(val);
+
+        if (lane == 0)
+                shared[wid] = val;
+
+        __syncthreads();
+
+        val = (threadIdx.x < blockDim.x / warpSize) ? shared[lane] : 0;
+
+        if (wid == 0)
+                val = warpReduceSum(val);
+
+        return val;
+}
+
+template <typename scalar_t>
+__global__ void channels_first(const scalar_t* __restrict__ input, scalar_t* rinput, int channels, int height, int width, int pad_size)
 {
-    return std::min(kMaxGridNum, (N + CUDA_NUM_THREADS - 1) / CUDA_NUM_THREADS);
+
+    // n (batch size), c (num of channels), y (height), x (width)
+    int n = blockIdx.x;
+    int y = blockIdx.y;
+    int x = blockIdx.z;
+
+    int ch_off = threadIdx.x;
+    scalar_t value;
+
+    int dimcyx = channels * height * width;
+    int dimyx = height * width;
+
+    int p_dimx = (width + 2 * pad_size);
+    int p_dimy = (height + 2 * pad_size);
+    int p_dimyxc = channels * p_dimy * p_dimx;
+    int p_dimxc = p_dimx * channels;
+
+    for (int c = ch_off; c < channels; c += THREADS_PER_BLOCK) {
+      value = input[n * dimcyx + c * dimyx + y * width + x];
+      rinput[n * p_dimyxc + (y + pad_size) * p_dimxc + (x + pad_size) * channels + c] = value;
+    }
 }
 
 // cuda kernel for assemble2 backward for affinity
@@ -99,12 +153,14 @@ int main() {
         pad_size = 1, kernel_size = 1, max_displacement = 1,
         stride1 = 1, stride2 = 1;
     typedef double scalar_t;
-    scalar_t *gradAff, **rgradUpdate, *rInput2;
+    scalar_t *gradAff, *rgradUpdate, *rInput2;
     gradAff = Zeros<scalar_t>({batchSize, nAffChannels, affHeight, affWidth});
     rgradUpdate = Ones<scalar_t>({batchSize, inputHeight, inputWidth, nInputChannels});
     rInput2 = Ones<scalar_t>({batchSize, inputHeight, inputWidth, nInputChannels});
 
-    naive_assemble2_backward_input2<<<totalBlocksCorr, threadsPerBlock, 0, stream>>>
+    dim3 threadsPerBlock(THREADS_PER_BLOCK);
+    dim3 totalBlocksCorr(batchSize, affHeight, affWidth);
+    naive_assemble2_backward_aff<<<totalBlocksCorr, threadsPerBlock, 0>>>
         (gradAff, nAffChannels, affHeight, affWidth,
          rgradUpdate, nInputChannels, inputHeight, inputWidth,
          rInput2,
@@ -113,6 +169,10 @@ int main() {
          max_displacement,
          stride1,
          stride2);
+    scalar_t *h_gradAff = new scalar_t[batchSize*nAffChannels*affHeight*affWidth];
+    cudaMemcpy(h_gradAff, gradAff, 
+            batchSize*nAffChannels*affHeight*affWidth*sizeof(double),
+            cudaMemcpyDeviceToHost);
     cudaFree(gradAff);
     cudaFree(rgradUpdate);
     cudaFree(rInput2);
