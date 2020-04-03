@@ -162,7 +162,7 @@ __global__ void naive_assemble2_forward(int item, scalar_t* update, int nInputCh
 // cuda kernel for assemble2 backward for affinity
 template<typename scalar_t>
 __global__ void naive_assemble2_backward_aff(scalar_t* __restrict__ gradAff, const int nAffChannels,
-        const int affHeight, const int affWidth, const scalar_t* __restrict__ gradUpdate,
+        const int affHeight, const int affWidth, const scalar_t* __restrict__ rGradUpdate,
         const int nInputChannels, const int inputHeight, const int inputWidth,
         const scalar_t* __restrict__ rInput2, const int pad_size, const int kernel_size,
         const int max_displacement, const int stride1, const int stride2) 
@@ -210,7 +210,7 @@ __global__ void naive_assemble2_backward_aff(scalar_t* __restrict__ gradAff, con
                                                                 + (x1 + i) * pdimc + ch;
                                                 int indx2 = n * pdimyxc + (y2 + j) * pdimxc
                                                                 + (x2 + i) * pdimc + ch;
-                                                acc0 += static_cast<float>(gradUpdate[indx1] * rInput2[indx2]);
+                                                acc0 += static_cast<float>(rGradUpdate[indx1] * rInput2[indx2]);
                                         }
                                 }
                         }
@@ -239,7 +239,7 @@ __global__ void naive_assemble2_backward_aff(scalar_t* __restrict__ gradAff, con
 template <typename scalar_t>
 __global__ void naive_assemble2_backward_input2(int item, scalar_t*  gradInput2, int nInputChannels, int inputHeight, int inputWidth,
         const scalar_t* __restrict__ Aff, int nAffChannels, int affHeight, int affWidth,
-        const scalar_t* __restrict__ gradUpdate,
+        const scalar_t* __restrict__ rGradUpdate,
         int pad_size,
         int kernel_size,
         int max_displacement,
@@ -304,7 +304,7 @@ __global__ void naive_assemble2_backward_input2(int item, scalar_t*  gradInput2,
       ymax = min(affHeight-1,ymax);
       
       int indx1 = n * pdimyxc + (y - j2)* pdimxc + (x - i2) * pdimc + c;
-      scalar_t val1 = gradUpdate[indx1];
+      scalar_t val1 = rGradUpdate[indx1];
 
       for (int j = ymin; j <= ymax; ++j) {
         for (int i = xmin; i <= xmax; ++i) {
@@ -521,7 +521,7 @@ int naive_assemble2_backward_cuda_kernel(
 
     naive_assemble2_backward_aff<scalar_t><<<totalBlocksCorr, threadsPerBlock, 0, stream>>> 
                         (gradAff.data<scalar_t>(), nAffChannels, affHeight, affWidth,
-                         gradUpdate.data<scalar_t>(), nInputChannels, inputHeight, inputWidth,
+                         rGradUpdate.data<scalar_t>(), nInputChannels, inputHeight, inputWidth,
                          rInput2.data<scalar_t>(),
                          pad_size,
                          kernel_size,
@@ -541,7 +541,7 @@ int naive_assemble2_backward_cuda_kernel(
         naive_assemble2_backward_input2<scalar_t><<<totalBlocksCorr, threadsPerBlock, 0, stream>>>(
             n, gradInput2.data<scalar_t>(), nInputChannels, inputHeight, inputWidth,
             Aff.data<scalar_t>(), nAffChannels, affHeight, affWidth,
-            gradUpdate.data<scalar_t>(),
+            rGradUpdate.data<scalar_t>(),
             pad_size,
             kernel_size,
             max_displacement,

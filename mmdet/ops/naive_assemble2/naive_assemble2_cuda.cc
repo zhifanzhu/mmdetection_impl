@@ -92,6 +92,8 @@ int naive_assemble2_backward_cuda(
 
   int batchSize = input2.size(0);
   int nInputChannels = input2.size(1);
+  int inputHeight = input2.size(2);
+  int inputWidth = input2.size(3);
   int paddedInputHeight = input2.size(2)+ 2 * pad_size;
   int paddedInputWidth = input2.size(3)+ 2 * pad_size;
 
