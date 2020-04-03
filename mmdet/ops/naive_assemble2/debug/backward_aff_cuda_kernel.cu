@@ -153,10 +153,17 @@ int main() {
         pad_size = 1, kernel_size = 1, max_displacement = 1,
         stride1 = 1, stride2 = 1;
     typedef double scalar_t;
-    scalar_t *gradAff, *rgradUpdate, *rInput2;
+    scalar_t *gradAff, *gradUpdate, *rgradUpdate, *rInput2;
     gradAff = Zeros<scalar_t>({batchSize, nAffChannels, affHeight, affWidth});
-    rgradUpdate = Ones<scalar_t>({batchSize, inputHeight, inputWidth, nInputChannels});
+    gradUpdate = Ones<scalar_t>({batchSize, inputHeight, inputWidth, nInputChannels});
+    rgradUpdate = Zeros<scalar_t>({batchSize, inputHeight+2, inputWidth+2, nInputChannels});
     rInput2 = Ones<scalar_t>({batchSize, inputHeight, inputWidth, nInputChannels});
+
+    dim3 blocks_grid(batchSize, inputHeight, inputWidth);
+    dim3 threads_block(THREADS_PER_BLOCK);
+    channels_first<scalar_t><<<blocks_grid, threads_block, 0>>>(
+            gradUpdate, rgradUpdate, nInputChannels, inputHeight, 
+            inputWidth, pad_size);
 
     dim3 threadsPerBlock(THREADS_PER_BLOCK);
     dim3 totalBlocksCorr(batchSize, affHeight, affWidth);
@@ -169,10 +176,14 @@ int main() {
          max_displacement,
          stride1,
          stride2);
+    int nelem = batchSize*nAffChannels*affHeight*affWidth;
     scalar_t *h_gradAff = new scalar_t[batchSize*nAffChannels*affHeight*affWidth];
     cudaMemcpy(h_gradAff, gradAff, 
             batchSize*nAffChannels*affHeight*affWidth*sizeof(double),
             cudaMemcpyDeviceToHost);
+    for (int i = 0; i != nelem; ++i) {
+        cout << h_gradAff[i] << " ";
+    }
     cudaFree(gradAff);
     cudaFree(rgradUpdate);
     cudaFree(rInput2);
