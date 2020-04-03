@@ -51,7 +51,7 @@ int naive_assemble2_forward_cuda(
     input2.stride(0),
     input2.stride(1),
     input2.stride(2),
-    input1.stride(3),
+    input2.stride(3),
     input2,
     input2.size(1),
     input2.stride(0),

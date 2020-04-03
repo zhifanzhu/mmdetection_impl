@@ -331,14 +331,14 @@ __global__ void naive_assemble2_backward_input2(int item, scalar_t*  gradInput2,
 // naive assemble2 forward cuda kernel
 int naive_assemble2_forward_cuda_kernel(
                                     at::Tensor& Aff,
-                                    int gab,
-                                    int gac,
-                                    int gah,
-                                    int gaw,
-                                    int gasb,
-                                    int gasc,
-                                    int gash,
-                                    int gasw,
+                                    int ab,
+                                    int ac,
+                                    int ah,
+                                    int aw,
+                                    int asb,
+                                    int asc,
+                                    int ash,
+                                    int asw,
 
                                     at::Tensor& update,
                                     int uc,
@@ -350,6 +350,7 @@ int naive_assemble2_forward_cuda_kernel(
                                     int usw,
 
                                     at::Tensor& input2,
+                                    int gc,
                                     int gsb,
                                     int gsc,
                                     int gsh,
@@ -366,16 +367,16 @@ int naive_assemble2_forward_cuda_kernel(
                                     cudaStream_t stream)
 {
 
-    int batchSize = gab;
+    int batchSize = ab;
     int num = batchSize;
 
     int nInputChannels = uc;
     int inputWidth = uw;
     int inputHeight = uh;
 
-    int nAffChannels = gac;
-    int affWidth = gaw;
-    int affHeight = gah;
+    int nAffChannels = ac;
+    int affWidth = aw;
+    int affHeight = ah;
 
     dim3 blocks_grid(batchSize, inputHeight, inputWidth);
     dim3 threads_block(THREADS_PER_BLOCK);
@@ -475,7 +476,7 @@ int naive_assemble2_backward_cuda_kernel(
 {
 
     int batchSize = gab;
-    int num = batchSize;
+    /* int num = batchSize; */
 
     int nInputChannels = uc;
     int inputWidth = uw;
@@ -504,7 +505,7 @@ int naive_assemble2_backward_cuda_kernel(
     dim3 threadsPerBlock(THREADS_PER_BLOCK);
     dim3 totalBlocksCorr(batchSize, affHeight, affWidth);
 
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input1.type(), "naive_assemble2_forward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input2.type(), "naive_assemble2_forward", ([&] {
 
     naive_assemble2_backward_aff<scalar_t><<<totalBlocksCorr, threadsPerBlock, 0, stream>>> 
                         (gradAff.data<scalar_t>(), nAffChannels, affHeight, affWidth,
