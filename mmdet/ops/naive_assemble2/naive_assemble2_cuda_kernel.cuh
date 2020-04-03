@@ -80,7 +80,7 @@ int naive_assemble2_backward_cuda_kernel(
     int ggsh,
     int ggsw,
 
-    /* at::Tensor& rInput1, */
+    at::Tensor& rGradUpdate,
     at::Tensor& rInput2,
     int pad_size,
     int kernel_size,

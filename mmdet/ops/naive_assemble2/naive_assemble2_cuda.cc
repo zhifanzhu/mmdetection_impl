@@ -80,7 +80,7 @@ int naive_assemble2_forward_cuda(
 }
 
 int naive_assemble2_backward_cuda(
-        at::Tensor& gradUpdate, at::Tensor& input2, /*at::Tensor& rInput1,*/ at::Tensor& rInput2, at::Tensor& Aff, 
+        at::Tensor& gradUpdate, at::Tensor& input2, at::Tensor& rGradUpdate, at::Tensor& rInput2, at::Tensor& Aff, 
         at::Tensor& gradAff, at::Tensor& gradInput2,
         int pad_size,
         int kernel_size,
@@ -106,12 +106,12 @@ int naive_assemble2_backward_cuda(
   int height = input2.size(2);
   int width = input2.size(3);
 
-  /* rInput1.resize_({batchSize, paddedInputHeight, paddedInputWidth, nInputChannels}); */
+  rGradUpdate.resize_({batchSize, inputHeight, inputWidth, nInputChannels});
   rInput2.resize_({batchSize, paddedInputHeight, paddedInputWidth, nInputChannels});
   gradAff.resize_({batchSize, nAffChannels, affHeight, affWidth});
   gradInput2.resize_({batchSize, nInputChannels, height, width});
 
-  /* rInput1.fill_(0); */
+  rGradUpdate.fill_(0);
   rInput2.fill_(0);
   gradAff.fill_(0);
   gradInput2.fill_(0);
@@ -149,7 +149,7 @@ int naive_assemble2_backward_cuda(
                                                 gradInput2.stride(1),
                                                 gradInput2.stride(2),
                                                 gradInput2.stride(3),
-                                                /* rInput1, */
+                                                rGradUpdate,
                                                 rInput2,
                                                 pad_size,
                                                 kernel_size,

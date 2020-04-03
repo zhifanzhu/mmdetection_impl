@@ -464,7 +464,7 @@ int naive_assemble2_backward_cuda_kernel(
                                     int ggsh,
                                     int ggsw,
 
-                                    /* at::Tensor& rInput1, */
+                                    at::Tensor& rGradUpdate,
                                     at::Tensor& rInput2,
                                     int pad_size,
                                     int kernel_size,
@@ -488,6 +488,18 @@ int naive_assemble2_backward_cuda_kernel(
 
     dim3 blocks_grid(batchSize, inputHeight, inputWidth);
     dim3 threads_block(THREADS_PER_BLOCK);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input2.type(), "lltm_forward_cuda", ([&] {
+
+        channels_first<scalar_t><<<blocks_grid, threads_block, 0, stream>>>(
+            gradUpdate.data<scalar_t>(),
+            rGradUpdate.data<scalar_t>(),
+            nInputChannels,
+            inputHeight,
+            inputWidth,
+            0
+        );
+    }));
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input2.type(), "lltm_forward_cuda", ([&] {
 
