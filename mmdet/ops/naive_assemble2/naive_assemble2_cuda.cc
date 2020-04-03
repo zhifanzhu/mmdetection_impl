@@ -92,8 +92,6 @@ int naive_assemble2_backward_cuda(
 
   int batchSize = input2.size(0);
   int nInputChannels = input2.size(1);
-  int inputHeight = input2.size(2);
-  int inputWidth = input2.size(3);
   int paddedInputHeight = input2.size(2)+ 2 * pad_size;
   int paddedInputWidth = input2.size(3)+ 2 * pad_size;
 
@@ -108,7 +106,7 @@ int naive_assemble2_backward_cuda(
   int height = input2.size(2);
   int width = input2.size(3);
 
-  rGradUpdate.resize_({batchSize, inputHeight, inputWidth, nInputChannels});
+  rGradUpdate.resize_({batchSize, paddedInputHeight, paddedInputWidth, nInputChannels});
   rInput2.resize_({batchSize, paddedInputHeight, paddedInputWidth, nInputChannels});
   gradAff.resize_({batchSize, nAffChannels, affHeight, affWidth});
   gradInput2.resize_({batchSize, nInputChannels, height, width});

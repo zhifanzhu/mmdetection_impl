@@ -497,7 +497,7 @@ int naive_assemble2_backward_cuda_kernel(
             nInputChannels,
             inputHeight,
             inputWidth,
-            0
+            pad_size
         );
     }));
 
