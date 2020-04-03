@@ -66,13 +66,14 @@ class NaiveAssemble2Function(Function):
         Aff, input2 = ctx.saved_tensors
 
         with torch.cuda.device_of(input2):
+            rgrad_update = input2.new()
             rbot2 = input2.new()
 
             grad_input2 = input2.new()
             grad_aff = input2.new()
 
             _ext.backward(
-                grad_update, input2, rbot2, Aff,
+                grad_update, input2, rgrad_update, rbot2, Aff,
                 grad_aff, grad_input2,
                 ctx.pad_size, ctx.kernel_size, ctx.max_displacement,
                 ctx.stride1, ctx.stride2, ctx.corr_multiply)
