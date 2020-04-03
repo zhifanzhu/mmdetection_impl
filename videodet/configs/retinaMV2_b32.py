@@ -84,8 +84,8 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=16,
-    workers_per_gpu=2,
+    imgs_per_gpu=32,
+    workers_per_gpu=4,
     train=[
         dict(
             type=vid_dataset_type,
@@ -133,7 +133,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/retinaMV2'
+work_dir = './workvids/retinaMV2_b32'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

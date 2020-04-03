@@ -202,7 +202,7 @@ class MultiCorrAssemble(nn.Module):
                  layers=(0,),
                  use_add=False,
                  ):
-        super(CorrAssemble, self).__init__()
+        super(MultiCorrAssemble, self).__init__()
         self.neck_first = neck_first
 
         self.rfu_list = nn.ModuleList()

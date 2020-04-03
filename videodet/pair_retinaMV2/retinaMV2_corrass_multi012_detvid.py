@@ -1,6 +1,6 @@
 # model settings
 model = dict(
-    type='SingleStageDetector',
+    type='PairRetinaNet',
     pretrained='zoo/mobilenet_v2.pth.tar',
     backbone=dict(
         type='SSDMobileNetV2',
@@ -17,6 +17,11 @@ model = dict(
         start_level=1,
         add_extra_convs=True,
         num_outs=5),
+    pair_module=dict(
+        type='MultiCorrAssemble',
+        disp=4,
+        layers=(0, 1, 2),
+        neck_first=True),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -54,13 +59,13 @@ test_cfg = dict(
     nms=dict(type='nms', iou_thr=0.5),
     max_per_img=100)
 # dataset settings
-vid_dataset_type = 'StillVIDDataset'
-det_dataset_type = 'DET30Dataset'
+vid_dataset_type = 'PairVIDDataset'
+det_dataset_type = 'PairDET30Dataset'
 data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='LoadAnnotations', with_bbox=True),
+    dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
     dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
@@ -80,7 +85,9 @@ test_pipeline = [
             dict(type='Normalize', **img_norm_cfg),
             dict(type='Pad', size_divisor=32),
             dict(type='ImageToTensor', keys=['img']),
-            dict(type='Collect', keys=['img']),
+            dict(type='Collect', keys=['img'],
+                 meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
+                            'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
         ])
 ]
 data = dict(
@@ -100,12 +107,12 @@ data = dict(
     ],
     val=dict(
         type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
         type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
@@ -121,19 +128,19 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=50,
+    interval=100,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=12, num_evals=5000*4, shuffle=True)
+evaluation = dict(interval=12, num_evals=5000, shuffle=False)
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/retinaMV2'
+work_dir = './workpairs/retinaMV2_corrass_multi012_detvid'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
