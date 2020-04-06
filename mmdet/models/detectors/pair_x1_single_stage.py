@@ -62,7 +62,7 @@ class UpdateNet(nn.Module):
                 in_channels=256,
                 out_channels=out_channels,
                 kernel_size=1,
-                padding=1,
+                padding=0,
                 stride=1,
             )
         )
@@ -73,8 +73,8 @@ class UpdateNet(nn.Module):
             if classname.find('Conv') != -1:
                 normal_init(m, std=0.01)
         self.apply(_init_conv)
-        nn.init.const_(self.score_conv[-1].bias[0], 1.0)
-        nn.init.const_(self.score_conv[-1].bias[1], 0.0)
+        nn.init.constant_(self.score_conv[-1].bias[0], 1.0)
+        nn.init.constant_(self.score_conv[-1].bias[1], 0.0)
 
     def forward(self, x, x_ref, is_train):
         cat = torch.cat([x, x_ref], dim=1)
@@ -110,11 +110,11 @@ class PairX1SingleStageDetector(PairBaseDetector):
         self.bbox_head = builder.build_head(bbox_head)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
-        self.init_weights(pretrained=pretrained)
         self.update_nets = nn.ModuleList()
         for _ in range(5):  # 5 is fpn level
             self.update_nets.append(
                 UpdateNet(in_channels=256, out_channels=256))
+        self.init_weights(pretrained=pretrained)
 
         # memory cache for testing
         self.prev_memory = None
@@ -129,7 +129,7 @@ class PairX1SingleStageDetector(PairBaseDetector):
             else:
                 self.neck.init_weights()
         self.bbox_head.init_weights()
-        for l in len(self.update_nets):
+        for l in range(len(self.update_nets)):
             self.update_nets[l].init_weights()
 
     def extract_feat(self, img):
@@ -153,12 +153,12 @@ class PairX1SingleStageDetector(PairBaseDetector):
         x = self.extract_feat(img)
         x_ref = self.extract_feat(ref_img)
         x_update = []
-        update_losses = 0
+        update_losses = []
         for l, net in enumerate(self.update_nets):
             update_feat, _loss = net(x[l], x_ref[l], is_train=True)
             x_update.append(update_feat)
             update_losses.append(_loss)
-        update_loss = torch.sum(update_losses) / 5  # 5 = len(self.update_nets)
+        update_loss = sum(update_losses) / 5  # 5 = len(self.update_nets)
 
         outs = self.bbox_head(x)
         loss_inputs = outs + (gt_bboxes, gt_labels, img_metas, self.train_cfg)
