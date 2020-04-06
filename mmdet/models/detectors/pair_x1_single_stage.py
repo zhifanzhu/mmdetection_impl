@@ -99,7 +99,6 @@ class PairX1SingleStageDetector(PairBaseDetector):
                  backbone,
                  neck=None,
                  bbox_head=None,
-                 pair_module=None,
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None):
@@ -107,9 +106,6 @@ class PairX1SingleStageDetector(PairBaseDetector):
         self.backbone = builder.build_backbone(backbone)
         if neck is not None:
             self.neck = builder.build_neck(neck)
-        if pair_module is not None:
-            self.pair_module = builder.build_pair_module(
-                pair_module)
         self.bbox_head = builder.build_head(bbox_head)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
@@ -131,8 +127,6 @@ class PairX1SingleStageDetector(PairBaseDetector):
                     m.init_weights()
             else:
                 self.neck.init_weights()
-        if self.with_temporal_module:
-            self.pair_module.init_weights()
         self.bbox_head.init_weights()
 
     def extract_feat(self, img):
