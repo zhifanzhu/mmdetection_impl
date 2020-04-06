@@ -10,6 +10,7 @@ from .pair_base import PairBaseDetector
 
 class UpdateNet(nn.Module):
     def __init__(self, in_channels, out_channels, loss_weight=0.1):
+        super(UpdateNet, self).__init__()
         self.loss_weight = loss_weight
         self.score_conv = nn.Sequential(
             nn.Conv2d(
@@ -128,6 +129,8 @@ class PairX1SingleStageDetector(PairBaseDetector):
             else:
                 self.neck.init_weights()
         self.bbox_head.init_weights()
+        for l in len(self.update_nets):
+            self.update_nets[l].init_weights()
 
     def extract_feat(self, img):
         x = self.backbone(img)
@@ -150,12 +153,12 @@ class PairX1SingleStageDetector(PairBaseDetector):
         x = self.extract_feat(img)
         x_ref = self.extract_feat(ref_img)
         x_update = []
-        update_losses = []
+        update_losses = 0
         for l, net in enumerate(self.update_nets):
             update_feat, _loss = net(x[l], x_ref[l], is_train=True)
             x_update.append(update_feat)
-            update_losses += _loss
-        update_loss = update_losses / 5  # 5 = len(self.update_nets)
+            update_losses.append(_loss)
+        update_loss = torch.sum(update_losses) / 5  # 5 = len(self.update_nets)
 
         outs = self.bbox_head(x)
         loss_inputs = outs + (gt_bboxes, gt_labels, img_metas, self.train_cfg)

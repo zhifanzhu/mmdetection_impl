@@ -25,6 +25,7 @@ from .pair_base import PairBaseDetector
 from .pair_single_stage import PairSingleStageDetector
 from .pair_retina import PairRetinaNet
 from .pair_x1_single_stage import PairX1SingleStageDetector
+from .pair_x1_retina import PairX1RetinaNet
 
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
@@ -34,5 +35,6 @@ __all__ = [
     'SeqBaseDetector', 'SeqSingleStageDetector', 'SeqRetinaNet',
     'SeqSSDDnT', 'SeqRNNSSDMobileNet',
     'PairBaseDetector', 'PairSingleStageDetector',
-    'PairRetinaNet', 'PairX1SingleStageDetector'
+    'PairRetinaNet',
+    'PairX1SingleStageDetector', 'PairX1RetinaNet',
 ]
