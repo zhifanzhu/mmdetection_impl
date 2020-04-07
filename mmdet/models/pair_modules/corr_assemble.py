@@ -122,6 +122,7 @@ class RFU(nn.Module):
                  in_channels,
                  use_softmax_norm=False,
                  use_add=False,
+                 use_max=False,
                  use_concat_skip=False,
                  ):
         super(RFU, self).__init__()
@@ -135,20 +136,23 @@ class RFU(nn.Module):
 
         self.use_softmax_norm = use_softmax_norm
         self.use_add = use_add
+        self.use_max = use_max
 
     def init_weights(self):
         self.update_net.init_weights()
 
     def forward(self, feat, feat_ref, is_train=False):
-        if not self.use_add:
+        if self.use_add:
+            aligned_ref = feat + feat_ref
+        elif self.use_max:
+            aligned_ref = torch.max(feat, feat_ref)
+        else:
             aff = self.corr(feat, feat_ref)
             if self.use_softmax_norm:
                 aff = torch.softmax(aff, dim=1)
             else:
                 aff = aff / (torch.sum(aff, dim=1, keepdim=True) + 1e-7)
             aligned_ref = self.assemble(aff, feat_ref)
-        else:
-            aligned_ref = feat + feat_ref
         updated_cur_feat = self.update_net(feat, aligned_ref)
         return updated_cur_feat
 
