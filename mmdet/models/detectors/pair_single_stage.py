@@ -44,7 +44,7 @@ class PairSingleStageDetector(PairBaseDetector):
                     m.init_weights()
             else:
                 self.neck.init_weights()
-        if self.with_temporal_module:
+        if self.with_pair_module:
             self.pair_module.init_weights()
         self.bbox_head.init_weights()
 

@@ -53,8 +53,8 @@ class ConcatUpdate(nn.Module):
             if classname.find('Conv') != -1:
                 normal_init(m, std=0.01)
         self.apply(_init_conv)
-        nn.init.const_(self.conv[-1].bias[0], 1.0)
-        nn.init.const_(self.conv[-1].bias[1], 0.0)
+        nn.init.constant_(self.conv[-1].bias[0], 1.0)
+        nn.init.constant_(self.conv[-1].bias[1], 0.0)
 
     def forward(self, feat, aligned_ref):
         cat = torch.cat([feat, aligned_ref], dim=1)

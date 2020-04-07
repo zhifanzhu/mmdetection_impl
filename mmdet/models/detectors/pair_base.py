@@ -27,8 +27,8 @@ class PairBaseDetector(nn.Module):
         return hasattr(self, 'shared_head') and self.shared_head is not None
 
     @property
-    def with_temporal_module(self):
-        return hasattr(self, 'temporal_module') and self.temporal_module is not None
+    def with_pair_module(self):
+        return hasattr(self, 'pair_module') and self.pair_module is not None
 
     @property
     def with_bbox(self):
