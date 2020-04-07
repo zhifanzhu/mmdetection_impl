@@ -174,10 +174,12 @@ class CorrAssemble(nn.Module):
                  layers=(0,),
                  use_softmax_norm=False,
                  use_add=False,
+                 use_max=False,
                  use_concat_skip=False,
                  ):
         super(CorrAssemble, self).__init__()
-        self.rfu_64 = RFU(disp, 256, use_softmax_norm, use_add, use_concat_skip)
+        self.rfu_64 = RFU(
+                disp, 256, use_softmax_norm, use_add, use_max, use_concat_skip)
         self.neck_first = neck_first
         self.trans_layers = [True if l in layers else False for l in range(5)]
 
@@ -205,13 +207,15 @@ class MultiCorrAssemble(nn.Module):
 
                  layers=(0,),
                  use_add=False,
+                 use_max=False,
                  ):
         super(MultiCorrAssemble, self).__init__()
         self.neck_first = neck_first
 
         self.rfu_list = nn.ModuleList()
         for _ in layers:
-            self.rfu_list.append(RFU(disp, 256, False, use_add, False))
+            self.rfu_list.append(
+                    RFU(disp, 256, False, use_add, use_max, False))
         self.trans_layers = [True if l in layers else False for l in range(5)]
 
     def init_weights(self):
