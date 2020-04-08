@@ -176,6 +176,10 @@ if __name__ == '__main__':
                 module='mmdet.ops.roi_pool',
                 sources=['src/roi_pool_cuda.cpp', 'src/roi_pool_kernel.cu']),
             make_cuda_ext(
+                name='psroi_pool_cuda',
+                module='mmdet.ops.psroi_pool',
+                sources=['src/psroi_pool_cuda.cpp', 'src/psroi_pool_kernel.cu']),
+            make_cuda_ext(
                 name='deform_conv_cuda',
                 module='mmdet.ops.dcn',
                 sources=[

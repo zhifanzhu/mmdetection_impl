@@ -13,6 +13,7 @@ from .correlation_package import Correlation
 from .naive_assemble import NaiveAssemble
 from .fast_assemble import FastAssemble
 from .naive_assemble2 import NaiveAssemble2
+from .psroi_pool import PSRoIPool, psroi_pool
 
 __all__ = [
     'nms', 'soft_nms', 'RoIAlign', 'roi_align', 'RoIPool', 'roi_pool',
@@ -21,5 +22,6 @@ __all__ = [
     'ModulatedDeformConvPack', 'deform_conv', 'modulated_deform_conv',
     'deform_roi_pooling', 'SigmoidFocalLoss', 'sigmoid_focal_loss',
     'MaskedConv2d', 'ContextBlock', 'PointwiseCorrelation',
-    'Correlation', 'FastAssemble', 'NaiveAssemble2'
+    'Correlation', 'FastAssemble', 'NaiveAssemble2',
+    'PSROIPool', 'psroi_pool',
 ]

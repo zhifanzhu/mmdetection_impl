@@ -9,7 +9,7 @@ from . import psroi_pool_cuda
 class PSRoIPoolingFunction(Function):
 
     @staticmethod
-    def forward(self, features, rois, pooled_height, pooled_width,
+    def forward(ctx, features, rois, pooled_height, pooled_width,
             spatial_scale, group_size, output_dim):
         assert features.is_cuda
         assert isinstance(pooled_height, int) and isinstance(pooled_width, int)
@@ -26,15 +26,15 @@ class PSRoIPoolingFunction(Function):
         ctx.rois = rois
         ctx.spatial_scale = spatial_scale
         ctx.output_dim = output_dim
-        self.feature_size = features.size()
+        ctx.feature_size = features.size()
 
         return output
 
     @staticmethod
     @once_differentiable
-    def backward(self, grad_output):
+    def backward(ctx, grad_output):
         assert grad_output.is_cuda
-        assert(self.feature_size is not None and grad_output.is_cuda)
+        assert(ctx.feature_size is not None and grad_output.is_cuda)
         spatial_scale = ctx.spatial_scale
         output_dim = ctx.output_dim
         feature_size = ctx.feature_size
@@ -66,7 +66,7 @@ class PSRoIPool(Module):
     def forward(self, features, rois):
         return psroi_pool(features, rois,
                 self.pooled_height, self.pooled_width, self.spatial_scale,
-                self.group_size, self.output_dim)(features, rois)
+                self.group_size, self.output_dim)
 
     def __repr___(self):
         format_str = self.__class__.__name__

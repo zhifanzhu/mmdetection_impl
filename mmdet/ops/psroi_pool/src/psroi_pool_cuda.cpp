@@ -1,4 +1,4 @@
-/* #include <torch/extension.h> */
+#include <torch/extension.h>
 
 #include <cmath>
 
@@ -7,15 +7,15 @@ int PSROIPoolForwardLauncher(
     const int num_rois, const int height,
     const int width, const int channels, const int pooled_height, const int pooled_width,
     const at::Tensor bottom_rois, const int group_size, const int output_dim, 
-    at::Tensor top_data, at::Tensor mapping_channel, cudaStream_t stream);
+    at::Tensor top_data, at::Tensor mapping_channel);
 
 
 int PSROIPoolBackwardLauncher(
     const at::Tensor top_diff, const at::Tensor mapping_channel, 
-    const int batch_size, const int num_rois, const float spatial_scale, 
+    const int num_rois, const float spatial_scale, 
     const int channels, const int height, const int width, 
     const int pooled_width, const int pooled_height, const int output_dim, 
-    at::Tensor bottom_diff, const at::Tensor bottom_rois, cudaStream_t stream);
+    at::Tensor bottom_diff, const at::Tensor bottom_rois);
 
 #define CHECK_CUDA(x) AT_CHECK(x.type().is_cuda(), #x, " must be a CUDAtensor ")
 #define CHECK_CONTIGUOUS(x) \
@@ -87,14 +87,14 @@ int psroi_pooling_backward_cuda(float spatial_scale,
     /* if (batch_size != 1) */
     /*     return 0; */
 
-    int num_channels = THCudaTensor_size(state, bottom_grad, 1);
-    int data_height = THCudaTensor_size(state, bottom_grad, 2);
-    int data_width = THCudaTensor_size(state, bottom_grad, 3);
+    int num_channels = bottom_grad.size(1);
+    int data_height = bottom_grad.size(2);
+    int data_width = bottom_grad.size(3);
 
-    PSROIPoolBackwardLauncher(top_grad, mappingchannel, batch_size, num_rois, 
+    PSROIPoolBackwardLauncher(top_grad, mappingchannel, num_rois, 
         spatial_scale, num_channels, data_height, data_width, 
-        pooled_width, pooled_height, output_dim, bottom_grad_flat, 
-        rois_flat);
+        pooled_width, pooled_height, output_dim, bottom_grad, 
+        rois);
     return 1;
 }
 

@@ -1,10 +1,11 @@
 #include <ATen/ATen.h>
+#include <ATen/NativeFunctions.h>
+#include <ATen/Dispatch.h>
 #include <THC/THCAtomics.cuh>
 
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
-#include "psroi_pooling_kernel.h"
 
 #define CUDA_1D_KERNEL_LOOP(i, n)                            \
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; \
@@ -80,14 +81,16 @@ __global__ void PSROIPoolForward(const int nthreads, const scalar_t* bottom_data
       	  }
       	}
       	scalar_t bin_area = (hend - hstart)*(wend - wstart);
-      	top_data[index] = is_empty? 0. : out_sum/bin_area;
+      	top_data[index] = is_empty ? static_cast<scalar_t>(0) 
+                                   : out_sum / bin_area;
       	mapping_channel[index] = c;
     }
 }
 
 
 int PSROIPoolForwardLauncher(
-    const at::Tensor bottom_data, const float spatial_scale, const int num_rois, const int height,
+    const at::Tensor bottom_data, const float spatial_scale, 
+    const int num_rois, const int height,
     const int width, const int channels, const int pooled_height,
     const int pooled_width, const at::Tensor bottom_rois,
     const int group_size, const int output_dim,
@@ -96,17 +99,14 @@ int PSROIPoolForwardLauncher(
     const int output_size = output_dim * pooled_height * pooled_width * num_rois;
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-        bottom_data.scalar_type(), "PSROSPoolLauncherForward", ([&] {
-        const scalar_t *bottom_data = bottom_data.data<scalar_t>();
-        const scalar_t *bottom_rois = bottom_rois.data<scalar_t>();
-        scalar_t *top_data    = top_data.data<scalar_t>();
-        int *mapping_channel  = mapping_channel.data<int>();
-
-        PSROIPoolForward<<<GET_BLOCKS(output_size), THREADS_PER_BLOCK>>>(
-                output_size, bottom_data, scalar_t(spatial_scale), 
+        bottom_data.type(), "PSROSPoolLauncherForward", ([&] {
+        PSROIPoolForward<scalar_t>
+            <<<GET_BLOCKS(output_size), THREADS_PER_BLOCK>>>(
+                output_size, bottom_data.data<scalar_t>(), spatial_scale, 
                 height, width, channels, pooled_height,
                 pooled_width, group_size, output_dim, 
-                bottom_rois, top_data, mapping_channel);
+                bottom_rois.data<scalar_t>(), top_data.data<scalar_t>(), 
+                mapping_channel.data<int>());
     }));
     THCudaCheck(cudaGetLastError());
     return 1;
@@ -117,7 +117,8 @@ template <typename scalar_t>
 __global__ void PSROIPoolBackward(const int nthreads, const scalar_t* top_diff,
     const int* mapping_channel, const int num_rois, const scalar_t spatial_scale,
     const int height, const int width, const int channels,
-    const int pooled_height, const int pooled_width, const int output_dim, scalar_t* bottom_diff,
+    const int pooled_height, const int pooled_width, 
+    const int output_dim, scalar_t* bottom_diff,
     const scalar_t* bottom_rois) {
     CUDA_1D_KERNEL_LOOP(index, nthreads)
     {
@@ -166,7 +167,8 @@ __global__ void PSROIPoolBackward(const int nthreads, const scalar_t* top_diff,
       scalar_t* offset_bottom_diff = bottom_diff +
         (roi_batch_ind * channels + c) * height * width;
       scalar_t bin_area = (hend - hstart)*(wend - wstart);
-      scalar_t diff_val = is_empty ? 0. : top_diff[index] / bin_area;
+      scalar_t diff_val = is_empty ? static_cast<scalar_t>(0) 
+                                   : top_diff[index] / bin_area;
       for (int h = hstart; h < hend; ++h) {
         for (int w = wstart; w < wend; ++w) {
           int bottom_index = h*width + w;
@@ -177,8 +179,9 @@ __global__ void PSROIPoolBackward(const int nthreads, const scalar_t* top_diff,
   }
 }
 
-int PSROIPoolBackwardLauncher(const at::Tensor top_diff, const at::Tensor mapping_channel, 
-        const int batch_size, const int num_rois, 
+int PSROIPoolBackwardLauncher(const at::Tensor top_diff, 
+        const at::Tensor mapping_channel, 
+        const int num_rois, 
         const float spatial_scale, const int channels,
         const int height, const int width, const int pooled_width,
         const int pooled_height, const int output_dim,
@@ -186,20 +189,21 @@ int PSROIPoolBackwardLauncher(const at::Tensor top_diff, const at::Tensor mappin
 {
     //const int output_size = output_dim * height * width * channels;
     const int output_size = output_dim * pooled_height * pooled_width * num_rois;
-    cudaError_t err;
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-        top_diff.scalar_type(), "PSROSPoolLauncherForward", ([&] {
-        const scalar_t *top_diff    = top_diff.data<scalar_t>();
-        const int *mapping_channel  = mapping_channel.data<int>();
-        const scalar_t *bottom_rois = bottom_rois.data<scalar_t>();
-        scalar_t *bottom_diff   = bottom_diff.data<scalar_t>();
-
-        PSROIPoolBackward<<<GET_BLOCKS(output_size), THREADS_PER_BLOCK>>>(
-            output_size, top_diff, mapping_channel, 
-            num_rois, spatial_scale, height, width, 
-            channels, pooled_height,
-            pooled_width, output_dim, bottom_diff, bottom_rois);
+        top_diff.type(), "PSROSPoolLauncherForward", ([&] {
+        if (sizeof(scalar_t) == sizeof(double)) {
+          fprintf(stderr, "double is not supported\n");
+          exit(-1);
+        }
+        PSROIPoolBackward<scalar_t>
+            <<<GET_BLOCKS(output_size), THREADS_PER_BLOCK>>>(
+                output_size, top_diff.data<scalar_t>(), 
+                mapping_channel.data<int>(), 
+                num_rois, spatial_scale, height, width, 
+                channels, pooled_height,
+                pooled_width, output_dim, 
+                bottom_diff.data<scalar_t>(), bottom_rois.data<scalar_t>());
     }));
     THCudaCheck(cudaGetLastError());
     return 1;

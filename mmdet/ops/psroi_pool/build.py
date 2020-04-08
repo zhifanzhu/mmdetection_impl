@@ -24,9 +24,10 @@ if __name__ == '__main__':
         package_data={'.': ['psroi_pool_build_output.so']},
         ext_modules=[
             make_cuda_ext(
-                name='roi_pool_cuda',
-                module='mmdet.ops.roi_pool',
-                sources=['src/roi_pool_cuda.cpp', 'src/roi_pool_kernel.cu']),
+                name='psroi_pool_cuda',
+                module='.',
+                sources=['src/psroi_pool_cuda.cpp', 'src/psroi_pool_kernel.cu']),
         ],
         cmdclass={'build_ext': BuildExtension},
-        zip_safe=False)
+        zip_safe=False,
+        verbose=True)
