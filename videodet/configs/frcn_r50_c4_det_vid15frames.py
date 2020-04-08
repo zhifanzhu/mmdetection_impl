@@ -111,7 +111,7 @@ img_norm_cfg = dict(
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
-    dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
+    dict(type='Resize', img_scale=(600, 800), keep_ratio=True),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
@@ -122,7 +122,7 @@ test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(
         type='MultiScaleFlipAug',
-        img_scale=(1333, 800),
+        img_scale=(600, 800),
         flip=False,
         transforms=[
             dict(type='Resize', keep_ratio=True),
@@ -155,11 +155,11 @@ data = dict(
         pipeline=test_pipeline),
     test=dict(
         type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames_mini.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=0.01/4, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=2.5e-3, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -177,12 +177,12 @@ log_config = dict(
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=1, num_evals=5000*4, shuffle=True)
+evaluation = dict(interval=12, num_evals=5000*4, shuffle=True)
 # runtime settings
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/faster_rcnn_r50_caffe_c4_dev_vid15frames'
+work_dir = './workvids/frcn_r50_caffe_c4_dev_vid15frames'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
