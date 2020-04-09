@@ -1,12 +1,12 @@
 # model settings
 norm_cfg = dict(type='BN', requires_grad=False)
 model = dict(
-    type='FasterRCNN',
+    type='RFCN',
     pretrained='open-mmlab://resnet50_caffe',
     backbone=dict(
         type='ResNet',
         depth=50,
-        num_stages=3,
+        num_stages=4,
         strides=(1, 2, 2, 1),
         dilations=(1, 1, 1, 2),
         out_indices=(3, ),
@@ -17,8 +17,8 @@ model = dict(
     shared_head=None,
     rpn_head=dict(
         type='RPNHead',
-        in_channels=1024,
-        feat_channels=1024,
+        in_channels=512,  # 1024
+        feat_channels=512,  # 1024
         anchor_scales=[2, 4, 8, 16, 32],
         anchor_ratios=[0.5, 1.0, 2.0],
         anchor_strides=[16],
@@ -172,10 +172,10 @@ log_config = dict(
 # yapf:enable
 evaluation = dict(interval=12, num_evals=5000*4, shuffle=True)
 # runtime settings
-total_epochs = 12
+total_epochs = 4
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/frcn_r50_caffe_c4_dev_vid15frames'
+work_dir = './workvids/rfcn_r50_dev_vid15frames'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

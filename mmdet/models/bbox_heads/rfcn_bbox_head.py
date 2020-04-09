@@ -66,9 +66,9 @@ class RfcnBBoxHead(nn.Module):
         cls_score = self.cls_pool(cls_roi_feat)
         bbox_pred = self.loc_pool(loc_roi_feat)
         if self.reg_class_agnostic:
-            bbox_pred = bbox_pred.view(-1, 4 * self.num_classes)
-        else:
             bbox_pred = bbox_pred.view(-1, 4)
+        else:
+            bbox_pred = bbox_pred.view(-1, 4 * self.num_classes)
         return cls_score.view(-1, self.num_classes), bbox_pred
 
     def get_target(self, sampling_results, gt_bboxes, gt_labels,

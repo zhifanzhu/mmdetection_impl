@@ -41,6 +41,7 @@ class RfcnPSRoIExtractor(nn.Module):
             in_channels=512,
             out_channels=pooled_size*pooled_size*num_reg_cls,
             kernel_size=1)
+        self.featmap_strides = [self.featmap_stride]  # For test mixins
 
     @property
     def num_inputs(self):
@@ -56,6 +57,6 @@ class RfcnPSRoIExtractor(nn.Module):
         assert len(feats) == 1
         cls_feat = self.ps_cls_conv(feats[0])
         loc_feat = self.ps_loc_conv(feats[0])
-        cls_roi_feat = self.roi_layers[0](cls_feat, rois)
-        loc_roi_feat = self.roi_layers[0](loc_feat, rois)
+        cls_roi_feat = self.cls_psroi_pool(cls_feat, rois)
+        loc_roi_feat = self.loc_psroi_pool(loc_feat, rois)
         return cls_roi_feat, loc_roi_feat

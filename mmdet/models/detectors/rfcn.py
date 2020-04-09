@@ -8,7 +8,7 @@ from ..registry import DETECTORS
 from .base import BaseDetector
 from .test_mixins import BBoxTestMixin, MaskTestMixin, RPNTestMixin
 
-""" The only difference is the extra `new_conv` after backbone and before psroi_extractor. 
+""" The only difference is the extra `new_conv` after backbone and before psroi_extractor.
 We also follow msra's style, with new_conv generating 1024 channels where first 512 channels are
  for RPN and last 512 channels are for PSRoIPool.(using torch.chunk) """
 
@@ -127,7 +127,7 @@ class RFCN(BaseDetector, RPNTestMixin, BBoxTestMixin,
         rois = bbox2roi([proposals])
         if self.with_bbox:
             bbox_feats = self.bbox_roi_extractor(
-                x_rfcn, rois)  # self.bbox_roi_extractor.num_inputs == 1
+                [x_rfcn], rois)  # self.bbox_roi_extractor.num_inputs == 1
             if self.with_shared_head:
                 bbox_feats = self.shared_head(bbox_feats)
             cls_score, bbox_pred = self.bbox_head(bbox_feats)
@@ -218,7 +218,7 @@ class RFCN(BaseDetector, RPNTestMixin, BBoxTestMixin,
             rois = bbox2roi([res.bboxes for res in sampling_results])
             # TODO: a more flexible way to decide which feature maps to use
             bbox_feats = self.bbox_roi_extractor(
-                x_rfcn, rois)  # self.bbox_roi_extractor.num_inputs == 1
+                [x_rfcn], rois)  # self.bbox_roi_extractor.num_inputs == 1
             if self.with_shared_head:
                 bbox_feats = self.shared_head(bbox_feats)
             cls_score, bbox_pred = self.bbox_head(bbox_feats)

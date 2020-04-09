@@ -179,7 +179,7 @@ log_config = dict(
 # yapf:enable
 evaluation = dict(interval=12, num_evals=5000*4, shuffle=True)
 # runtime settings
-total_epochs = 12
+total_epochs = 4
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './workvids/frcn_r50_caffe_c4_dev_vid15frames'
