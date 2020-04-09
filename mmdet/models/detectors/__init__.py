@@ -27,6 +27,8 @@ from .pair_retina import PairRetinaNet
 from .pair_x1_single_stage import PairX1SingleStageDetector
 from .pair_x1_retina import PairX1RetinaNet
 
+from .rfcn import RFCN
+
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
     'FastRCNN', 'FasterRCNN', 'MaskRCNN', 'CascadeRCNN', 'HybridTaskCascade',
@@ -37,4 +39,5 @@ __all__ = [
     'PairBaseDetector', 'PairSingleStageDetector',
     'PairRetinaNet',
     'PairX1SingleStageDetector', 'PairX1RetinaNet',
+    'RFCN',
 ]
