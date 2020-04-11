@@ -1,4 +1,5 @@
-/* #include <torch/extension.h> */
+#include <torch/extension.h>
+#include <ATen/cuda/CUDAContext.h>
 #include <cmath>
 
 int CorrelationForward(
@@ -49,10 +50,13 @@ int mx_correlation_forward_cuda(
     int neighborhood_grid_radius = max_displacement / stride2;
     int neighborhood_grid_width = neighborhood_grid_radius * 2 + 1;
     int top_channels = neighborhood_grid_width * neighborhood_grid_width;
-    CorrelationForward(output, input1, input2, rbot1, rbot2, top_channels, top_height, top_width,
+    int success = CorrelationForward(output, input1, input2, rbot1, rbot2, top_channels, top_height, top_width,
         pad_size, max_displacement, kernel_size, neighborhood_grid_radius, neighborhood_grid_width,
         kernel_radius, stride1, stride2, 
         at::cuda::getCurrentCUDAStream());
+    if (!success) 
+        AT_ERROR("CUDA call failed");
+    return success;
 }
 
 /* int mx_correlation_backward_cuda( */

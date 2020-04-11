@@ -24,7 +24,7 @@ if __name__ == '__main__':
         package_data={'.': ['mx_correlation.so']},
         ext_modules=[
             make_cuda_ext(
-                name='mx_correlation_cua',
+                name='mx_correlation_cuda',
                 module='.',
                 sources=['src/mx_correlation_cuda.cpp', 'src/mx_correlation_kernel.cu']),
         ],
