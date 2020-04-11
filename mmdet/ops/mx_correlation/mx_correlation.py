@@ -3,7 +3,8 @@ from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.modules.module import Module
 
-from . import mx_correlation
+from . import mx_correlation_cuda
+
 
 class MxCorrelationFunction(Function):
 
@@ -66,7 +67,7 @@ class MxCorrelation(Module):
                  stride1=1,
                  stride2=2,
                  corr_multiply=1):
-        super(Correlation, self).__init__()
+        super(MxCorrelation, self).__init__()
         self.pad_size = pad_size
         self.kernel_size = kernel_size
         self.max_displacement = max_displacement
@@ -76,7 +77,7 @@ class MxCorrelation(Module):
 
     def forward(self, input1, input2):
 
-        result = CorrelationFunction.apply(
+        result = MxCorrelationFunction.apply(
             input1, input2, self.pad_size, self.kernel_size, self.max_displacement,
             self.stride1, self.stride2, self.corr_multiply)
 

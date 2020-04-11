@@ -15,6 +15,7 @@
 #define ROUND_OFF 50000
 #define WARPS_PER_BLOCK 1
 #define THREADS_PER_WARP 32
+#define kMaxThreadsPerBlock 1024
 
 // == Correlation Kernel
 template <typename Dtype>
@@ -294,104 +295,62 @@ int CorrelationForward(
     return 1;
 }
 
-/* template <typename Dtype> */
-/* void Backward_gpu( */
-/*        const Tensor<gpu, 4, Dtype> &out_grad, */
-/*       const Tensor<gpu, 4, Dtype> &in_grad1, */
-/*       const Tensor<gpu, 4, Dtype> &in_grad2, */
-/*       const Tensor<gpu, 4, Dtype> &tmp1, */
-/*       const Tensor<gpu, 4, Dtype> &tmp2, */
-/*       int top_channels_, int top_height_, */
-/*       int top_width_, int pad_size_, bool is_multiply, */
-/*       int max_displacement_, int kernel_size_, */
-/*       int neighborhood_grid_radius_, int neighborhood_grid_width_, */
-/*       int  kernel_radius_, int stride1_, int stride2_, */
-/*       cudaStream_t stream0, cudaStream_t stream1, */
-/*       int num, int channels, int height, int width) { */
-/*     //  Get top diff, compute bottom diff */
-/*     const Dtype* top_diff = out_grad.dptr_; */
-/*     Dtype* bottom0_diff = in_grad1.dptr_; */
-/*     Dtype* bottom1_diff = in_grad2.dptr_; */
-/*     const Dtype* rbot1 = tmp1.dptr_; */
-/*     const Dtype* rbot2 = tmp2.dptr_; */
-/*     const int paddedheight = height + 2 * pad_size_; */
-/*     const int paddedwidth = width + 2 * pad_size_; */
-/*     const int bottomcount = channels * height * width; */
-/*     int botThreadCount = bottomcount; */
-/*     const int gridSize = (botThreadCount + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock; */
-/*     //  CorrelationLayerBackward */
-/*     if (is_multiply == true) { */
-/*         //  == Run kernel Backward 0 */
-/*         dim3 totalBlocksBackward0(width, height, channels * num);  //  First dim is fastest */
-/*         const int buffer_size_backw0 = \ */
-/*         (static_cast<int>(ceil(static_cast<float>(2 * kernel_radius_)\ */
-/*          / static_cast<float>(stride1_))) + 1) * top_channels_; */
-/*         //  == Run kernel Backward 0 */
-/*         for (int n = 0; n < num; n++) { */
-/*         CorrelateDataBackward0<Dtype><<<gridSize, kMaxThreadsPerBlock, 0, stream0>>>( */
-/*             botThreadCount, */
-/*             num, n, top_width_, top_height_, top_channels_, */
-/*             max_displacement_, neighborhood_grid_radius_, neighborhood_grid_width_, kernel_radius_, */
-/*             stride1_, stride2_, */
-/*             width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size_, */
-/*             bottom0_diff, rbot2, top_diff); */
-/*         CORRELATION_CUDA_CHECK(cudaPeekAtLastError()); */
-/*         } */
-/*         //  == Run kernel Backward 1 */
-/*         for (int n = 0; n < num; n++) { */
-/*         CorrelateDataBackward1<Dtype><<<gridSize, kMaxThreadsPerBlock, 0, stream1>>>( */
-/*             botThreadCount, */
-/*             num, n, top_width_, top_height_, top_channels_, */
-/*             max_displacement_, neighborhood_grid_radius_, neighborhood_grid_width_, kernel_radius_, */
-/*             stride1_, stride2_, */
-/*             width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size_, */
-/*             rbot1, bottom1_diff, top_diff); */
-/*        CORRELATION_CUDA_CHECK(cudaPeekAtLastError()); */
-/*         } */
-/*     } else  { */
-/*         for (int n = 0; n < num; n++) { */
-/*         //  Bottom0: */
-/*         CorrelateDataBackward0Subtract<Dtype><<<gridSize, kMaxThreadsPerBlock, 0, stream0>>>( */
-/*             botThreadCount, */
-/*             num, n, top_width_, top_height_, top_channels_, */
-/*             max_displacement_, neighborhood_grid_radius_, neighborhood_grid_width_, kernel_radius_, */
-/*             stride1_, stride2_, */
-/*             width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size_, */
-/*             bottom0_diff, rbot1, rbot2, top_diff); */
-/*         CORRELATION_CUDA_CHECK(cudaPeekAtLastError()); */
-/*         } */
-/*         for (int n = 0; n < num; n++) { */
-/*         //  Bottom1: */
-/*         CorrelateDataBackward1Subtract<Dtype><<<gridSize, kMaxThreadsPerBlock, 0, stream1>>>( */
-/*             botThreadCount, */
-/*             num, n, top_width_, top_height_, top_channels_, */
-/*             max_displacement_, neighborhood_grid_radius_, neighborhood_grid_width_, kernel_radius_, */
-/*             stride1_, stride2_, */
-/*             width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size_, */
-/*             rbot1, rbot2, bottom1_diff, top_diff); */
-/*         CORRELATION_CUDA_CHECK(cudaPeekAtLastError()); */
-/*         } */
-/*     } */
-/* } */
+int CorrelationBackward(
+    at::Tensor grad_output, 
+    at::Tensor grad_input1, 
+    at::Tensor grad_input2, 
+    at::Tensor rbot1, 
+    at::Tensor rbot2,
+    int top_channels, 
+    int top_height, 
+    int top_width, 
+    int pad_size, 
+    int max_displacement, 
+    int kernel_size,
+    int neighborhood_grid_radius, 
+    int neighborhood_grid_width,
+    int kernel_radius, 
+    int stride1, 
+    int stride2, 
+    int num, 
+    int channels, 
+    int height, 
+    int width, 
+    cudaStream_t stream)
+{
+    const int paddedheight = height + 2 * pad_size;
+    const int paddedwidth = width + 2 * pad_size;
+    const int bottomcount = channels * height * width;
+    int botThreadCount = bottomcount;
+    const int gridSize = (botThreadCount + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
 
-/* template<typename Dtype> */
-/* inline void CorrelationBackward(const Tensor<gpu, 4, Dtype> &out_grad, */
-/*                             const Tensor<gpu, 4, Dtype> &in_grad1, */
-/*                             const Tensor<gpu, 4, Dtype> &in_grad2, */
-/*                             const Tensor<gpu, 4, Dtype> &tmp1, */
-/*                             const Tensor<gpu, 4, Dtype> &tmp2, */
-/*                             int top_channels_, int top_height_, */
-/*                             int top_width_, int pad_size_, bool is_multiply, */
-/*                             int max_displacement_, int kernel_size_, */
-/*                             int neighborhood_grid_radius_, int neighborhood_grid_width_, */
-/*                             int  kernel_radius_, int stride1_, */
-/*                             int stride2_, int num, int channels, int height, int width */
-/*                             ) { */
-/*   cudaStream_t stream0 = Stream<gpu>::GetStream(in_grad1.stream_); */
-/*   cudaStream_t stream1 = Stream<gpu>::GetStream(in_grad2.stream_); */
-/*   cuda::Backward_gpu(out_grad, in_grad1, in_grad2, tmp1, tmp2, top_channels_, */
-/*                       top_height_, top_width_, pad_size_, is_multiply, */
-/*                       max_displacement_, kernel_size_, neighborhood_grid_radius_, */
-/*                       neighborhood_grid_width_, kernel_radius_, stride1_, stride2_, */
-/*                       stream0, stream1, num, channels, height, width); */
-/* } */
+    dim3 totalBlocksBackward0(width, height, channels * num);  //  First dim is fastest
+    const int buffer_size_backw0 = (static_cast<int>(ceil(static_cast<float>(2 * kernel_radius) \
+                    / static_cast<float>(stride1))) + 1) * top_channels;
+
+    for (int n = 0; n < num; n++) {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+            rbot1.type(), "Correlation backward input1", ([&], {
+        CorrelateDataBackward0<Dtype><<<gridSize, kMaxThreadsPerBlock, 0, stream>>>(
+            botThreadCount,
+            num, n, top_width, top_height, top_channels,
+            max_displacement, neighborhood_grid_radius, neighborhood_grid_width, kernel_radius,
+            stride1, stride2,
+            width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size,
+            grad_input1.data<scalar_t>(), rbot2.data<scalar_t>(), grad_output.data<scalar_t>());
+        }));
+    }
+
+
+    for (int n = 0; n < num; n++) {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+            rbot1.type(), "COrrelation backward input2", ([&], {
+        CorrelateDataBackward1<Dtype><<<gridSize, kMaxThreadsPerBlock, 0, stream1>>>(
+            botThreadCount,
+            num, n, top_width, top_height, top_channels,
+            max_displacement, neighborhood_grid_radius, neighborhood_grid_width, kernel_radius,
+            stride1, stride2,
+            width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size,
+            rbot1.data<scalar_t>(), grad_input2.data<scalar_t>(), grad_output.data<scalar_t>());
+        }));
+}
