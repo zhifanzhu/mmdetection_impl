@@ -291,7 +291,11 @@ int CorrelationForward(
             stride1, stride2, width, height, channels, 
             rbot1.data<scalar_t>(), rbot2.data<scalar_t>(), output.data<scalar_t>());
             }));
-    THCudaCheck(cudaGetLastError());
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("error in mx correlation forward: %s\n", cudaGetErrorString(err));
+        return 0;
+    }
     return 1;
 }
 
@@ -330,8 +334,8 @@ int CorrelationBackward(
 
     for (int n = 0; n < num; n++) {
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-            rbot1.type(), "Correlation backward input1", ([&], {
-        CorrelateDataBackward0<Dtype><<<gridSize, kMaxThreadsPerBlock, 0, stream>>>(
+            rbot1.scalar_type(), "Correlation backward input1", ([&] {
+        CorrelateDataBackward0<scalar_t><<<gridSize, kMaxThreadsPerBlock, 0, stream>>>(
             botThreadCount,
             num, n, top_width, top_height, top_channels,
             max_displacement, neighborhood_grid_radius, neighborhood_grid_width, kernel_radius,
@@ -341,11 +345,10 @@ int CorrelationBackward(
         }));
     }
 
-
     for (int n = 0; n < num; n++) {
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-            rbot1.type(), "COrrelation backward input2", ([&], {
-        CorrelateDataBackward1<Dtype><<<gridSize, kMaxThreadsPerBlock, 0, stream1>>>(
+            rbot1.scalar_type(), "Correlation backward input2", ([&] {
+        CorrelateDataBackward1<scalar_t><<<gridSize, kMaxThreadsPerBlock, 0, stream>>>(
             botThreadCount,
             num, n, top_width, top_height, top_channels,
             max_displacement, neighborhood_grid_radius, neighborhood_grid_width, kernel_radius,
@@ -353,4 +356,11 @@ int CorrelationBackward(
             width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size,
             rbot1.data<scalar_t>(), grad_input2.data<scalar_t>(), grad_output.data<scalar_t>());
         }));
+    }
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("error in mx correlation backward: %s\n", cudaGetErrorString(err));
+        return 0;
+    }
+    return 1;
 }

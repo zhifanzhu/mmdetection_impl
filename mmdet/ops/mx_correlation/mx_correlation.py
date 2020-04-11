@@ -18,13 +18,14 @@ class MxCorrelationFunction(Function):
                 stride1,
                 stride2,
                 corr_multiply):
-        ctx.save_for_backward(input1, input2)
         ctx.pad_size = pad_size
         ctx.kernel_size = kernel_size
         ctx.max_displacement = max_displacement
         ctx.stride1 = stride1
         ctx.stride2 = stride2
         ctx.corr_multiply = corr_multiply
+        ctx.input1_size = input1.size()
+        ctx.input2_size = input2.size()
 
         with torch.cuda.device_of(input1):
             rbot1 = input1.new()
@@ -34,6 +35,7 @@ class MxCorrelationFunction(Function):
             mx_correlation.forward(input1, input2, rbot1, rbot2, output,
                          pad_size, kernel_size, max_displacement,
                          stride1, stride2, corr_multiply)
+        ctx.save_for_backward(rbot1, rbot2)
 
         return output
 
@@ -41,17 +43,14 @@ class MxCorrelationFunction(Function):
     @once_differentiable
     def backward(ctx, grad_output):
         grad_output = grad_output.contiguous()
-        input1, input2 = ctx.saved_tensors
+        rbot1, rbot2 = ctx.saved_tensors
 
-        with torch.cuda.device_of(input1):
-            rbot1 = input1.new()
-            rbot2 = input2.new()
-
-            grad_input1 = input1.new()
-            grad_input2 = input2.new()
+        with torch.cuda.device_of(rbot1):
+            grad_input1 = rbot1.new_zeros(ctx.input1_size)
+            grad_input2 = rbot2.new_zeros(ctx.input2_size)
 
             mx_correlation.backward(
-                input1, input2, rbot1, rbot2,
+                rbot1, rbot2,
                 grad_output, grad_input1, grad_input2,
                 ctx.pad_size, ctx.kernel_size, ctx.max_displacement,
                 ctx.stride1, ctx.stride2, ctx.corr_multiply)
