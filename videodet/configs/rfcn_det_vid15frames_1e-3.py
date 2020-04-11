@@ -1,32 +1,24 @@
 # model settings
 norm_cfg = dict(type='BN', requires_grad=False)
 model = dict(
-    type='FasterRCNN',
+    type='RFCN',
     pretrained='open-mmlab://resnet50_caffe',
     backbone=dict(
         type='ResNet',
         depth=50,
-        num_stages=3,
-        strides=(1, 2, 2),
-        dilations=(1, 1, 1),
-        out_indices=(2, ),
+        num_stages=4,
+        strides=(1, 2, 2, 1),
+        dilations=(1, 1, 1, 2),
+        out_indices=(3, ),
         frozen_stages=1,
         norm_cfg=norm_cfg,
         norm_eval=True,
         style='caffe'),
-    shared_head=dict(
-        type='ResLayer',
-        depth=50,
-        stage=3,
-        stride=2,
-        dilation=1,
-        style='caffe',
-        norm_cfg=norm_cfg,
-        norm_eval=True),
+    shared_head=None,
     rpn_head=dict(
         type='RPNHead',
-        in_channels=1024,
-        feat_channels=1024,
+        in_channels=512,  # 1024
+        feat_channels=512,  # 1024
         anchor_scales=[2, 4, 8, 16, 32],
         anchor_ratios=[0.5, 1.0, 2.0],
         anchor_strides=[16],
@@ -36,12 +28,13 @@ model = dict(
             type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
         loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
     bbox_roi_extractor=dict(
-        type='SingleRoIExtractor',
-        roi_layer=dict(type='RoIAlign', out_size=14, sample_num=2),
-        out_channels=1024,
-        featmap_strides=[16]),
+        type='RfcnPSRoIExtractor',
+        num_classes=31,
+        reg_class_agnostic=False,
+        pooled_size=7,
+        featmap_stride=16),
     bbox_head=dict(
-        type='BBoxHead',
+        type='RfcnBBoxHead',
         with_avg_pool=True,
         roi_feat_size=7,
         in_channels=2048,
@@ -159,7 +152,7 @@ data = dict(
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=2.5e-3, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=1e-3, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -167,7 +160,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[8, 11])
+    step=[3, 5])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -179,10 +172,10 @@ log_config = dict(
 # yapf:enable
 evaluation = dict(interval=12, num_evals=5000*4, shuffle=True)
 # runtime settings
-total_epochs = 12
+total_epochs = 6
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workvids/frcn_r50_caffe_c4_dev_vid15frames'
+work_dir = './workvids/rfcn_r50_dev_vid15frames_1e-3'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
