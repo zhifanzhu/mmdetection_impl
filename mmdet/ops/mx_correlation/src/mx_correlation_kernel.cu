@@ -220,7 +220,7 @@ int channels, int width, int height, int widthheight, int padding, int pwidthhei
     int ch = blockIdx.y;
     int n  = blockIdx.z;
     Dtype value = in[(n * channels + ch) * widthheight + xy];
-    __syncthreads();
+    __syncthreads();  // TODO: do we really need to sync?
     int xpad  = (xy % width + padding);
     int ypad  = (xy / width + padding);
     int xypad = ypad * (width + 2 * padding) + xpad;
@@ -328,9 +328,9 @@ int CorrelationBackward(
     int botThreadCount = bottomcount;
     const int gridSize = (botThreadCount + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
 
-    dim3 totalBlocksBackward0(width, height, channels * num);  //  First dim is fastest
-    const int buffer_size_backw0 = (static_cast<int>(ceil(static_cast<float>(2 * kernel_radius) \
-                    / static_cast<float>(stride1))) + 1) * top_channels;
+    /* dim3 totalBlocksBackward0(width, height, channels * num);  //  First dim is fastest */
+    /* const int buffer_size_backw0 = (static_cast<int>(ceil(static_cast<float>(2 * kernel_radius) \ */
+    /*                 / static_cast<float>(stride1))) + 1) * top_channels; */
 
     for (int n = 0; n < num; n++) {
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(
