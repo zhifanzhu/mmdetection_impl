@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import normal_init
-from mmdet.ops import Correlation, FastAssemble
+from mmdet.ops import Correlation, FastAssemble, MxCorrelation
 
 from ..registry import PAIR_MODULE
 
@@ -125,10 +125,15 @@ class RFU(nn.Module):
                  use_add=False,
                  use_max=False,
                  use_concat_skip=False,
+                 use_mx_corr=False,
                  ):
         super(RFU, self).__init__()
-        self.corr = Correlation(corr_disp, kernel_size=1,
-                                max_displacement=corr_disp, stride1=1, stride2=1)
+        if use_mx_corr:
+            self.corr = MxCorrelation(corr_disp, kernel_size=1,
+                                      max_displacement=corr_disp, stride1=1, stride2=1)
+        else:
+            self.corr = Correlation(corr_disp, kernel_size=1,
+                                    max_displacement=corr_disp, stride1=1, stride2=1)
         self.assemble = FastAssemble(corr_disp)
         if use_concat_skip:
             self.update_net = ConcatSkip(in_channels)
@@ -177,10 +182,13 @@ class CorrAssemble(nn.Module):
                  use_add=False,
                  use_max=False,
                  use_concat_skip=False,
+                 use_mx_corr=False,
                  ):
         super(CorrAssemble, self).__init__()
         self.rfu_64 = RFU(
-                disp, 256, use_softmax_norm, use_add, use_max, use_concat_skip)
+            disp, 256, use_softmax_norm=use_softmax_norm,
+            use_add=use_add, use_max=use_max, use_concat_skip=use_concat_skip,
+            use_mx_corr=use_mx_corr)
         self.neck_first = neck_first
         self.trans_layers = [True if l in layers else False for l in range(5)]
 
