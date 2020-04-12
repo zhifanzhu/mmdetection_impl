@@ -268,7 +268,7 @@ int CorrelationForward(
         input2.type(), "rearrange input2", ([&] {
             blob_rearrange_kernel2<scalar_t>
                 <<<totalBlocksRearr, threads_per_block, 0, stream>>>
-                (input1.data<scalar_t>(), rbot2.data<scalar_t>(), 
+                (input2.data<scalar_t>(), rbot2.data<scalar_t>(), 
                  bnum, bchannels, bwidth, bheight, bwidthheight, pad_size, pwidthheight);
             }));
 
