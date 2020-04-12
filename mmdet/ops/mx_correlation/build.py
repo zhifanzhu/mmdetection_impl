@@ -1,3 +1,4 @@
+""" This file is for debug; to get runnable ops, use setup.py """
 import os
 import platform
 import time
