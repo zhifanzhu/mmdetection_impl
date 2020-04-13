@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import normal_init
-from mmdet.ops import Correlation, FastAssemble, MxCorrelation, NaiveAssemble2
+from mmdet.ops import Correlation, FastAssemble, MxCorrelation, NaiveAssemble
 
 from ..registry import PAIR_MODULE
 
@@ -138,7 +138,7 @@ class RFU(nn.Module):
         if use_fastassemble:
             self.assemble = FastAssemble(corr_disp)
         else:
-            self.assemble = NaiveAssemble2(corr_disp)
+            self.assemble = NaiveAssemble(corr_disp)
         if use_concat_skip:
             self.update_net = ConcatSkip(in_channels)
         else:
@@ -227,14 +227,18 @@ class MultiCorrAssemble(nn.Module):
         self.neck_first = neck_first
 
         self.rfu_list = nn.ModuleList()
-        for _ in layers:
-            self.rfu_list.append(
-                    RFU(disp, 256, False, use_add, use_max, False))
+        for l in range(5):
+            if l in layers:
+                self.rfu_list.append(
+                        RFU(disp, 256, False, use_add, use_max, False))
+            else:
+                self.rfu_list.append(None)
         self.trans_layers = [True if l in layers else False for l in range(5)]
 
     def init_weights(self):
-        for rfu in self.rfu_list:
-            rfu.init_weights()
+        for l, rfu in enumerate(self.rfu_list):
+            if self.trans_layers[l]:
+                rfu.init_weights()
 
     def forward(self, feat, feat_ref, is_train=False):
         out = [
