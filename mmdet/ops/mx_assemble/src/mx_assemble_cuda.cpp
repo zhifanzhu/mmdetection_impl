@@ -17,7 +17,7 @@ int AssembleForward(
     int kernel_radius, 
     int stride1, 
     int stride2,
-    cudaStream_t stream)
+    cudaStream_t stream);
 
 int AssembleBackward(
     at::Tensor grad_output, 
@@ -55,10 +55,10 @@ int mx_assemble_forward_cuda(
     CHECK_INPUT(input2);
     CHECK_INPUT(rbot2);
     CHECK_INPUT(output);
-    int num = input1.size(0);
-    int channels = input1.size(1);
-    int paddedbottomheight = input1.size(2) + 2 * pad_size;
-    int paddedbottomwidth = input1.size(3) + 2 * pad_size;
+    int num = input2.size(0);
+    int channels = input2.size(1);
+    int paddedbottomheight = input2.size(2) + 2 * pad_size;
+    int paddedbottomwidth = input2.size(3) + 2 * pad_size;
     rbot2.resize_({num, paddedbottomheight, paddedbottomwidth, channels});
     rbot2.fill_(0);
     int kernel_radius = (kernel_size - 1) / 2;
@@ -93,8 +93,8 @@ int mx_assemble_backward_cuda(
     CHECK_INPUT(aff);
     CHECK_INPUT(grad_aff);
     CHECK_INPUT(grad_input2);
-    int paddedbottomheight = grad_input1.size(2) + 2 * pad_size;
-    int paddedbottomwidth = grad_input1.size(3) + 2 * pad_size;
+    int paddedbottomheight = grad_output.size(2) + 2 * pad_size;
+    int paddedbottomwidth = grad_output.size(3) + 2 * pad_size;
     int kernel_radius = (kernel_size - 1) / 2;
     int border_size = max_displacement + kernel_radius;
     int top_width = std::ceil(static_cast<float>(paddedbottomwidth - border_size * 2) \

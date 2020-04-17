@@ -244,9 +244,9 @@ int AssembleForward(
     int stride2,
     cudaStream_t stream)
 {
-    const int bnum = input1.size(0);
-    const int bchannels = input1.size(1);
-    const int bheight = input1.size(2);
+    const int bnum = input2.size(0);
+    const int bchannels = input2.size(1);
+    const int bheight = input2.size(2);
     const int bwidth = input2.size(3);
     const int bwidthheight = bwidth * bheight;
     int threads_per_block = 16;
@@ -257,25 +257,25 @@ int AssembleForward(
             blob_rearrange_kernel2<scalar_t>
                 <<<totalBlocksRearr, threads_per_block, 0, stream>>>
                 (input2.data<scalar_t>(), rbot2.data<scalar_t>(), 
-                 bnum, bchannels, bwidth, bheight, bwidthheight, pad_size, pwidthheight);
+                 bnum, bchannels, bwidth, bheight, bwidthheight, pad_size, bwidthheight);
             }));
 
-    const int paddedheight = height + 2 * pad_size;
-    const int paddedwidth = width + 2 * pad_size;
-    const int bottomcount = channels * height * width;
+    const int paddedheight = bheight + 2 * pad_size;
+    const int paddedwidth = bwidth + 2 * pad_size;
+    const int bottomcount = bchannels * bheight * bwidth;
     int botThreadCount = bottomcount;
     const int gridSize = (botThreadCount + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
 
 
     for (int n = 0; n < bnum; n++) {
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-            rbot1.scalar_type(), "assemble forward", ([&] {
+            input2.scalar_type(), "assemble forward", ([&] {
         CorrelateDataBackward0<scalar_t><<<gridSize, kMaxThreadsPerBlock, 0, stream>>>(
             botThreadCount,
             bnum, n, top_width, top_height, top_channels,
             max_displacement, neighborhood_grid_radius, neighborhood_grid_width, kernel_radius,
             stride1, stride2,
-            width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size,
+            bwidth, bheight, paddedwidth, paddedheight, bchannels, bottomcount, pad_size,
             output.data<scalar_t>(), rbot2.data<scalar_t>(), aff.data<scalar_t>());
         }));
     }
@@ -312,6 +312,7 @@ int AssembleBackward(
     const int bheight = grad_output.size(2);
     const int bwidth = grad_output.size(3);
     const int bwidthheight = bwidth * bheight;
+    const int topcount = top_width * top_height * top_channels;
     int threads_per_block = 16;
     dim3 totalBlocksRearr((bwidthheight - 1) / threads_per_block + 1, bchannels, bnum);
     const int pwidthheight = (bwidth + 2 * pad_size) * (bheight + 2 * pad_size);
@@ -333,6 +334,7 @@ int AssembleBackward(
 
 
     int topThreadCount = topcount;
+    dim3 threadsPerBlock(THREADS_PER_WARP * WARPS_PER_BLOCK);
     dim3 totalBlocksCorr(top_width, top_height, bnum);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
         grad_output.scalar_type(), "assemble backward aff", ([&] {
@@ -342,7 +344,7 @@ int AssembleBackward(
             bnum, top_width, top_height, top_channels, topcount,
             max_displacement, neighborhood_grid_radius,
             neighborhood_grid_width, kernel_radius, kernel_size,
-            stride1, stride2, paddedwidth, paddedheight, channels, 
+            stride1, stride2, paddedwidth, paddedheight, bchannels, 
             rgrad_output.data<scalar_t>(), rbot2.data<scalar_t>(), grad_aff.data<scalar_t>());
             }));
 
@@ -354,7 +356,7 @@ int AssembleBackward(
             bnum, n, top_width, top_height, top_channels,
             max_displacement, neighborhood_grid_radius, neighborhood_grid_width, kernel_radius,
             stride1, stride2,
-            bwidth, bheight, paddedwidth, paddedheight, channels, bottomcount, pad_size,
+            bwidth, bheight, paddedwidth, paddedheight, bchannels, bottomcount, pad_size,
             rgrad_output.data<scalar_t>(), grad_input2.data<scalar_t>(), aff.data<scalar_t>());
         }));
     }
