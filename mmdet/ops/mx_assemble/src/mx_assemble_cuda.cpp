@@ -70,8 +70,8 @@ int mx_assemble_forward_cuda(
     int neighborhood_grid_radius = max_displacement / stride2;
     int neighborhood_grid_width = neighborhood_grid_radius * 2 + 1;
     int top_channels = neighborhood_grid_width * neighborhood_grid_width;
-    output.resize_({num, top_channels, top_height, top_width});
-    output.fill_(0);
+    /* output.resize_({num, top_channels, top_height, top_width}); */
+    /* output.fill_(0); */
     int success = AssembleForward(output, aff, input2, rbot2, top_channels, top_height, top_width,
         pad_size, max_displacement, neighborhood_grid_radius, neighborhood_grid_width,
         kernel_radius, stride1, stride2, 

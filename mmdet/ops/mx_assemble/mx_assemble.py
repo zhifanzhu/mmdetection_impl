@@ -27,7 +27,7 @@ class MxAssembleFunction(Function):
 
         with torch.cuda.device_of(aff):
             rbot2 = input2.new()
-            output = aff.new()
+            output = input2.new_zeros(input2.size())
 
             mx_assemble_cuda.forward(aff, input2, rbot2, output,
                          pad_size, kernel_size, max_displacement,
