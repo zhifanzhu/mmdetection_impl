@@ -191,13 +191,13 @@ class CorrAssemble(nn.Module):
                  use_max=False,
                  use_concat_skip=False,
                  use_mx_corr=False,
-                 use_fastassemble=True,
+                 assemble_type='fast',
                  ):
         super(CorrAssemble, self).__init__()
         self.rfu_64 = RFU(
             disp, 256, use_softmax_norm=use_softmax_norm,
             use_add=use_add, use_max=use_max, use_concat_skip=use_concat_skip,
-            use_mx_corr=use_mx_corr, use_fastassemble=use_fastassemble)
+            use_mx_corr=use_mx_corr, assemble_type=assemble_type)
         self.neck_first = neck_first
         self.trans_layers = [True if l in layers else False for l in range(5)]
 
