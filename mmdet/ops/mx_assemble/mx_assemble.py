@@ -57,18 +57,13 @@ class MxAssembleFunction(Function):
 
 
 class MxAssemble(Module):
-    def __init__(self,
-                 pad_size=0,
-                 kernel_size=0,
-                 max_displacement=0,
-                 stride1=1,
-                 stride2=2):
+    def __init__(self, k):
         super(MxAssemble, self).__init__()
-        self.pad_size = pad_size
-        self.kernel_size = kernel_size
-        self.max_displacement = max_displacement
-        self.stride1 = stride1
-        self.stride2 = stride2
+        self.pad_size = k
+        self.kernel_size = 1
+        self.max_displacement = k
+        self.stride1 = 1
+        self.stride2 = 1
 
     def forward(self, aff, input2):
 

@@ -180,6 +180,10 @@ if __name__ == '__main__':
                 module='mmdet.ops.psroi_pool',
                 sources=['src/psroi_pool_cuda.cpp', 'src/psroi_pool_kernel.cu']),
             make_cuda_ext(
+                name='mx_assemble_cuda',
+                module='mmdet.ops.mx_assemble',
+                sources=['src/mx_assemble_cuda.cpp', 'src/mx_assemble_kernel.cu']),
+            make_cuda_ext(
                 name='mx_correlation_cuda',
                 module='mmdet.ops.mx_correlation',
                 sources=['src/mx_correlation_cuda.cpp', 'src/mx_correlation_kernel.cu']),
