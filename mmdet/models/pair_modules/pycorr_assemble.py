@@ -82,6 +82,7 @@ class PyCorrAssemble(nn.Module):
                  mode='bilinear',
                  neck_first=True,
                  use_mxcorr=True,
+                 use_softmax_norm=False,
                  ):
         super(PyCorrAssemble, self).__init__()
         if use_mxcorr:
@@ -99,6 +100,7 @@ class PyCorrAssemble(nn.Module):
         self.upd_net1 = ConcatUpdate(in_channels=256)
         self.upd_net2 = ConcatUpdate(in_channels=256)
 
+        self.use_softmax_norm = use_softmax_norm
         self.alpha = alpha
         self.beta = beta
         self.mode = mode
