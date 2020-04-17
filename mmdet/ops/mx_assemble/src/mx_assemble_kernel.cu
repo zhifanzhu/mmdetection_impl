@@ -71,9 +71,8 @@ __global__ void CorrelateData(const int nthreads, int num, int topwidth,
         for (int idx = 0; idx < THREADS_PER_WARP * WARPS_PER_BLOCK; idx++) {
             total_sum += sum[idx];
         }
-        const int sumelems = kernel_size * kernel_size * bottomchannels;
         const int index = ((top_channel * topheight + blockIdx.y) * topwidth) + blockIdx.x;
-        top[index + item*topcount] = total_sum / static_cast<float>(sumelems);
+        top[index + item*topcount] = total_sum;
     }  //  Aggregate result of  different threads
   }
 }
@@ -134,9 +133,8 @@ __global__ void CorrelateDataBackward0(const int nthreads, int num, int item,
           }
         }
     }
-    const int sumelems = (kernel_radius * 2 + 1) * (kernel_radius * 2+1) * bottomchannels;
     const int bot0index = ((n * bottomheight) + (m-pad_size)) * bottomwidth + (l-pad_size);
-    bottom0diff[bot0index + item * bottomcount] = sum / static_cast<float>(sumelems);
+    bottom0diff[bot0index + item * bottomcount] = sum;
   }
 }
 
@@ -202,9 +200,8 @@ __global__ void CorrelateDataBackward1(const int nthreads,
         }
       }
     }
-    const int sumelems = (kernel_radius*2+1)*(kernel_radius*2+1)*bottomchannels;
     const int bot1index = ((n * bottomheight) + (m - pad_size)) * bottomwidth + (l - pad_size);
-    bottom1diff[bot1index + item * bottomcount] = sum / static_cast<float>(sumelems);
+    bottom1diff[bot1index + item * bottomcount] = sum;
   }
 }
 
