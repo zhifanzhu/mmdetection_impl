@@ -15,6 +15,7 @@ from .fast_assemble import FastAssemble
 from .naive_assemble2 import NaiveAssemble2
 from .psroi_pool import PSRoIPool, psroi_pool
 from .mx_correlation import MxCorrelation
+from .mx_assemble import MxAssemble
 
 __all__ = [
     'nms', 'soft_nms', 'RoIAlign', 'roi_align', 'RoIPool', 'roi_pool',
@@ -25,5 +26,5 @@ __all__ = [
     'MaskedConv2d', 'ContextBlock', 'PointwiseCorrelation',
     'Correlation', 'FastAssemble', 'NaiveAssemble2',
     'PSRoIPool', 'psroi_pool',
-    'MxCorrelation',
+    'MxCorrelation', 'MxAssemble',
 ]

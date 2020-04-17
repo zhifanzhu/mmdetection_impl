@@ -67,7 +67,7 @@ class MxAssemble(Module):
 
     def forward(self, aff, input2):
 
-        result = MxAssemble.apply(
+        result = MxAssembleFunction.apply(
             aff, input2, self.pad_size, self.kernel_size, self.max_displacement,
             self.stride1, self.stride2)
 

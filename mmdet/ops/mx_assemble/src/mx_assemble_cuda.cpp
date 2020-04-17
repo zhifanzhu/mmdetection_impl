@@ -104,6 +104,10 @@ int mx_assemble_backward_cuda(
     int neighborhood_grid_radius = max_displacement / stride2;
     int neighborhood_grid_width = neighborhood_grid_radius * 2 + 1;
     int top_channels = neighborhood_grid_width * neighborhood_grid_width;
+    int num = grad_output.size(0);
+    int channels = grad_output.size(1);
+    rgrad_output.resize_({num, paddedbottomheight, paddedbottomwidth, channels});
+    rgrad_output.fill_(0);
     int success = AssembleBackward(
         grad_output, rgrad_output, rbot2,
         aff, grad_aff, grad_input2,
