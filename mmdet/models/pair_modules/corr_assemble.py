@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import normal_init
-from mmdet.ops import Correlation, FastAssemble, MxCorrelation, NaiveAssemble
+from mmdet.ops import Correlation, FastAssemble, MxCorrelation, NaiveAssemble, MxAssemble
 
 from ..registry import PAIR_MODULE
 
@@ -126,7 +126,7 @@ class RFU(nn.Module):
                  use_max=False,
                  use_concat_skip=False,
                  use_mx_corr=False,
-                 use_fastassemble=True
+                 assemble_type='fast',  # 'naive', 'mx'
                  ):
         super(RFU, self).__init__()
         if use_mx_corr:
@@ -135,10 +135,14 @@ class RFU(nn.Module):
         else:
             self.corr = Correlation(corr_disp, kernel_size=1,
                                     max_displacement=corr_disp, stride1=1, stride2=1)
-        if use_fastassemble:
+        if assemble_type == 'fast':
             self.assemble = FastAssemble(corr_disp)
-        else:
+        elif assemble_type == 'naive':
             self.assemble = NaiveAssemble(corr_disp)
+        elif assemble_type == 'mx':
+            self.assemble = MxAssemble(k=corr_disp)
+        else:
+            raise ValueError("assemble_type not understood.")
         if use_concat_skip:
             self.update_net = ConcatSkip(in_channels)
         else:
