@@ -120,6 +120,7 @@ zoo
 work_dirs
 workvids
 workpairs
+worktrips
 
 # Pytorch
 *.pth
