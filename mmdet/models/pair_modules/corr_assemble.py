@@ -133,6 +133,7 @@ class RFU(nn.Module):
                  use_concat_skip=False,
                  use_mx_corr=False,
                  assemble_type='fast',  # 'naive', 'mx'
+                 pre_conv=False,        # Conv before feed into concat?
                  ):
         super(RFU, self).__init__()
         if use_mx_corr:
@@ -157,9 +158,32 @@ class RFU(nn.Module):
         self.use_softmax_norm = use_softmax_norm
         self.use_add = use_add
         self.use_max = use_max
+        if pre_conv:
+            self.pre_conv = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=in_channels,
+                    kernel_size=1,
+                    padding=0,
+                    stride=1,
+                ),
+                nn.ReLU(),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=in_channels,
+                    kernel_size=1,
+                    padding=0,
+                    stride=1,
+                ),
+            )
 
     def init_weights(self):
+        def _init_conv(m):
+            classname = m.__class__.__name__
+            if classname.find('Conv') != -1:
+                normal_init(m, std=0.01)
         self.update_net.init_weights()
+        self.apply(_init_conv)
 
     def forward(self, feat, feat_ref, is_train=False):
         if self.use_add:
@@ -198,12 +222,13 @@ class CorrAssemble(nn.Module):
                  use_concat_skip=False,
                  use_mx_corr=False,
                  assemble_type='fast',
+                 pre_conv=False,
                  ):
         super(CorrAssemble, self).__init__()
         self.rfu_64 = RFU(
             disp, 256, use_softmax_norm=use_softmax_norm,
             use_add=use_add, use_max=use_max, use_concat_skip=use_concat_skip,
-            use_mx_corr=use_mx_corr, assemble_type=assemble_type)
+            use_mx_corr=use_mx_corr, assemble_type=assemble_type, pre_conv=pre_conv)
         self.neck_first = neck_first
         self.trans_layers = [True if l in layers else False for l in range(5)]
 
