@@ -18,7 +18,7 @@ model = dict(
         add_extra_convs=True,
         num_outs=5),
     triple_module=dict(
-        type='TIdentity'),
+        type='Identity'),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -84,7 +84,8 @@ test_pipeline = [
             dict(type='ImageToTensor', keys=['img']),
             dict(type='Collect', keys=['img'],
                  meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
+                            # 'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
+                            'scale_factor', 'flip', 'img_norm_cfg')),
         ])
 ]
 data = dict(

@@ -1,5 +1,5 @@
-from .tidentity import TIdentity
+from .identity import Identity
 
 __all__ = [
-    'TIdentity',
+    'Identity',
 ]

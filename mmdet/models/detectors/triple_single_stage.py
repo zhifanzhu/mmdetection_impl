@@ -107,8 +107,8 @@ class TripleSingleStageDetector(TripleBaseDetector):
 
     def simple_test(self, img, img_meta, near_img, far_img, rescale=False):
         x = self.extract_feat(img)
-        x_near = self.extract_feat(near_img)
-        x_far = self.extract_feat(far_img)
+        x_near = self.extract_feat(near_img[0])
+        x_far = self.extract_feat(far_img[0])
         x = self.triple_module(x, x_near, x_far, is_train=False)
 
         if self.with_neck and not self.neck_first:
