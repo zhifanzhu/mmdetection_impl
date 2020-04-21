@@ -183,7 +183,8 @@ class RFU(nn.Module):
             if classname.find('Conv') != -1:
                 normal_init(m, std=0.01)
         self.update_net.init_weights()
-        self.apply(_init_conv)
+        if self.pre_conv:
+            self.pre_conv.apply(_init_conv)
 
     def forward(self, feat, feat_ref, is_train=False):
         if self.use_add:
