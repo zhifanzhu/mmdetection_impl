@@ -198,6 +198,8 @@ class RFU(nn.Module):
             else:
                 aff = aff / (torch.sum(aff, dim=1, keepdim=True) + 1e-7)
             aligned_ref = self.assemble(aff, feat_ref)
+        if self.pre_conv:
+            aligned_ref = self.pre_conv(aligned_ref)
         updated_cur_feat = self.update_net(feat, aligned_ref)
         return updated_cur_feat
 
