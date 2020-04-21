@@ -142,7 +142,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workpairs/retinanMV2_mxcorrmxass_detvid'
+work_dir = './workpairs/retinanMV2_mxmx_pre_detvid'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
