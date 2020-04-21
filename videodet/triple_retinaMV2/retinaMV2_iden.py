@@ -18,7 +18,7 @@ model = dict(
         add_extra_convs=True,
         num_outs=5),
     triple_module=dict(
-        type='Identity'),
+        type='TIdentity'),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -99,6 +99,7 @@ data = dict(
         dict(
             type=det_dataset_type,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
+            jitter_far_img=False,
             img_prefix=data_root,
             pipeline=train_pipeline),
     ],

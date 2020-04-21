@@ -24,7 +24,7 @@ class TripleDET30Dataset(Dataset):
     def __init__(self,
                  ann_file,
                  pipeline,
-                 jitter_far,
+                 jitter_far_img,
                  min_offset=-9,
                  max_offset=9,
                  min_size=None,
@@ -41,7 +41,7 @@ class TripleDET30Dataset(Dataset):
         self.test_mode = test_mode
         self.min_offset = min_offset
         self.max_offset = max_offset
-        self.jitter_far = jitter_far
+        self.jitter_far_img = jitter_far_img
 
         # join paths if data_root is specified
         if self.data_root is not None:
@@ -211,7 +211,7 @@ class TripleDET30Dataset(Dataset):
         self.pre_pipeline(results)
         results = self.pipeline(results)
         results['near_img'] = DC(results['img'].data.clone(), stack=True)
-        if not self.jitter_far:
+        if not self.jitter_far_img:
             results['far_img'] = DC(results['img'].data.clone(), stack=True)
         else:
             raise NotImplementedError

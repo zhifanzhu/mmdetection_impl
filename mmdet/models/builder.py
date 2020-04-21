@@ -3,7 +3,7 @@ from torch import nn
 from mmdet.utils import build_from_cfg
 from .registry import (BACKBONES, DETECTORS, HEADS, LOSSES, NECKS,
                        ROI_EXTRACTORS, SHARED_HEADS, TEMPORAL_MODULE,
-                       PAIR_MODULE)
+                       PAIR_MODULE, TRIPLE_MODULE)
 
 
 def build(cfg, registry, default_args=None):
@@ -33,7 +33,7 @@ def build_pair_module(cfg):
 
 
 def build_triple_module(cfg):
-    return build(cfg, PAIR_MODULE)
+    return build(cfg, TRIPLE_MODULE)
 
 
 def build_roi_extractor(cfg):
