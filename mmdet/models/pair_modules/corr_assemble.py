@@ -24,6 +24,7 @@ class ConcatUpdate(nn.Module):
                 padding=0,
                 stride=1,
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=256,
                 out_channels=16,
@@ -31,6 +32,7 @@ class ConcatUpdate(nn.Module):
                 padding=1,
                 stride=1,
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=16,
                 out_channels=3,
@@ -38,6 +40,7 @@ class ConcatUpdate(nn.Module):
                 padding=1,
                 stride=1,
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=3,
                 out_channels=2,
@@ -78,6 +81,7 @@ class ConcatSkip(nn.Module):
                 padding=0,
                 stride=1,
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=256,
                 out_channels=16,
@@ -85,6 +89,7 @@ class ConcatSkip(nn.Module):
                 padding=1,
                 stride=1,
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=16,
                 out_channels=3,
@@ -92,6 +97,7 @@ class ConcatSkip(nn.Module):
                 padding=1,
                 stride=1,
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=3,
                 out_channels=1,
