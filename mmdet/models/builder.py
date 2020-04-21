@@ -32,6 +32,10 @@ def build_pair_module(cfg):
     return build(cfg, PAIR_MODULE)
 
 
+def build_triple_module(cfg):
+    return build(cfg, PAIR_MODULE)
+
+
 def build_roi_extractor(cfg):
     return build(cfg, ROI_EXTRACTORS)
 
