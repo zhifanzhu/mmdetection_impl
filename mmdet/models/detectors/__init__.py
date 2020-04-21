@@ -24,8 +24,10 @@ from .seq_rnn_ssd import SeqRNNSSDMobileNet
 from .pair_base import PairBaseDetector
 from .pair_single_stage import PairSingleStageDetector
 from .pair_retina import PairRetinaNet
-from .pair_x1_single_stage import PairX1SingleStageDetector
-from .pair_x1_retina import PairX1RetinaNet
+
+from .triple_base import TripleBaseDetector
+from .triple_single_stage import TripleSingleStageDetector
+from .triple_retina import TripleRetinaNet
 
 from .rfcn import RFCN
 
@@ -36,8 +38,7 @@ __all__ = [
     'RepPointsDetector', 'FOVEA',
     'SeqBaseDetector', 'SeqSingleStageDetector', 'SeqRetinaNet',
     'SeqSSDDnT', 'SeqRNNSSDMobileNet',
-    'PairBaseDetector', 'PairSingleStageDetector',
-    'PairRetinaNet',
-    'PairX1SingleStageDetector', 'PairX1RetinaNet',
+    'PairBaseDetector', 'PairSingleStageDetector', 'PairRetinaNet',
+    'TripleBaseDetector', 'TripleSingleStageDetector', 'TripleRetinaNet',
     'RFCN',
 ]
