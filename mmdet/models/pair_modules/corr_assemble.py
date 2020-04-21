@@ -226,6 +226,8 @@ class MultiCorrAssemble(nn.Module):
                  layers=(0,),
                  use_add=False,
                  use_max=False,
+                 use_mx_corr=False,
+                 assemble_type='fast',
                  ):
         super(MultiCorrAssemble, self).__init__()
         self.neck_first = neck_first
@@ -234,7 +236,9 @@ class MultiCorrAssemble(nn.Module):
         for l in range(5):
             if l in layers:
                 self.rfu_list.append(
-                        RFU(disp, 256, False, use_add, use_max, False))
+                    RFU(corr_disp=disp, in_channels=256, use_softmax_norm=False,
+                        use_add=use_add, use_max=use_max, use_concat_skip=False,
+                        use_mx_corr=use_mx_corr, assemble_type=assemble_type))
             else:
                 self.rfu_list.append(None)
         self.trans_layers = [True if l in layers else False for l in range(5)]
