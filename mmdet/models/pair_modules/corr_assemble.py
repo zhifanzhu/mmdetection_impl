@@ -163,14 +163,22 @@ class RFU(nn.Module):
             self.pre_conv = nn.Sequential(
                 nn.Conv2d(
                     in_channels=in_channels,
-                    out_channels=in_channels,
+                    out_channels=512,
                     kernel_size=1,
                     padding=0,
                     stride=1,
                 ),
                 nn.ReLU(),
                 nn.Conv2d(
-                    in_channels=in_channels,
+                    in_channels=512,
+                    out_channels=512,
+                    kernel_size=3,
+                    padding=1,
+                    stride=1,
+                ),
+                nn.ReLU(),
+                nn.Conv2d(
+                    in_channels=512,
                     out_channels=in_channels,
                     kernel_size=1,
                     padding=0,
