@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from mmcv.cnn import normal_init
+from mmcv.cnn import xavier_init
 from mmdet.ops import Correlation, FastAssemble, MxCorrelation, NaiveAssemble, MxAssemble
 
 from ..registry import PAIR_MODULE
@@ -54,7 +54,7 @@ class ConcatUpdate(nn.Module):
         def _init_conv(m):
             classname = m.__class__.__name__
             if classname.find('Conv') != -1:
-                normal_init(m, std=0.01)
+                xavier_init(m, distribution='uniform')
         self.apply(_init_conv)
         nn.init.constant_(self.conv[-1].bias[0], 1.0)
         nn.init.constant_(self.conv[-1].bias[1], 0.0)
@@ -111,7 +111,7 @@ class ConcatSkip(nn.Module):
         def _init_conv(m):
             classname = m.__class__.__name__
             if classname.find('Conv') != -1:
-                normal_init(m, std=0.01)
+                xavier_init(m, distribution='uniform')
         self.apply(_init_conv)
         nn.init.normal_(self.conv[-1].weight, 0.01)
         nn.init.constant_(self.conv[-1].bias, 0.0)
@@ -181,7 +181,7 @@ class RFU(nn.Module):
         def _init_conv(m):
             classname = m.__class__.__name__
             if classname.find('Conv') != -1:
-                normal_init(m, std=0.01)
+                xavier_init(m, distribution='uniform')
         self.update_net.init_weights()
         if self.pre_conv:
             self.pre_conv.apply(_init_conv)
