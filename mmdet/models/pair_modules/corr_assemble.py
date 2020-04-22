@@ -158,6 +158,7 @@ class RFU(nn.Module):
         self.use_softmax_norm = use_softmax_norm
         self.use_add = use_add
         self.use_max = use_max
+        self.pre_conv = None
         if pre_conv:
             self.pre_conv = nn.Sequential(
                 nn.Conv2d(
@@ -183,7 +184,7 @@ class RFU(nn.Module):
             if classname.find('Conv') != -1:
                 normal_init(m, std=0.01)
         self.update_net.init_weights()
-        if self.pre_conv:
+        if self.pre_conv is not None:
             self.pre_conv.apply(_init_conv)
 
     def forward(self, feat, feat_ref, is_train=False):
