@@ -24,6 +24,8 @@ from .seq_rnn_ssd import SeqRNNSSDMobileNet
 from .pair_base import PairBaseDetector
 from .pair_single_stage import PairSingleStageDetector
 from .pair_retina import PairRetinaNet
+from .twin_single_stage import TwinSingleStageDetector
+from .twin_retina import TwinRetinaNet
 
 from .triple_base import TripleBaseDetector
 from .triple_single_stage import TripleSingleStageDetector
@@ -41,4 +43,5 @@ __all__ = [
     'PairBaseDetector', 'PairSingleStageDetector', 'PairRetinaNet',
     'TripleBaseDetector', 'TripleSingleStageDetector', 'TripleRetinaNet',
     'RFCN',
+    'TwinSingleStageDetector', 'TwinRetinaNet',
 ]
