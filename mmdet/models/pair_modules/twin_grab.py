@@ -9,6 +9,7 @@ from ..utils import ConvModule
 class Grab(nn.Module):
 
     def __init__(self, channels=256):
+        super(Grab, self).__init__()
         self.conv_l = ConvModule(
             in_channels=channels,
             out_channels=channels,
@@ -69,7 +70,9 @@ class TwinGrab(nn.Module):
     def init_weights(self):
         for g in self.grabs:
             g.init_weights()
-        xavier_init(self.conv_extra, distribution='uniform')
+        for m in self.conv_extra():
+            if isinstance(m, nn.Conv2d):
+                xavier_init(m, distribution='uniform')
 
     def forward(self, feat, feat_ref, is_train=False):
         outs = [
