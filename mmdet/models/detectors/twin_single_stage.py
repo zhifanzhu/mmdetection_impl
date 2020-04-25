@@ -103,8 +103,8 @@ class TwinSingleStageDetector(PairBaseDetector):
         #     x = x
         # else:
         #     x = self.pair_module(x, self.prev_memory, is_train=False)
-        x_ref = self.twin.module.extract_feat(ref_img)
-        x = self.pair_module(x, x_ref, is_trian=False)
+        x_ref = self.twin.module.extract_feat(ref_img[0])
+        x = self.pair_module(x, x_ref, is_train=False)
 
         if self.with_neck and not self.neck_first:
             x = self.neck(x)

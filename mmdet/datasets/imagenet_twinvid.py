@@ -331,6 +331,7 @@ class TwinVIDDataset(Dataset):
         img_info['filename'] = filename
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
+        results['is_first'] = True
         results = self.pipeline(results)
 
         ref_frame_ind = max(
@@ -342,6 +343,7 @@ class TwinVIDDataset(Dataset):
         ref_results = dict(img_info=img_info, ann_info=ref_ann_info)
 
         self.pre_pipeline(ref_results)
+        ref_results['is_first'] = True
         ref_results = self.twin_pipeline(ref_results)
 
         results['ref_img'] = ref_results['img']

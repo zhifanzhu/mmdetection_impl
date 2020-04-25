@@ -207,11 +207,13 @@ class TwinDET30Dataset(Dataset):
         """
         img_info = self.img_infos[idx]
         ann_info = self.get_ann_info(idx)
-        results_dict = dict(img_info=img_info, ann_info=ann_info)
-        self.pre_pipeline(results_dict)
-        results = self.pipeline(results_dict)
+        results = dict(img_info=img_info, ann_info=ann_info)
+        self.pre_pipeline(results)
+        results = self.pipeline(results)
 
-        twin_results = self.twin_pipeline(results_dict)
+        ref_results = dict(img_info=img_info, ann_info=ann_info)
+        self.pre_pipeline(ref_results)
+        twin_results = self.twin_pipeline(ref_results)
         results['ref_img'] = DC(twin_results['img'].data.clone(), stack=True)
         if len(results['gt_bboxes'].data) == 0:
             return None
