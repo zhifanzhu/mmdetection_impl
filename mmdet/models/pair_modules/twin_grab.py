@@ -70,7 +70,7 @@ class TwinGrab(nn.Module):
     def init_weights(self):
         for g in self.grabs:
             g.init_weights()
-        for m in self.conv_extra():
+        for m in self.conv_extra.modules():
             if isinstance(m, nn.Conv2d):
                 xavier_init(m, distribution='uniform')
 
