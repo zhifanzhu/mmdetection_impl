@@ -95,8 +95,8 @@ test_cfg = dict(
     nms=dict(type='nms', iou_thr=0.5),
     max_per_img=100)
 # dataset settings
-vid_dataset_type = 'PairVIDDataset'
-det_dataset_type = 'PairDET30Dataset'
+vid_dataset_type = 'TwinVIDDataset'
+det_dataset_type = 'TwinDET30Dataset'
 data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 train_pipeline = [
@@ -126,6 +126,33 @@ test_pipeline = [
                             'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
         ])
 ]
+twin_train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
+    dict(type='Resize', img_scale=(256, 256), keep_ratio=False),
+    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='Pad', size_divisor=32),
+    dict(type='DefaultFormatBundle'),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
+]
+twin_test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(
+        type='MultiScaleFlipAug',
+        img_scale=(256, 256),
+        flip=False,
+        transforms=[
+            dict(type='Resize', keep_ratio=False),
+            dict(type='RandomFlip'),
+            dict(type='Normalize', **img_norm_cfg),
+            dict(type='Pad', size_divisor=32),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(type='Collect', keys=['img'],
+                 meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
+                            'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
+        ])
+]
 data = dict(
     imgs_per_gpu=16,
     workers_per_gpu=2,
@@ -134,23 +161,27 @@ data = dict(
             type=vid_dataset_type,
             ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
             img_prefix=data_root,
-            pipeline=train_pipeline),
+            pipeline=train_pipeline,
+            twin_pipeline=twin_train_pipeline),
         dict(
             type=det_dataset_type,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,
-            pipeline=train_pipeline),
+            pipeline=train_pipeline,
+            twin_pipeline=twin_train_pipeline),
     ],
     val=dict(
         type=vid_dataset_type,
         ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
-        pipeline=test_pipeline),
+        pipeline=test_pipeline,
+        twin_pipeline=twin_test_pipeline),
     test=dict(
         type=vid_dataset_type,
         ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
-        pipeline=test_pipeline))
+        pipeline=test_pipeline,
+        twin_pipeline=twin_test_pipeline))
 # optimizer
 optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
