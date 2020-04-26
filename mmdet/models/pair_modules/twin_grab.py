@@ -34,7 +34,7 @@ class Grab(nn.Module):
                 in_channels=channels,
                 out_channels=channels,
                 kernel_size=3,
-                padding=0,
+                padding=1,
                 stride=1)
         )
         final_chan = 1 if self.use_skip else 2
@@ -59,13 +59,12 @@ class Grab(nn.Module):
                 kernel_size=3,
                 padding=1,
                 stride=1),
-            ConvModule(
+            nn.Conv2d(
                 in_channels=3,
                 out_channels=final_chan,
                 kernel_size=3,
                 padding=1,
-                stride=1,
-                activation='none')
+                stride=1)
         )
 
     def init_weights(self):
@@ -75,8 +74,8 @@ class Grab(nn.Module):
         if self.use_skip:
             nn.init.constant_(self.conv_final[-1].bias, 0.0)
         else:
-            nn.init.constant_(self.conv_2[-1].bias[0], 1.0)
-            nn.init.constant_(self.conv_2[-1].bias[1], 0.0)
+            nn.init.constant_(self.conv_final[-1].bias[0], 1.0)
+            nn.init.constant_(self.conv_final[-1].bias[1], 0.0)
 
     def forward(self, f, f_h, f_l):
         f_l = self.conv_l(f_l)

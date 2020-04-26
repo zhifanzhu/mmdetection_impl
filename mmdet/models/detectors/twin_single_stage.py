@@ -82,9 +82,7 @@ class TwinSingleStageDetector(PairBaseDetector):
                       gt_labels,
                       gt_bboxes_ignore=None):
         x = self.extract_feat(img)
-        # TODO: We actually no need for no_grad()?
-        with torch.no_grad():
-            x_ref = self.twin.module.extract_feat(ref_img)
+        x_ref = self.twin.module.extract_feat(ref_img)
         x = self.pair_module(x, x_ref, is_train=True)
         if self.with_neck and not self.neck_first:
             x = self.neck(x)
