@@ -8,57 +8,98 @@ from ..utils import ConvModule
 
 class Grab(nn.Module):
 
-    def __init__(self, channels=256):
+    def __init__(self, use_skip=False, channels=256):
         super(Grab, self).__init__()
+        self.use_skip = use_skip
         self.conv_l = ConvModule(
             in_channels=channels,
             out_channels=channels,
             kernel_size=3,
             padding=1,
-            stride=2,
-            activation='relu')
+            stride=2)
         self.conv_h = ConvModule(
             in_channels=channels,
             out_channels=channels,
             kernel_size=3,
             padding=1,
-            stride=1,
-            activation='relu')
+            stride=1)
         self.conv_2 = nn.Sequential(
             ConvModule(
                 in_channels=2*channels,
                 out_channels=channels,
                 kernel_size=1,
                 padding=0,
-                stride=1,
-                activation='relu'),
+                stride=1),
             ConvModule(
                 in_channels=channels,
                 out_channels=channels,
                 kernel_size=3,
+                padding=0,
+                stride=1)
+        )
+        final_chan = 1 if self.use_skip else 2
+        self.conv_final = nn.Sequential(
+            ConvModule(
+                in_channels=2*channels,
+                out_channels=256,
+                kernel_size=1,
+                padding=0,
+                stride=1,
+                activation='relu'),
+            ConvModule(
+                in_channels=256,
+                out_channels=16,
+                kernel_size=3,
                 padding=1,
                 stride=1,
-                activation='relu'))
+                activation='relu'),
+            ConvModule(
+                in_channels=16,
+                out_channels=3,
+                kernel_size=3,
+                padding=1,
+                stride=1),
+            ConvModule(
+                in_channels=3,
+                out_channels=final_chan,
+                kernel_size=3,
+                padding=1,
+                stride=1,
+                activation='none')
+        )
 
     def init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 xavier_init(m, distribution='uniform')
+        if self.use_skip:
+            nn.init.constant_(self.conv_final[-1].bias, 0.0)
+        else:
+            nn.init.constant_(self.conv_2[-1].bias[0], 1.0)
+            nn.init.constant_(self.conv_2[-1].bias[1], 0.0)
 
     def forward(self, f, f_h, f_l):
         f_l = self.conv_l(f_l)
         f_h = self.conv_h(f_h)
-        f_prev = torch.cat([f_h, f_l], dim=1)
-        f_prev = self.conv_2(f_prev)
-        return f + f_prev
+        f_prev = self.conv_2(torch.cat([f_h, f_l], dim=1))
+
+        cat_feat = torch.cat([f, f_prev], dim=1)
+        if self.use_skip:
+            out = f + self.conv_final(cat_feat) * f_prev
+        else:
+            score = torch.softmax(self.conv_2(cat_feat), dim=1)
+            out = score[:, 0, :, :].unsqueeze(1) * f + \
+                    score[:, 1, :, :].unsqueeze(1) * f_prev
+        return out
 
 
 @PAIR_MODULE.register_module
 class TwinGrab(nn.Module):
 
-    def __init__(self, channels=256):
+    def __init__(self, use_skip=False, channels=256):
         super(TwinGrab, self).__init__()
-        self.grabs = nn.ModuleList([Grab(channels=channels) for _ in range(4)])
+        self.grabs = nn.ModuleList(
+            [Grab(use_skip=use_skip, channels=channels) for _ in range(4)])
         self.conv_extra = ConvModule(
             in_channels=channels,
             out_channels=channels,
