@@ -25,6 +25,8 @@ class TwinVIDDataset(Dataset):
                  ann_file,
                  pipeline,
                  twin_pipeline,
+                 test_sampling_style='train',  # or 'key'
+                 key_interval=10,
                  min_offset=-9,
                  max_offset=9,
                  min_size=None,
@@ -41,6 +43,8 @@ class TwinVIDDataset(Dataset):
         self.test_mode = test_mode
         self.min_offset = min_offset
         self.max_offset = max_offset
+        self.test_sampling_style=test_sampling_style
+        self.key_interval = key_interval
 
         # join paths if data_root is specified
         if self.data_root is not None:
@@ -246,7 +250,10 @@ class TwinVIDDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.test_mode:
-            return self.prepare_test_img(idx)
+            if self.test_sampling_style == 'train':
+                return self.prepare_test_img_train(idx)
+            elif self.test_sampling_style == 'key':
+                return self.prepare_test_img_key(idx)
         while True:
             data = self.prepare_train_img(idx)
             if data is None:
@@ -293,35 +300,7 @@ class TwinVIDDataset(Dataset):
             return None
         return results
 
-    def prepare_test_img(self, idx):
-        """
-        For first frame, provide is_first==True, and identical img_cache
-        for non-first frame, provide is_first==False, and previous img as img_cache
-
-        Test time, no data shuffle. As this happens in MSRA & MaskTrackRCNN
-        Currently, we don't use keyframe mode.
-
-        Dataloader does not pass 'img_prev' to model, it's up to model to choose
-        to store 'img_prev', or intermediate result. Thus no side-effect happens.
-
-        Testpipeline:
-            dict(type='LoadImageFromFile'),
-            dict(
-                type='MultiScaleFlipAug',
-                img_scale=(512, 512),
-                flip=False,
-                transforms=[
-                    dict(type='Resize', keep_ratio=False),
-                    dict(type='RandomFlip'),
-                    dict(type='Normalize', **img_norm_cfg),
-                    dict(type='Pad', size_divisor=32),
-                    dict(type='ImageToTensor', keys=['img']),
-                    dict(type='Collect', keys=['img'],
-                         meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
-                ])
-
-        """
+    def prepare_test_img_train(self, idx):
         img_info = self.img_infos[idx]
         frame_ind = img_info['frame_ind']
         foldername = img_info['foldername']
@@ -348,3 +327,23 @@ class TwinVIDDataset(Dataset):
 
         results['ref_img'] = ref_results['img']
         return results
+
+    def prepare_test_img_key(self, idx):
+        """
+        dict(type='Collect', keys=['img'],
+             meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
+                'scale_factor', 'flip', 'img_norm_cfg', 'is_key')),
+        """
+        img_info = self.img_infos[idx]
+        frame_ind = img_info['frame_ind']
+        is_key = ((frame_ind % self.key_interval) == 0)
+        foldername = img_info['foldername']
+        ann_info = self.get_ann_info(idx, frame_ind)
+        filename = osp.join(foldername, f"{frame_ind:06d}.JPEG")
+        img_info['filename'] = filename
+        results = dict(img_info=img_info, ann_info=ann_info)
+        self.pre_pipeline(results)
+        results['is_key'] = is_key
+        results = self.pipeline(results)
+        return results
+

@@ -47,7 +47,7 @@ class TwinSingleStageDetector(PairBaseDetector):
         self.twin.eval()
 
         # memory cache for testing
-        self.prev_memory = None
+        self.key_feat = None
 
     def init_weights(self, pretrained=None):
         super(TwinSingleStageDetector, self).init_weights(pretrained)
@@ -93,22 +93,16 @@ class TwinSingleStageDetector(PairBaseDetector):
             *loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
         return losses
 
-    def simple_test(self, img, img_meta, ref_img, rescale=False):
+    def simple_test(self, img, img_meta, rescale=False):
         x = self.extract_feat(img)
-        # x_cache = x
-        # is_first = img_meta[0]['is_first']
-        # if is_first:
-        #     x = x
-        # else:
-        #     x = self.pair_module(x, self.prev_memory, is_train=False)
-        x_ref = self.twin.module.extract_feat(ref_img[0])
-        x = self.pair_module(x, x_ref, is_train=False)
+        is_key = img_meta[0]['is_key']
+        if is_key:
+            self.key_feat = x
+        else:
+            x = self.pair_module(x, self.key_feat, is_train=False)
 
         if self.with_neck and not self.neck_first:
             x = self.neck(x)
-
-        # self.prev_memory = x
-        # self.prev_memory = x_cache
 
         outs = self.bbox_head(x)
         bbox_inputs = outs + (img_meta, self.test_cfg, rescale)

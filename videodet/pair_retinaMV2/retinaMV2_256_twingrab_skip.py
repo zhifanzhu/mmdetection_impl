@@ -124,7 +124,7 @@ test_pipeline = [
             dict(type='ImageToTensor', keys=['img']),
             dict(type='Collect', keys=['img'],
                  meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
+                            'scale_factor', 'flip', 'img_norm_cfg', 'is_key')),
         ])
 ]
 twin_train_pipeline = [
@@ -151,7 +151,7 @@ twin_test_pipeline = [
             dict(type='ImageToTensor', keys=['img']),
             dict(type='Collect', keys=['img'],
                  meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
+                            'scale_factor', 'flip', 'img_norm_cfg', 'is_key')),
         ])
 ]
 data = dict(
@@ -176,13 +176,17 @@ data = dict(
         ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline,
-        twin_pipeline=twin_test_pipeline),
+        twin_pipeline=twin_test_pipeline,
+        test_sampling_style='key',
+        key_interval=10),
     test=dict(
         type=vid_dataset_type,
         ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline,
-        twin_pipeline=twin_test_pipeline))
+        twin_pipeline=twin_test_pipeline,
+        test_sampling_style='key',
+        key_interval=10))
 # optimizer
 optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
