@@ -5,10 +5,11 @@ from .pycorr_assemble import PyCorrAssemble
 
 from .twin_grab import TwinGrab
 from .twin_direct import TwinDirect
+from .twin_nonlocal import TwinNonLocal
 
 __all__ = [
     'Identity',
     'CorrAssemble', 'MultiCorrAssemble',
     'PyCorrAssemble', 'Embed64',
-    'TwinGrab', 'TwinDirect'
+    'TwinGrab', 'TwinDirect', 'TwinNonLocal',
 ]
