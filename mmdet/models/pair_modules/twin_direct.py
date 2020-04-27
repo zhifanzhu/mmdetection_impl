@@ -73,7 +73,7 @@ class Direct(nn.Module):
 
     def forward(self, f, f_h):
         f_h = self.conv_h(f_h)
-        f_prev = self.conv_2(f_h, dim=1)
+        f_prev = self.conv_2(f_h)
 
         cat_feat = torch.cat([f, f_prev], dim=1)
         if self.use_skip:

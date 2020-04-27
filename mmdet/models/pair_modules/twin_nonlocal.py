@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from mmcv.cnn import constant_init, normal_init, xavier_init
+from mmcv.cnn import constant_init, normal_init
 
 from ..registry import PAIR_MODULE
 from ..utils import ConvModule
@@ -132,9 +132,6 @@ class TwinNonLocal(nn.Module):
     def init_weights(self):
         for g in self.nl_blocks:
             g.init_weights()
-        for m in self.conv_extra.modules():
-            if isinstance(m, nn.Conv2d):
-                xavier_init(m, distribution='uniform')
 
     def forward(self, feat, feat_ref, is_train=False):
         outs = [
