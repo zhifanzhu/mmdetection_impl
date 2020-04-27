@@ -4,10 +4,11 @@ from .corr_assemble import CorrAssemble, MultiCorrAssemble
 from .pycorr_assemble import PyCorrAssemble
 
 from .twin_grab import TwinGrab
+from .twin_direct import TwinDirect
 
 __all__ = [
     'Identity',
     'CorrAssemble', 'MultiCorrAssemble',
     'PyCorrAssemble', 'Embed64',
-    'TwinGrab',
+    'TwinGrab', 'TwinDirect'
 ]
