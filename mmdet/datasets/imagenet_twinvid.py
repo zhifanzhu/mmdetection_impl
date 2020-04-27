@@ -251,7 +251,8 @@ class TwinVIDDataset(Dataset):
     def __getitem__(self, idx):
         if self.test_mode:
             if self.test_sampling_style == 'train':
-                return self.prepare_test_img_train(idx)
+                raise NotImplementedError
+                # return self.prepare_test_img_train(idx)
             elif self.test_sampling_style == 'key':
                 return self.prepare_test_img_key(idx)
         while True:
@@ -344,6 +345,9 @@ class TwinVIDDataset(Dataset):
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
         results['is_key'] = is_key
-        results = self.pipeline(results)
+        if is_key:
+            results = self.twin_pipeline(results)
+        else:
+            results = self.pipeline(results)
         return results
 

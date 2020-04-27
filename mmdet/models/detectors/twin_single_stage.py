@@ -94,17 +94,21 @@ class TwinSingleStageDetector(PairBaseDetector):
         return losses
 
     def simple_test(self, img, img_meta, rescale=False):
-        x = self.extract_feat(img)
         is_key = img_meta[0]['is_key']
         if is_key:
+            x = self.twin.module.extract_feat(img)
             self.key_feat = x
         else:
+            x = self.extract_feat(img)
             x = self.pair_module(x, self.key_feat, is_train=False)
 
-        if self.with_neck and not self.neck_first:
-            x = self.neck(x)
+        # if self.with_neck and not self.neck_first:
+        #     x = self.neck(x)
 
-        outs = self.bbox_head(x)
+        if is_key:
+            outs = self.twin.module.bbox_head(x)
+        else:
+            outs = self.bbox_head(x)
         bbox_inputs = outs + (img_meta, self.test_cfg, rescale)
         bbox_list = self.bbox_head.get_bboxes(*bbox_inputs)
         bbox_results = [
