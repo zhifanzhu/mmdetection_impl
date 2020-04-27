@@ -237,7 +237,8 @@ def _non_dist_train(model, dataset, cfg, validate=False):
             elif issubclass(dataset_type, datasets.SeqVIDDataset):
                 runner.register_hook(
                    NonDistSeqEvalmAPHook(val_dataset_cfg, **eval_cfg))
-            elif issubclass(dataset_type, datasets.PairVIDDataset):
+            elif issubclass(dataset_type, datasets.PairVIDDataset) \
+                    or issubclass(dataset_type, datasets.TwinVIDDataset):
                 runner.register_hook(
                     NonDistPairEvalmAPHook(val_dataset_cfg, **eval_cfg))
             else:
