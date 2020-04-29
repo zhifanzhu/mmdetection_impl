@@ -8,10 +8,11 @@ from .embed_ca import EmbedCA
 from .twin_grab import TwinGrab
 from .twin_direct import TwinDirect
 from .twin_nonlocal import TwinNonLocal
+from .twin_embed_ca import TwinEmbedCA
 
 __all__ = [
     'Identity',
     'CorrAssemble', 'MultiCorrAssemble',
     'PyCorrAssemble', 'Embed64', 'PairNonLocal', 'EmbedCA',
-    'TwinGrab', 'TwinDirect', 'TwinNonLocal',
+    'TwinGrab', 'TwinDirect', 'TwinNonLocal', 'TwinEmbedCA'
 ]
