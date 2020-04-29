@@ -175,7 +175,7 @@ class CA(nn.Module):
 
     def embedded_gaussian(self, theta_x, phi_x):
         # pairwise_weight: [N, DxD, H, W]
-        pairwise_weight = self.corr(theta_x, phi_x)
+        pairwise_weight = self.corr(theta_x.contiguous(), phi_x.contiguous())
         if self.use_scale:
             # theta_x.shape[-1] is `self.inter_channels`
             pairwise_weight *= 256  # sumelems = kernel*kernel* bottomchannels
@@ -185,7 +185,7 @@ class CA(nn.Module):
 
     def dot_product(self, theta_x, phi_x):
         # pairwise_weight: [N, DxD, H, W]
-        pairwise_weight = self.corr(theta_x, phi_x)
+        pairwise_weight = self.corr(theta_x.contiguous(), phi_x.contiguous())
         pairwise_weight *= 256
         pairwise_weight /= pairwise_weight.shape[-1]
         return pairwise_weight
@@ -210,7 +210,7 @@ class CA(nn.Module):
         pairwise_weight = pairwise_func(theta_x, phi_x)
 
         # y: [N, HxW, C]
-        y = self.assemble(pairwise_weight, g_x)
+        y = self.assemble(pairwise_weight, g_x.contiguous())
         # y: [N, C, H, W]
         y = y.permute(0, 2, 1).reshape(n, self.inter_channels, h, w)
 
