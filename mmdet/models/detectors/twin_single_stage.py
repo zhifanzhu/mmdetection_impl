@@ -41,8 +41,8 @@ class TwinSingleStageDetector(PairBaseDetector):
 
         # Build twin model
         print(" Loading Twin's weights...")
-        twin = build_detector(twin, train_cfg=self.train_cfg, test_cfg=self.test_cfg)
-        self.twin = MMDataParallel(twin, device_ids=[0]).cuda()  # TODO check device id?
+        self.twin = build_detector(twin, train_cfg=self.train_cfg, test_cfg=self.test_cfg)
+        # self.twin = MMDataParallel(twin, device_ids=[0]).cuda()  # TODO check device id?
         load_checkpoint(self.twin, twin_load_from, map_location='cpu', strict=False, logger=None)
         self.twin.eval()
 
@@ -82,7 +82,8 @@ class TwinSingleStageDetector(PairBaseDetector):
                       gt_labels,
                       gt_bboxes_ignore=None):
         x = self.extract_feat(img)
-        x_ref = self.twin.module.extract_feat(ref_img)
+        with torch.no_grad():
+            x_ref = self.twin.extract_feat(ref_img)
         x = self.pair_module(x, x_ref, is_train=True)
         if self.with_neck and not self.neck_first:
             x = self.neck(x)
@@ -96,7 +97,7 @@ class TwinSingleStageDetector(PairBaseDetector):
     def simple_test(self, img, img_meta, rescale=False):
         is_key = img_meta[0]['is_key']
         if is_key:
-            twin = self.twin.module
+            twin = self.twin
             x = twin.extract_feat(img)
             outs = twin.bbox_head(x)
             bbox_inputs = outs + (img_meta, twin.test_cfg, rescale)
