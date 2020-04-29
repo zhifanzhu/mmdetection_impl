@@ -175,7 +175,7 @@ class CA(nn.Module):
 
     def embedded_gaussian(self, theta_x, phi_x):
         # pairwise_weight: [N, DxD, H, W]
-        pairwise_weight = self.corr(theta_x.contiguous(), phi_x.contiguous())
+        pairwise_weight = self.corr(theta_x, phi_x)
         if self.use_scale:
             # theta_x.shape[-1] is `self.inter_channels`
             pairwise_weight *= 256  # sumelems = kernel*kernel* bottomchannels
@@ -185,7 +185,7 @@ class CA(nn.Module):
 
     def dot_product(self, theta_x, phi_x):
         # pairwise_weight: [N, DxD, H, W]
-        pairwise_weight = self.corr(theta_x.contiguous(), phi_x.contiguous())
+        pairwise_weight = self.corr(theta_x, phi_x)
         pairwise_weight *= 256
         pairwise_weight /= pairwise_weight.shape[-1]
         return pairwise_weight
@@ -194,25 +194,14 @@ class CA(nn.Module):
         """ g is ref value, phi is ref key, theta is current(query)"""
         n, _, h, w = x.shape
 
-        # g_x: [N, HxW, C]
-        g_x = self.g(x_ref).view(n, self.inter_channels, -1)
-        g_x = g_x.permute(0, 2, 1)
-
-        # theta_x: [N, HxW, C]
-        theta_x = self.theta(x).view(n, self.inter_channels, -1)
-        theta_x = theta_x.permute(0, 2, 1)
-
-        # phi_x: [N, C, HxW]
-        phi_x = self.phi(x_ref).view(n, self.inter_channels, -1)
+        g_x = self.g(x_ref)
+        theta_x = self.theta(x)
+        phi_x = self.phi(x_ref)
 
         pairwise_func = getattr(self, self.mode)
-        # pairwise_weight: [N, HxW, HxW]
         pairwise_weight = pairwise_func(theta_x, phi_x)
 
-        # y: [N, HxW, C]
-        y = self.assemble(pairwise_weight, g_x.contiguous())
-        # y: [N, C, H, W]
-        y = y.permute(0, 2, 1).reshape(n, self.inter_channels, h, w)
+        y = self.assemble(pairwise_weight, g_x)
 
         output = x + self.conv_out(y)
 
