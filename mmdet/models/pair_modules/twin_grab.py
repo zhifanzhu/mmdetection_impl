@@ -8,14 +8,17 @@ from ..utils import ConvModule
 
 class Grab(nn.Module):
 
-    def __init__(self, use_skip=False, channels=256):
+    def __init__(self, use_skip=False, channels=256, dilation=False):
         super(Grab, self).__init__()
         self.use_skip = use_skip
+        conv_l_pad = 2 if dilation else 1
+        conv_l_dilate = 2 if dilation else 1
         self.conv_l = ConvModule(
             in_channels=channels,
             out_channels=channels,
             kernel_size=3,
-            padding=1,
+            padding=conv_l_pad,
+            dilation=conv_l_dilate,
             stride=2)
         self.conv_h = ConvModule(
             in_channels=channels,
@@ -95,10 +98,11 @@ class Grab(nn.Module):
 @PAIR_MODULE.register_module
 class TwinGrab(nn.Module):
 
-    def __init__(self, use_skip=False, channels=256):
+    def __init__(self, use_skip=False, channels=256, dilation=False):
         super(TwinGrab, self).__init__()
         self.grabs = nn.ModuleList(
-            [Grab(use_skip=use_skip, channels=channels) for _ in range(4)])
+            [Grab(use_skip=use_skip, channels=channels, dilation=dilation)
+             for _ in range(4)])
         self.conv_extra = ConvModule(
             in_channels=channels,
             out_channels=channels,
