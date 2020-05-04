@@ -217,10 +217,6 @@ def main():
     if fp16_cfg is not None:
         wrap_fp16_model(model)
     checkpoint = load_checkpoint(model, checkpoint_file, map_location='cpu')
-    # For unknown reason, some weights of twin's are changed, thus load_again.
-    if hasattr(model, 'twin'):
-        _ = load_checkpoint(model.twin, cfg.model.twin_load_from,
-                            map_location='cpu', strict=False, logger=None)
 
     # old versions did not save class info in checkpoints, this walkaround is
     # for backward compatibility
