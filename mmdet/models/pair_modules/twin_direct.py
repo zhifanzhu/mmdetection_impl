@@ -8,29 +8,38 @@ from ..utils import ConvModule
 
 class Direct(nn.Module):
 
-    def __init__(self, use_skip=False, channels=256):
+    def __init__(self, use_skip=False, channels=256, bare=False):
+        """
+
+        :param use_skip:
+        :param channels:
+        :param bare: bool, if True, do not perform conv_h and conv_2,
+            i.e. transform x_ref by conv_final and skip connect to x directly.
+        """
         super(Direct, self).__init__()
         self.use_skip = use_skip
-        self.conv_h = ConvModule(
-            in_channels=channels,
-            out_channels=channels,
-            kernel_size=3,
-            padding=1,
-            stride=1)
-        self.conv_2 = nn.Sequential(
-            ConvModule(
-                in_channels=channels,
-                out_channels=channels,
-                kernel_size=1,
-                padding=0,
-                stride=1),
-            ConvModule(
+        self.bare = bare
+        if not self.bare:
+            self.conv_h = ConvModule(
                 in_channels=channels,
                 out_channels=channels,
                 kernel_size=3,
                 padding=1,
                 stride=1)
-        )
+            self.conv_2 = nn.Sequential(
+                ConvModule(
+                    in_channels=channels,
+                    out_channels=channels,
+                    kernel_size=1,
+                    padding=0,
+                    stride=1),
+                ConvModule(
+                    in_channels=channels,
+                    out_channels=channels,
+                    kernel_size=3,
+                    padding=1,
+                    stride=1)
+            )
         final_chan = 1 if self.use_skip else 2
         self.conv_final = nn.Sequential(
             ConvModule(
@@ -72,8 +81,11 @@ class Direct(nn.Module):
             nn.init.constant_(self.conv_final[-1].bias[1], 0.0)
 
     def forward(self, f, f_h):
-        f_h = self.conv_h(f_h)
-        f_prev = self.conv_2(f_h)
+        if self.bare:
+            f_prev = f_h
+        else:
+            f_h = self.conv_h(f_h)
+            f_prev = self.conv_2(f_h)
 
         cat_feat = torch.cat([f, f_prev], dim=1)
         if self.use_skip:
