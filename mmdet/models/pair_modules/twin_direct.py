@@ -100,10 +100,10 @@ class Direct(nn.Module):
 @PAIR_MODULE.register_module
 class TwinDirect(nn.Module):
 
-    def __init__(self, use_skip=False, channels=256):
+    def __init__(self, use_skip=False, channels=256, bare=False):
         super(TwinDirect, self).__init__()
         self.grabs = nn.ModuleList(
-            [Direct(use_skip=use_skip, channels=channels) for _ in range(4)])
+            [Direct(use_skip=use_skip, channels=channels, bare=bare) for _ in range(4)])
         self.conv_extra = ConvModule(
             in_channels=channels,
             out_channels=channels,
