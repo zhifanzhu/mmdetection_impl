@@ -8,9 +8,14 @@ from ..utils import ConvModule
 
 class Grab(nn.Module):
 
-    def __init__(self, use_skip=False, channels=256, dilation=False):
+    def __init__(self,
+                 use_skip=False,
+                 channels=256,
+                 low_only=False,
+                 dilation=False):
         super(Grab, self).__init__()
         self.use_skip = use_skip
+        self.low_only = low_only
         conv_l_pad = 2 if dilation else 1
         conv_l_dilate = 2 if dilation else 1
         self.conv_l = ConvModule(
@@ -20,12 +25,13 @@ class Grab(nn.Module):
             padding=conv_l_pad,
             dilation=conv_l_dilate,
             stride=2)
-        self.conv_h = ConvModule(
-            in_channels=channels,
-            out_channels=channels,
-            kernel_size=3,
-            padding=1,
-            stride=1)
+        if not self.low_only:
+            self.conv_h = ConvModule(
+                in_channels=channels,
+                out_channels=channels,
+                kernel_size=3,
+                padding=1,
+                stride=1)
         self.conv_2 = nn.Sequential(
             ConvModule(
                 in_channels=2*channels,
@@ -81,9 +87,12 @@ class Grab(nn.Module):
             nn.init.constant_(self.conv_final[-1].bias[1], 0.0)
 
     def forward(self, f, f_h, f_l):
-        f_l = self.conv_l(f_l)
-        f_h = self.conv_h(f_h)
-        f_prev = self.conv_2(torch.cat([f_h, f_l], dim=1))
+        if self.low_only:
+            f_prev = self.conv_l(f_l)
+        else:
+            f_l = self.conv_l(f_l)
+            f_h = self.conv_h(f_h)
+            f_prev = self.conv_2(torch.cat([f_h, f_l], dim=1))
 
         cat_feat = torch.cat([f, f_prev], dim=1)
         if self.use_skip:
@@ -98,10 +107,11 @@ class Grab(nn.Module):
 @PAIR_MODULE.register_module
 class TwinGrab(nn.Module):
 
-    def __init__(self, use_skip=False, channels=256, dilation=False):
+    def __init__(self, use_skip=False, channels=256, low_only=False, dilation=False):
         super(TwinGrab, self).__init__()
         self.grabs = nn.ModuleList(
-            [Grab(use_skip=use_skip, channels=channels, dilation=dilation)
+            [Grab(use_skip=use_skip, channels=channels,
+                  low_only=low_only, dilation=dilation)
              for _ in range(4)])
         self.conv_extra = ConvModule(
             in_channels=channels,
