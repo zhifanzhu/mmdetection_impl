@@ -109,17 +109,22 @@ class TwinGrab(nn.Module):
 
     def __init__(self, use_skip=False, channels=256, low_only=False, dilation=False):
         super(TwinGrab, self).__init__()
+        self.low_only = low_only
         self.grabs = nn.ModuleList(
             [Grab(use_skip=use_skip, channels=channels,
                   low_only=low_only, dilation=dilation)
              for _ in range(4)])
-        self.conv_extra = ConvModule(
-            in_channels=channels,
-            out_channels=channels,
-            kernel_size=3,
-            padding=1,
-            stride=1,
-            activation='relu')
+        if self.low_only:
+            self.conv_extra = Grab(use_skip=use_skip, channels=channels,
+                                   low_only=low_only, dilation=dilation)
+        else:
+            self.conv_extra = ConvModule(
+                in_channels=channels,
+                out_channels=channels,
+                kernel_size=3,
+                padding=1,
+                stride=1,
+                activation='relu')
 
     def init_weights(self):
         for g in self.grabs:
@@ -134,6 +139,11 @@ class TwinGrab(nn.Module):
             self.grabs[1](f=feat[1], f_h=feat_ref[2], f_l=feat_ref[1]),
             self.grabs[2](f=feat[2], f_h=feat_ref[3], f_l=feat_ref[2]),
             self.grabs[3](f=feat[3], f_h=feat_ref[4], f_l=feat_ref[3]),
-            self.conv_extra(feat[4])
         ]
+        if self.low_only:
+            outs.append(
+                self.conv_extra(f=feat[4], f_h=None, f_l=feat_ref[4]))
+        else:
+            outs.append(self.conv_extra(feat[4]))
+
         return outs
