@@ -28,7 +28,8 @@ class NonLocal2D(nn.Module):
                  use_scale=True,
                  conv_cfg=None,
                  norm_cfg=None,
-                 mode='embedded_gaussian'):
+                 mode='embedded_gaussian',
+                 conv_final=False):
         super(NonLocal2D, self).__init__()
         self.in_channels = in_channels
         self.reduction = reduction
@@ -61,8 +62,40 @@ class NonLocal2D(nn.Module):
             conv_cfg=conv_cfg,
             norm_cfg=norm_cfg,
             activation=None)
+        if conv_final:
+            self.conv_final = nn.Sequential(
+                ConvModule(
+                    in_channels=2*in_channels,
+                    out_channels=256,
+                    kernel_size=1,
+                    padding=0,
+                    stride=1,
+                    activation='relu'),
+                ConvModule(
+                    in_channels=256,
+                    out_channels=16,
+                    kernel_size=3,
+                    padding=1,
+                    stride=1,
+                    activation='relu'),
+                ConvModule(
+                    in_channels=16,
+                    out_channels=3,
+                    kernel_size=3,
+                    padding=1,
+                    stride=1),
+                nn.Conv2d(
+                    in_channels=3,
+                    out_channels=1,
+                    kernel_size=3,
+                    padding=1,
+                    stride=1)
+            )
 
-        self.init_weights()
+        if self.conv_final is not None:
+            self.init_weights(zeros_init=False)
+        else:
+            self.init_weights(zeros_init=True)
 
     def init_weights(self, std=0.01, zeros_init=True):
         for m in [self.g, self.theta, self.phi]:
@@ -71,6 +104,8 @@ class NonLocal2D(nn.Module):
             constant_init(self.conv_out.conv, 0)
         else:
             normal_init(self.conv_out.conv, std=std)
+        if self.conv_final is not None:
+            nn.init.constant_(self.conv_final[-1].bias, 0.0)
 
     def embedded_gaussian(self, theta_x, phi_x):
         # pairwise_weight: [N, HxW, HxW]
@@ -111,7 +146,12 @@ class NonLocal2D(nn.Module):
         # y: [N, C, H, W]
         y = y.permute(0, 2, 1).reshape(n, self.inter_channels, h, w)
 
-        output = x + self.conv_out(y)
+        if self.conv_final is not None:
+            y = self.conv_out(y)
+            cat_feat = torch.cat([x, y], dim=1)
+            output = x + self.conv_final(cat_feat) * y
+        else:
+            output = x + self.conv_out(y)
 
         return output
 
@@ -119,14 +159,15 @@ class NonLocal2D(nn.Module):
 @PAIR_MODULE.register_module
 class TwinNonLocal(nn.Module):
 
-    def __init__(self, channels=256, reduction=2):
+    def __init__(self, channels=256, reduction=2, conv_final=False):
         super(TwinNonLocal, self).__init__()
         self.nl_blocks = nn.ModuleList([
             NonLocal2D(
                 in_channels=channels,
                 reduction=reduction,
                 use_scale=True,
-                mode='embedded_gaussian')
+                mode='embedded_gaussian',
+                conv_final=conv_final)
             for _ in range(5)])
 
     def init_weights(self):
