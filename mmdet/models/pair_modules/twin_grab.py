@@ -107,7 +107,12 @@ class Grab(nn.Module):
 @PAIR_MODULE.register_module
 class TwinGrab(nn.Module):
 
-    def __init__(self, use_skip=False, channels=256, low_only=False, dilation=False):
+    def __init__(self,
+                 use_skip=False,
+                 channels=256,
+                 low_only=False,
+                 dilation=False,
+                 extra_nls=False):
         super(TwinGrab, self).__init__()
         self.low_only = low_only
         self.grabs = nn.ModuleList(
@@ -126,12 +131,26 @@ class TwinGrab(nn.Module):
                 stride=1,
                 activation='relu')
 
+        if extra_nls:
+            from .twin_nonlocal import NonLocal2D
+            self.extra_nls = nn.ModuleList([
+                NonLocal2D(
+                    in_channels=channels,
+                    reduction=2,
+                    use_scale=True,
+                    mode='embedded_gaussian',
+                    conv_final=True)
+                for _ in range(5)])
+
     def init_weights(self):
         for g in self.grabs:
             g.init_weights()
         for m in self.conv_extra.modules():
             if isinstance(m, nn.Conv2d):
                 xavier_init(m, distribution='uniform')
+        if self.extra_nls is not None:
+            for g in self.extra_nls:
+                g.init_weights()
 
     def forward(self, feat, feat_ref, is_train=False):
         outs = [
@@ -146,4 +165,14 @@ class TwinGrab(nn.Module):
         else:
             outs.append(self.conv_extra(feat[4]))
 
-        return outs
+        if self.extra_nls is not None:
+            nl_outs = [
+                self.extra_nls[0](x=outs[0], x_ref=feat_ref[1]),
+                self.extra_nls[1](x=outs[1], x_ref=feat_ref[2]),
+                self.extra_nls[2](x=outs[2], x_ref=feat_ref[3]),
+                self.extra_nls[3](x=outs[3], x_ref=feat_ref[4]),
+                self.extra_nls[4](x=outs[4], x_ref=outs[4]),
+            ]
+            return nl_outs
+        else:
+            return outs
