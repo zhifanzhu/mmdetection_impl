@@ -148,7 +148,7 @@ class TwinGrab(nn.Module):
         for m in self.conv_extra.modules():
             if isinstance(m, nn.Conv2d):
                 xavier_init(m, distribution='uniform')
-        if self.extra_nls is not None:
+        if hasattr(self, 'extra_nls'):
             for g in self.extra_nls:
                 g.init_weights()
 
@@ -165,7 +165,7 @@ class TwinGrab(nn.Module):
         else:
             outs.append(self.conv_extra(feat[4]))
 
-        if self.extra_nls is not None:
+        if hasattr(self, 'extra_nls'):
             nl_outs = [
                 self.extra_nls[0](x=outs[0], x_ref=feat_ref[1]),
                 self.extra_nls[1](x=outs[1], x_ref=feat_ref[2]),
