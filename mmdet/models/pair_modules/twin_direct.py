@@ -8,13 +8,14 @@ from ..utils import ConvModule
 
 class Direct(nn.Module):
 
-    def __init__(self, use_skip=False, channels=256, bare=False):
+    def __init__(self, use_skip=False, channels=256, bare=False, force_final=False):
         """
 
         :param use_skip:
         :param channels:
         :param bare: bool, if True, do not perform conv_h and conv_2,
             i.e. transform x_ref by conv_final and skip connect to x directly.
+        :param force_final: if True, conv_final output as feature, rather than weight map
         """
         super(Direct, self).__init__()
         self.use_skip = use_skip
@@ -40,31 +41,36 @@ class Direct(nn.Module):
                     padding=1,
                     stride=1)
             )
-        final_chan = 1 if self.use_skip else 2
+        self.force_final = force_final
+        if self.force_final:
+            chans = [channels, channels, channels, channels]
+        else:
+            final_chan = 1 if self.use_skip else 2
+            chans = [256, 16, 3, final_chan]
         self.conv_final = nn.Sequential(
             ConvModule(
                 in_channels=2*channels,
-                out_channels=256,
+                out_channels=chans[0],
                 kernel_size=1,
                 padding=0,
                 stride=1,
                 activation='relu'),
             ConvModule(
-                in_channels=256,
-                out_channels=16,
+                in_channels=chans[0],
+                out_channels=chans[1],
                 kernel_size=3,
                 padding=1,
                 stride=1,
                 activation='relu'),
             ConvModule(
-                in_channels=16,
-                out_channels=3,
+                in_channels=chans[1],
+                out_channels=chans[2],
                 kernel_size=3,
                 padding=1,
                 stride=1),
             nn.Conv2d(
-                in_channels=3,
-                out_channels=final_chan,
+                in_channels=chans[2],
+                out_channels=chans[3],
                 kernel_size=3,
                 padding=1,
                 stride=1)
@@ -74,11 +80,12 @@ class Direct(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 xavier_init(m, distribution='uniform')
-        if self.use_skip:
-            nn.init.constant_(self.conv_final[-1].bias, 0.0)
-        else:
-            nn.init.constant_(self.conv_final[-1].bias[0], 1.0)
-            nn.init.constant_(self.conv_final[-1].bias[1], 0.0)
+        if not self.force_final:
+            if self.use_skip:
+                nn.init.constant_(self.conv_final[-1].bias, 0.0)
+            else:
+                nn.init.constant_(self.conv_final[-1].bias[0], 1.0)
+                nn.init.constant_(self.conv_final[-1].bias[1], 0.0)
 
     def forward(self, f, f_h):
         if self.bare:
@@ -89,7 +96,10 @@ class Direct(nn.Module):
 
         cat_feat = torch.cat([f, f_prev], dim=1)
         if self.use_skip:
-            out = f + self.conv_final(cat_feat) * f_prev
+            if self.force_final:
+                out = self.conv_final(cat_feat)
+            else:
+                out = f + self.conv_final(cat_feat) * f_prev
         else:
             score = torch.softmax(self.conv_2(cat_feat), dim=1)
             out = score[:, 0, :, :].unsqueeze(1) * f + \
@@ -105,12 +115,15 @@ class TwinDirect(nn.Module):
                  channels=256,
                  bare=False,
                  top_conv=False,
-                 shared=False):
+                 shared=False,
+                 force_final=False):
         super(TwinDirect, self).__init__()
         self.shared = shared
         if not shared:
-            self.grabs = nn.ModuleList(
-                [Direct(use_skip=use_skip, channels=channels, bare=bare) for _ in range(4)])
+            self.grabs = nn.ModuleList([
+                Direct(
+                    use_skip=use_skip, channels=channels, bare=bare, force_final=force_final)
+                for _ in range(4)])
         else:
             self.grab = Direct(use_skip=use_skip, channels=channels, bare=bare)
         self.top_conv = top_conv
