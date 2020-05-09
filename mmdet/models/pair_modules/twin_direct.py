@@ -100,31 +100,76 @@ class Direct(nn.Module):
 @PAIR_MODULE.register_module
 class TwinDirect(nn.Module):
 
-    def __init__(self, use_skip=False, channels=256, bare=False):
+    def __init__(self,
+                 use_skip=False,
+                 channels=256,
+                 bare=False,
+                 top_conv=False,
+                 shared=False):
         super(TwinDirect, self).__init__()
-        self.grabs = nn.ModuleList(
-            [Direct(use_skip=use_skip, channels=channels, bare=bare) for _ in range(4)])
-        self.conv_extra = ConvModule(
-            in_channels=channels,
-            out_channels=channels,
-            kernel_size=3,
-            padding=1,
-            stride=1,
-            activation='relu')
+        self.shared = shared
+        if not shared:
+            self.grabs = nn.ModuleList(
+                [Direct(use_skip=use_skip, channels=channels, bare=bare) for _ in range(4)])
+        else:
+            self.grab = Direct(use_skip=use_skip, channels=channels, bare=bare)
+        self.top_conv = top_conv
+        if self.top_conv:
+            self.conv_extra = ConvModule(
+                    in_channels=channels,
+                    out_channels=channels,
+                    kernel_size=3,
+                    padding=1,
+                    stride=2,           # Note different stride
+                    activation='relu')
+            if not self.shared:
+                self.grab_extra = Direct(
+                        use_skip=use_skip,
+                        channels=channels,
+                        bare=bare)
+        else:
+            self.conv_extra = ConvModule(
+                in_channels=channels,
+                out_channels=channels,
+                kernel_size=3,
+                padding=1,
+                stride=1,               # Note different stride
+                activation='relu')
 
     def init_weights(self):
-        for g in self.grabs:
-            g.init_weights()
+        if self.shared:
+            self.grab.init_weights()
+        else:
+            for g in self.grabs:
+                g.init_weights()
         for m in self.conv_extra.modules():
             if isinstance(m, nn.Conv2d):
                 xavier_init(m, distribution='uniform')
+        if self.top_conv and not self.shared:
+            self.grab_extra.init_weights()
 
     def forward(self, feat, feat_ref, is_train=False):
-        outs = [
-            self.grabs[0](f=feat[0], f_h=feat_ref[1]),
-            self.grabs[1](f=feat[1], f_h=feat_ref[2]),
-            self.grabs[2](f=feat[2], f_h=feat_ref[3]),
-            self.grabs[3](f=feat[3], f_h=feat_ref[4]),
-            self.conv_extra(feat[4])
-        ]
+        if self.shared:
+            outs = [
+                self.grab(f=feat[0], f_h=feat_ref[1]),
+                self.grab(f=feat[1], f_h=feat_ref[2]),
+                self.grab(f=feat[2], f_h=feat_ref[3]),
+                self.grab(f=feat[3], f_h=feat_ref[4]),
+            ]
+        else:
+            outs = [
+                self.grabs[0](f=feat[0], f_h=feat_ref[1]),
+                self.grabs[1](f=feat[1], f_h=feat_ref[2]),
+                self.grabs[2](f=feat[2], f_h=feat_ref[3]),
+                self.grabs[3](f=feat[3], f_h=feat_ref[4]),
+            ]
+        if self.top_conv:
+            feat_ref_top = self.conv_extra(feat_ref[4])
+            if self.shared:
+                outs.append(self.grab(f=feat[4], f_h=feat_ref_top))
+            else:
+                outs.append(self.grab_extra(f=feat[4], f_h=feat_ref_top))
+        else:
+            outs.append(self.conv_extra(feat[4]))
+
         return outs
