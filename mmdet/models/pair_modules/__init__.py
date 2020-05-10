@@ -10,14 +10,15 @@ from .twin_direct import TwinDirect, TwinSharedLow
 from .twin_nonlocal import TwinNonLocal
 from .twin_embed_ca import TwinEmbedCA
 
-# Tests
+# Experiments
 from .embed_64 import Embed64
 from .twin_interp import TwinInterp
+from .twin_direct_k1 import TwinDirectK1
 
 __all__ = [
     'Identity',
     'CorrAssemble', 'MultiCorrAssemble',
     'PyCorrAssemble', 'Embed64', 'PairNonLocal', 'EmbedCA',
     'TwinGrab', 'TwinDirect', 'TwinNonLocal', 'TwinEmbedCA',
-    'PairDirect', 'TwinInterp', 'TwinSharedLow',
+    'PairDirect', 'TwinInterp', 'TwinSharedLow', 'TwinDirectK1',
 ]
