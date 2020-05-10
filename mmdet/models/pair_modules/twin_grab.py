@@ -112,16 +112,23 @@ class TwinGrab(nn.Module):
                  channels=256,
                  low_only=False,
                  dilation=False,
+                 shared=False,
                  extra_nls=False):
         super(TwinGrab, self).__init__()
         self.low_only = low_only
-        self.grabs = nn.ModuleList(
-            [Grab(use_skip=use_skip, channels=channels,
-                  low_only=low_only, dilation=dilation)
-             for _ in range(4)])
+        self.shared = shared
+        if not self.shared:
+            self.grabs = nn.ModuleList(
+                [Grab(use_skip=use_skip, channels=channels,
+                      low_only=low_only, dilation=dilation)
+                 for _ in range(4)])
+        else:
+            self.grab = Grab(use_skip=use_skip, channels=channels,
+                             low_only=low_only, dilation=dilation)
         if self.low_only:
-            self.conv_extra = Grab(use_skip=use_skip, channels=channels,
-                                   low_only=low_only, dilation=dilation)
+            if not self.shared:
+                self.conv_extra = Grab(use_skip=use_skip, channels=channels,
+                                       low_only=low_only, dilation=dilation)
         else:
             self.conv_extra = ConvModule(
                 in_channels=channels,
@@ -143,11 +150,15 @@ class TwinGrab(nn.Module):
                 for _ in range(5)])
 
     def init_weights(self):
-        for g in self.grabs:
-            g.init_weights()
-        for m in self.conv_extra.modules():
-            if isinstance(m, nn.Conv2d):
-                xavier_init(m, distribution='uniform')
+        if self.shared:
+            self.grab.init_weights()
+        else:
+            for g in self.grabs:
+                g.init_weights()
+        if hasattr(self, 'conv_extra'):
+            for m in self.conv_extra.modules():
+                if isinstance(m, nn.Conv2d):
+                    xavier_init(m, distribution='uniform')
         if hasattr(self, 'extra_nls'):
             for g in self.extra_nls:
                 g.init_weights()
@@ -160,10 +171,13 @@ class TwinGrab(nn.Module):
             self.grabs[3](f=feat[3], f_h=feat_ref[4], f_l=feat_ref[3]),
         ]
         if self.low_only:
-            outs.append(
-                self.conv_extra(f=feat[4], f_h=None, f_l=feat_ref[4]))
+            if self.shared:
+                last_feat = self.grab(f=feat[4], f_h=None, f_l=feat_ref[4])
+            else:
+                last_feat = self.conv_extra(f=feat[4], f_h=None, f_l=feat_ref[4])
         else:
-            outs.append(self.conv_extra(feat[4]))
+            last_feat = self.conv_extra(feat[4])
+        outs.append(last_feat)
 
         if hasattr(self, 'extra_nls'):
             nl_outs = [
