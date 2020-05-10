@@ -6,7 +6,7 @@ from .embed_ca import EmbedCA
 from .pair_direct import PairDirect
 
 from .twin_grab import TwinGrab
-from .twin_direct import TwinDirect
+from .twin_direct import TwinDirect, TwinSharedLow
 from .twin_nonlocal import TwinNonLocal
 from .twin_embed_ca import TwinEmbedCA
 
@@ -19,5 +19,5 @@ __all__ = [
     'CorrAssemble', 'MultiCorrAssemble',
     'PyCorrAssemble', 'Embed64', 'PairNonLocal', 'EmbedCA',
     'TwinGrab', 'TwinDirect', 'TwinNonLocal', 'TwinEmbedCA',
-    'PairDirect', 'TwinInterp',
+    'PairDirect', 'TwinInterp', 'TwinSharedLow',
 ]

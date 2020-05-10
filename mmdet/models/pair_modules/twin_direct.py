@@ -186,3 +186,39 @@ class TwinDirect(nn.Module):
             outs.append(self.conv_extra(feat[4]))
 
         return outs
+
+
+@PAIR_MODULE.register_module
+class TwinSharedLow(nn.Module):
+
+    def __init__(self,
+                 use_skip=False,
+                 channels=256):
+        super(TwinSharedLow, self).__init__()
+        self.grab = Direct(use_skip=use_skip, channels=channels,
+                           bare=True, force_final=False)
+        self.conv3x3 = nn.ModuleList([
+            ConvModule(
+                in_channels=channels,
+                out_channels=channels,
+                kernel_size=3,
+                padding=1,
+                stride=2)
+            for _ in range(5)
+        ])
+
+    def init_weights(self):
+        self.grab.init_weights()
+        for m in self.conv3x3.modules():
+            if isinstance(m, nn.Conv2d):
+                xavier_init(m, distribution='uniform')
+
+    def forward(self, feat, feat_ref, is_train=False):
+        outs = [
+            self.grab(f=feat[0], f_h=self.conv3x3[0](feat_ref[0])),
+            self.grab(f=feat[1], f_h=self.conv3x3[1](feat_ref[1])),
+            self.grab(f=feat[2], f_h=self.conv3x3[2](feat_ref[2])),
+            self.grab(f=feat[3], f_h=self.conv3x3[3](feat_ref[3])),
+            self.grab(f=feat[4], f_h=self.conv3x3[4](feat_ref[4])),
+        ]
+        return outs
