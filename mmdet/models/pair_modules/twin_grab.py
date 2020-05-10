@@ -164,12 +164,20 @@ class TwinGrab(nn.Module):
                 g.init_weights()
 
     def forward(self, feat, feat_ref, is_train=False):
-        outs = [
-            self.grabs[0](f=feat[0], f_h=feat_ref[1], f_l=feat_ref[0]),
-            self.grabs[1](f=feat[1], f_h=feat_ref[2], f_l=feat_ref[1]),
-            self.grabs[2](f=feat[2], f_h=feat_ref[3], f_l=feat_ref[2]),
-            self.grabs[3](f=feat[3], f_h=feat_ref[4], f_l=feat_ref[3]),
-        ]
+        if self.shared:
+            outs = [
+                self.grab(f=feat[0], f_h=feat_ref[1], f_l=feat_ref[0]),
+                self.grab(f=feat[1], f_h=feat_ref[2], f_l=feat_ref[1]),
+                self.grab(f=feat[2], f_h=feat_ref[3], f_l=feat_ref[2]),
+                self.grab(f=feat[3], f_h=feat_ref[4], f_l=feat_ref[3]),
+            ]
+        else:
+            outs = [
+                self.grabs[0](f=feat[0], f_h=feat_ref[1], f_l=feat_ref[0]),
+                self.grabs[1](f=feat[1], f_h=feat_ref[2], f_l=feat_ref[1]),
+                self.grabs[2](f=feat[2], f_h=feat_ref[3], f_l=feat_ref[2]),
+                self.grabs[3](f=feat[3], f_h=feat_ref[4], f_l=feat_ref[3]),
+            ]
         if self.low_only:
             if self.shared:
                 last_feat = self.grab(f=feat[4], f_h=None, f_l=feat_ref[4])
