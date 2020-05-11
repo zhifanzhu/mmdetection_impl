@@ -142,7 +142,7 @@ class CA(nn.Module):
 @PAIR_MODULE.register_module
 class TwinEmbedCA(nn.Module):
 
-    def __init__(self, channels=256, reduction=2, conv_final=True):
+    def __init__(self, channels=256, reduction=2, conv_final=True, against_self=False):
         super(TwinEmbedCA, self).__init__()
         kwargs = dict(
             use_scale=True,
@@ -181,6 +181,7 @@ class TwinEmbedCA(nn.Module):
                 reduction=reduction,
                 **kwargs),
         ])
+        self.against_self = against_self
 
     def init_weights(self):
         for g in self.blocks:
@@ -188,11 +189,20 @@ class TwinEmbedCA(nn.Module):
         self.top_conv.init_weights()
 
     def forward(self, feat, feat_ref, is_train=False):
-        outs = [
-            self.blocks[0](x=feat[0], x_ref=feat_ref[1]),
-            self.blocks[1](x=feat[1], x_ref=feat_ref[2]),
-            self.blocks[2](x=feat[2], x_ref=feat_ref[3]),
-            self.blocks[0](x=feat[3], x_ref=feat_ref[4]),
-            self.blocks[1](x=feat[4], x_ref=self.top_conv(feat_ref[4])),
-        ]
+        if self.against_self:
+            outs = [
+                self.blocks[0](x=feat[0], x_ref=feat[0]),
+                self.blocks[1](x=feat[1], x_ref=feat[1]),
+                self.blocks[2](x=feat[2], x_ref=feat[2]),
+                self.blocks[3](x=feat[3], x_ref=feat[3]),
+                self.blocks[4](x=feat[4], x_ref=feat[4]),
+            ]
+        else:
+            outs = [
+                self.blocks[0](x=feat[0], x_ref=feat_ref[1]),
+                self.blocks[1](x=feat[1], x_ref=feat_ref[2]),
+                self.blocks[2](x=feat[2], x_ref=feat_ref[3]),
+                self.blocks[3](x=feat[3], x_ref=feat_ref[4]),
+                self.blocks[4](x=feat[4], x_ref=self.top_conv(feat_ref[4])),
+            ]
         return outs
