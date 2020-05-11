@@ -213,7 +213,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workpairs/retinaMV2_256_twinembedca'
+work_dir = './workpairs/retinaMV2_256_twinembedca_self'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
