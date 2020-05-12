@@ -159,7 +159,7 @@ class NonLocal2D(nn.Module):
 @PAIR_MODULE.register_module
 class TwinNonLocal(nn.Module):
 
-    def __init__(self, channels=256, reduction=2, conv_final=False):
+    def __init__(self, channels=256, reduction=2, conv_final=False, against_self=False):
         super(TwinNonLocal, self).__init__()
         self.nl_blocks = nn.ModuleList([
             NonLocal2D(
@@ -169,17 +169,27 @@ class TwinNonLocal(nn.Module):
                 mode='embedded_gaussian',
                 conv_final=conv_final)
             for _ in range(5)])
+        self.against_self = against_self
 
     def init_weights(self):
         for g in self.nl_blocks:
             g.init_weights()
 
     def forward(self, feat, feat_ref, is_train=False):
-        outs = [
-            self.nl_blocks[0](x=feat[0], x_ref=feat_ref[1]),
-            self.nl_blocks[1](x=feat[1], x_ref=feat_ref[2]),
-            self.nl_blocks[2](x=feat[2], x_ref=feat_ref[3]),
-            self.nl_blocks[3](x=feat[3], x_ref=feat_ref[4]),
-            self.nl_blocks[4](x=feat[4], x_ref=feat[4])
-        ]
+        if self.against_self:
+            outs = [
+                self.nl_blocks[0](x=feat[0], x_ref=feat[0]),
+                self.nl_blocks[1](x=feat[1], x_ref=feat[1]),
+                self.nl_blocks[2](x=feat[2], x_ref=feat[2]),
+                self.nl_blocks[3](x=feat[3], x_ref=feat[3]),
+                self.nl_blocks[4](x=feat[4], x_ref=feat[4]),
+            ]
+        else:
+            outs = [
+                self.nl_blocks[0](x=feat[0], x_ref=feat_ref[1]),
+                self.nl_blocks[1](x=feat[1], x_ref=feat_ref[2]),
+                self.nl_blocks[2](x=feat[2], x_ref=feat_ref[3]),
+                self.nl_blocks[3](x=feat[3], x_ref=feat_ref[4]),
+                self.nl_blocks[4](x=feat[4], x_ref=feat[4])
+            ]
         return outs
