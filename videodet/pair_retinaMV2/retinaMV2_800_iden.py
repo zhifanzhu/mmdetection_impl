@@ -1,63 +1,24 @@
-twin = dict(
-    type='RetinaNet',
-    pretrained='torchvision://resnet50',
-    backbone=dict(
-        type='ResNet',
-        depth=50,
-        num_stages=4,
-        out_indices=(0, 1, 2, 3),
-        frozen_stages=1,
-        style='pytorch'),
-    neck=dict(
-        type='FPN',
-        in_channels=[256, 512, 1024, 2048],
-        out_channels=256,
-        start_level=1,
-        add_extra_convs=True,
-        num_outs=5),
-    bbox_head=dict(
-        type='RetinaHead',
-        num_classes=31,
-        in_channels=256,
-        stacked_convs=4,
-        feat_channels=256,
-        octave_base_scale=4,
-        scales_per_octave=3,
-        anchor_ratios=[0.5, 1.0, 2.0],
-        anchor_strides=[8, 16, 32, 64, 128],
-        target_means=[.0, .0, .0, .0],
-        target_stds=[1.0, 1.0, 1.0, 1.0],
-        loss_cls=dict(
-            type='FocalLoss',
-            use_sigmoid=True,
-            gamma=2.0,
-            alpha=0.25,
-            loss_weight=1.0),
-        loss_bbox=dict(type='SmoothL1Loss', beta=0.11, loss_weight=1.0)))
 # model settings
 model = dict(
-    type='TwinRetinaNet',
-    pretrained='torchvision://resnet50',
+    type='PairRetinaNet',
+    pretrained='zoo/mobilenet_v2.pth.tar',
     backbone=dict(
-        type='ResNet',
-        depth=50,
-        num_stages=4,
-        out_indices=(0, 1, 2, 3),
-        frozen_stages=1,
-        style='pytorch'),
-    twin=twin,
-    twin_load_from='./workvids/retinanet_r50_det_vid15frames_smallLR/epoch_12.pth',
+        type='SSDMobileNetV2',
+        input_size=-1,
+        frozen_stages=3,
+        out_layers=('layer4', 'layer7', 'layer14', 'layer19'),
+        with_extra=False,
+        norm_eval=True,
+        ),
     neck=dict(
         type='FPN',
-        in_channels=[256, 512, 1024, 2048],
+        in_channels=[24, 32, 96, 1280],
         out_channels=256,
         start_level=1,
         add_extra_convs=True,
         num_outs=5),
     pair_module=dict(
-        type='TwinGrab',
-        use_skip=True,
-        low_only=True),
+        type='Identity'),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -95,15 +56,14 @@ test_cfg = dict(
     nms=dict(type='nms', iou_thr=0.5),
     max_per_img=100)
 # dataset settings
-vid_dataset_type = 'TwinVIDDataset'
-det_dataset_type = 'TwinDET30Dataset'
+vid_dataset_type = 'PairVIDDataset'
+det_dataset_type = 'PairDET30Dataset'
 data_root = 'data/ILSVRC2015/'
-img_norm_cfg = dict(
-    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
-    dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
+    dict(type='Resize', img_scale=(800, 800), keep_ratio=False),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
@@ -114,7 +74,7 @@ test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(
         type='MultiScaleFlipAug',
-        img_scale=(512, 512),
+        img_scale=(800, 800),
         flip=False,
         transforms=[
             dict(type='Resize', keep_ratio=False),
@@ -124,34 +84,7 @@ test_pipeline = [
             dict(type='ImageToTensor', keys=['img']),
             dict(type='Collect', keys=['img'],
                  meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_key')),
-        ])
-]
-twin_train_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
-    dict(type='Resize', img_scale=(1024, 1024), keep_ratio=False),
-    dict(type='RandomFlip', flip_ratio=0.5),
-    dict(type='Normalize', **img_norm_cfg),
-    dict(type='Pad', size_divisor=32),
-    dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
-]
-twin_test_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(
-        type='MultiScaleFlipAug',
-        img_scale=(1024, 1024),
-        flip=False,
-        transforms=[
-            dict(type='Resize', keep_ratio=False),
-            dict(type='RandomFlip'),
-            dict(type='Normalize', **img_norm_cfg),
-            dict(type='Pad', size_divisor=32),
-            dict(type='ImageToTensor', keys=['img']),
-            dict(type='Collect', keys=['img'],
-                 meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_key')),
+                            'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
         ])
 ]
 data = dict(
@@ -162,31 +95,23 @@ data = dict(
             type=vid_dataset_type,
             ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
             img_prefix=data_root,
-            pipeline=train_pipeline,
-            twin_pipeline=twin_train_pipeline),
+            pipeline=train_pipeline),
         dict(
             type=det_dataset_type,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,
-            pipeline=train_pipeline,
-            twin_pipeline=twin_train_pipeline),
+            pipeline=train_pipeline),
     ],
     val=dict(
         type=vid_dataset_type,
         ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
-        pipeline=test_pipeline,
-        twin_pipeline=twin_test_pipeline,
-        test_sampling_style='key',
-        key_interval=10),
+        pipeline=test_pipeline),
     test=dict(
         type=vid_dataset_type,
         ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
-        pipeline=test_pipeline,
-        twin_pipeline=twin_test_pipeline,
-        test_sampling_style='key',
-        key_interval=10))
+        pipeline=test_pipeline))
 # optimizer
 optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
@@ -212,7 +137,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workpairs/retinar50_512_twinlow_skip'
+work_dir = './workpairs/retinaMV2_800_iden'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
