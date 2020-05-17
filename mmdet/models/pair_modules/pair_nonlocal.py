@@ -145,7 +145,7 @@ class NonLocal2D(nn.Module):
         # y: [N, C, H, W]
         y = y.permute(0, 2, 1).reshape(n, self.inter_channels, h, w)
 
-        if self.conv_final is not None:
+        if hasattr(self, 'conv_final'):
             y = self.conv_out(y)
             cat_feat = torch.cat([x, y], dim=1)
             output = x + self.conv_final(cat_feat) * y
