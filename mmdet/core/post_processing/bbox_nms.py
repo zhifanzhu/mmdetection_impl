@@ -1,7 +1,6 @@
 import torch
 
 from mmdet.ops.nms import nms_wrapper
-from visdrone.utils import box_ops
 
 
 def multiclass_nms(multi_bboxes,
@@ -32,10 +31,7 @@ def multiclass_nms(multi_bboxes,
     bboxes, labels = [], []
     nms_cfg_ = nms_cfg.copy()
     nms_type = nms_cfg_.pop('type', 'nms')
-    if nms_type == 'refine_boxes':
-        nms_op = box_ops.refine_boxes
-    else:
-        nms_op = getattr(nms_wrapper, nms_type)
+    nms_op = getattr(nms_wrapper, nms_type)
     for i in range(1, num_classes):
         cls_inds = multi_scores[:, i] > score_thr
         if not cls_inds.any():
