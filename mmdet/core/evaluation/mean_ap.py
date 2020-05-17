@@ -224,7 +224,8 @@ def eval_map(det_results,
              scale_ranges=None,
              iou_thr=0.5,
              dataset=None,
-             print_summary=True):
+             print_summary=True,
+             with_tqdm=False):
     """Evaluate mAP of a dataset.
 
     Args:
@@ -260,7 +261,12 @@ def eval_map(det_results,
     gt_labels = [
         label if label.ndim == 1 else label[:, 0] for label in gt_labels
     ]
-    for i in range(num_classes):
+    if with_tqdm:
+        import tqdm
+        range_func = tqdm.trange
+    else:
+        range_func = range
+    for i in range_func(num_classes):
         # get gt and det bboxes of this class
         cls_dets, cls_gts, cls_gt_ignore = get_cls_results(
             det_results, gt_bboxes, gt_labels, gt_ignore, i)
