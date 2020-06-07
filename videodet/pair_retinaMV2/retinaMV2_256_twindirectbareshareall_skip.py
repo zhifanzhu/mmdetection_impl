@@ -96,8 +96,8 @@ test_cfg = dict(
     nms_pre=1000,
     min_bbox_size=0,
     score_thr=0.05,
-    nms=dict(type='nms', iou_thr=0.5),
-    max_per_img=100)
+    nms=dict(type='nms', iou_thr=0.5, disable=True),
+    max_per_img=-1)
 # dataset settings
 vid_dataset_type = 'TwinVIDDataset'
 det_dataset_type = 'TwinDET30Dataset'
