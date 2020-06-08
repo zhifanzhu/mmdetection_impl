@@ -273,6 +273,7 @@ class PairVIDDataset(Dataset):
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
         results = self.pipeline(results)
+        flip = results['img_meta'].data['flip']
 
         ref_frame_ind = max(
             min(frame_ind + np.random.randint(self.min_offset, self.max_offset+1),
@@ -282,16 +283,11 @@ class PairVIDDataset(Dataset):
         img_info['filename'] = ref_filename
         ref_results = dict(img_info=img_info, ann_info=ref_ann_info)
 
-        # if self.proposals is not None:
-        #     results['proposals'] = self.proposals[idx]
-
         self.pre_pipeline(ref_results)
+        ref_results['flip'] = flip
         ref_results = self.pipeline(ref_results)
 
-        # results['ref_filename'] = ref_results['filename']
         results['ref_img'] = ref_results['img']
-        # results['ref_bboxes'] = ref_results['gt_bboxes']
-        # results['ref_labels'] = ref_results['gt_labels']
 
         if len(results['gt_bboxes'].data) == 0:
             return None
