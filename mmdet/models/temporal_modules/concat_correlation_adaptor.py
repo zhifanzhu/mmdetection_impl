@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn import normal_init
-from mmdet.ops import PointwiseCorrelation, DeformConv
+from mmdet.ops import DeformConv
 
 from ..registry import TEMPORAL_MODULE
 
@@ -32,6 +32,7 @@ class ConcatCorrelationAdaptor(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
+        raise NotImplementedError
         self.point_corrs = nn.ModuleList([
             PointwiseCorrelation(disp, s)
             for disp, s in zip(displacements, strides)
