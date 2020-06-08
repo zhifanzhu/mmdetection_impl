@@ -8,8 +8,6 @@ from .nms import nms, soft_nms
 from .roi_align import RoIAlign, roi_align
 from .roi_pool import RoIPool, roi_pool
 from .sigmoid_focal_loss import SigmoidFocalLoss, sigmoid_focal_loss
-from .correlation_package import Correlation
-from .fast_assemble import FastAssemble
 from .psroi_pool import PSRoIPool, psroi_pool
 from .mx_correlation import MxCorrelation
 from .mx_assemble import MxAssemble
@@ -21,7 +19,6 @@ __all__ = [
     'ModulatedDeformConvPack', 'deform_conv', 'modulated_deform_conv',
     'deform_roi_pooling', 'SigmoidFocalLoss', 'sigmoid_focal_loss',
     'MaskedConv2d', 'ContextBlock',
-    'Correlation', 'FastAssemble',
     'PSRoIPool', 'psroi_pool',
     'MxCorrelation', 'MxAssemble',
 ]
