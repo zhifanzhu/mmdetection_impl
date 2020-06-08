@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
 from mmcv.cnn import normal_init
-from mmdet.ops import Correlation, DeformConv
+from mmdet.ops import DeformConv
 
 
 """
@@ -47,6 +47,7 @@ class AlignedSTMNCell(nn.Module):
         # bottleneck = 256
         offset_channels = kernel_size * kernel_size * 2
         corr_channels = (2 * displacement + 1) ** 2
+        raise NotImplementedError
         self.correlation = Correlation(
             pad_size=displacement, kernel_size=1, max_displacement=displacement,
             stride1=1, stride2=1)

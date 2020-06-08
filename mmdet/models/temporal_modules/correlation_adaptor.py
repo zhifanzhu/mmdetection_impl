@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import normal_init
-from mmdet.ops import Correlation, DeformConv, ModulatedDeformConv
+from mmdet.ops import DeformConv, ModulatedDeformConv
 
 from ..registry import TEMPORAL_MODULE
 
@@ -39,6 +39,7 @@ class CorrelationAdaptor(nn.Module):
         """
 
         super(CorrelationAdaptor, self).__init__()
+        raise NotImplementedError
         self.adapt_layer = adapt_layer
         self.neck_first = neck_first
         self.with_modulated_dcn = with_modulated_dcn

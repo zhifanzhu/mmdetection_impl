@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import xavier_init
-from mmdet.ops import Correlation, FastAssemble, MxCorrelation, NaiveAssemble, MxAssemble
+from mmdet.ops import MxCorrelation, MxAssemble
 
 from ..registry import PAIR_MODULE
 
@@ -140,12 +140,11 @@ class RFU(nn.Module):
             self.corr = MxCorrelation(corr_disp, kernel_size=1,
                                       max_displacement=corr_disp, stride1=1, stride2=1)
         else:
-            self.corr = Correlation(corr_disp, kernel_size=1,
-                                    max_displacement=corr_disp, stride1=1, stride2=1)
+            raise NotImplementedError
         if assemble_type == 'fast':
-            self.assemble = FastAssemble(corr_disp)
+            raise NotImplementedError
         elif assemble_type == 'naive':
-            self.assemble = NaiveAssemble(corr_disp)
+            raise NotImplementedError
         elif assemble_type == 'mx':
             self.assemble = MxAssemble(k=corr_disp)
         else:

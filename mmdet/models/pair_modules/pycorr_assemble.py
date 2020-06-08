@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn import normal_init
-from mmdet.ops import Correlation, FastAssemble, MxCorrelation
+from mmdet.ops import MxAssemble, MxCorrelation
 
 from ..registry import PAIR_MODULE
 
@@ -89,12 +89,11 @@ class PyCorrAssemble(nn.Module):
             self.corr = MxCorrelation(pad_size=1, kernel_size=1, max_displacement=1,
                                       stride1=1, stride2=1)
         else:
-            self.corr = Correlation(pad_size=1, kernel_size=1, max_displacement=1,
-                                    stride1=1, stride2=1)
+            raise NotImplementedError
 
-        self.assem0 = FastAssemble(k=4)
-        self.assem1 = FastAssemble(k=2)
-        self.assem2 = FastAssemble(k=1)
+        self.assem0 = MxAssemble(k=4)
+        self.assem1 = MxAssemble(k=2)
+        self.assem2 = MxAssemble(k=1)
 
         self.upd_net0 = ConcatUpdate(in_channels=256)
         self.upd_net1 = ConcatUpdate(in_channels=256)

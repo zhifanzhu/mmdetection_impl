@@ -10,7 +10,7 @@ from mmcv.cnn import xavier_init
 from mmdet.core import (AnchorGenerator, multi_apply,
                         anchor_target_tracking)
 from mmdet.models.backbones.ssd_mobilenet_v2 import ExtraConv
-from mmdet.ops import Correlation
+from mmdet.ops import MxCorrelation
 from mmdet.core.bbox import bbox2delta
 from ..losses import smooth_l1_loss
 from ..registry import HEADS
@@ -37,7 +37,7 @@ class DnTLayer(nn.Module):
                  strides=(2, 1, 1)):
         super(DnTLayer, self).__init__()
         self.point_corrs = nn.ModuleList([
-            Correlation(pad_size=disp, kernel_size=1, max_displacement=disp,
+            MxCorrelation(pad_size=disp, kernel_size=1, max_displacement=disp,
                                  stride1=s, stride2=s)
             for disp, s in zip(displacements, strides)
         ])
