@@ -42,9 +42,11 @@ class RetinaTrackHead(AnchorHead):
                  conv_cfg=None,
                  norm_cfg=None,
                  freeze_all=False,
+                 version='v1',
                  **kwargs):
         self.m1 = m1
         self.m2 = m2
+        self.version = version
         self.stacked_convs = stacked_convs
         self.octave_base_scale = octave_base_scale
         self.scales_per_octave = scales_per_octave
@@ -62,20 +64,35 @@ class RetinaTrackHead(AnchorHead):
 
         # Task shared
         self.m1_convs = nn.ModuleList()
-        for k in range(self.num_anchors):
-            m1_branch = nn.ModuleList()
+        if self.version == 'v1':
+            for k in range(self.num_anchors):
+                m1_branch = nn.ModuleList()
+                for i in range(self.m1):
+                    chn = self.in_channels if i == 0 else self.feat_channels
+                    m1_branch.append(
+                        ConvModule(
+                            chn,
+                            self.feat_channels,
+                            3,
+                            stride=1,
+                            padding=1,
+                            conv_cfg=self.conv_cfg,
+                            norm_cfg=self.norm_cfg))
+                self.m1_convs.append(m1_branch)
+        elif self.version =='v2':
             for i in range(self.m1):
                 chn = self.in_channels if i == 0 else self.feat_channels
-                m1_branch.append(
+                chn = chn * self.num_anchors
+                self.m1_convs.append(
                     ConvModule(
                         chn,
-                        self.feat_channels,
+                        self.feat_channels * self.num_anchors,
                         3,
                         stride=1,
                         padding=1,
+                        groups=self.num_anchors,
                         conv_cfg=self.conv_cfg,
                         norm_cfg=self.norm_cfg))
-            self.m1_convs.append(m1_branch)
 
         self.cls_convs = nn.ModuleList()
         self.reg_convs = nn.ModuleList()
@@ -125,13 +142,19 @@ class RetinaTrackHead(AnchorHead):
 
     def forward_single(self, x):
         num_img, _, height, width = x.shape
-        task_shared_outs = []
-        for k in range(self.num_anchors):
-            feat = x
+        if self.version == 'v1':
+            task_shared_outs = []
+            for k in range(self.num_anchors):
+                feat = x
+                for i in range(self.m1):
+                    feat = self.m1_convs[k][i](feat)
+                task_shared_outs.append(feat)
+            task_shared_feat = torch.cat(task_shared_outs, 0)
+        else:
+            feat = x.repeat(1, self.num_anchors, 1, 1)
             for i in range(self.m1):
-                feat = self.m1_convs[k][i](feat)
-            task_shared_outs.append(feat)
-        task_shared_feat = torch.cat(task_shared_outs, 0)
+                feat = self.m1_convs[i](feat)
+            task_shared_feat = feat
 
         cls_feat = task_shared_feat
         reg_feat = task_shared_feat
