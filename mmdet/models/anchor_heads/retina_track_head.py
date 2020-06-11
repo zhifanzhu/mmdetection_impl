@@ -154,7 +154,8 @@ class RetinaTrackHead(AnchorHead):
             feat = x.repeat(1, self.num_anchors, 1, 1)
             for i in range(self.m1):
                 feat = self.m1_convs[i](feat)
-            task_shared_feat = feat
+            task_shared_feat = feat.view(
+                num_img * self.num_anchors, self.feat_channels, height, width)
 
         cls_feat = task_shared_feat
         reg_feat = task_shared_feat
