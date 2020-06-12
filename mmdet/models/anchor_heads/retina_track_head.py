@@ -36,6 +36,7 @@ class RetinaTrackHead(AnchorHead):
                  m2,
                  num_classes,
                  in_channels,
+                 use_3x3=True,
                  stacked_convs=4,
                  octave_base_scale=4,
                  scales_per_octave=3,
@@ -46,6 +47,7 @@ class RetinaTrackHead(AnchorHead):
                  **kwargs):
         self.m1 = m1
         self.m2 = m2
+        self.use_3x3 = use_3x3
         self.version = version
         self.stacked_convs = stacked_convs
         self.octave_base_scale = octave_base_scale
@@ -119,10 +121,10 @@ class RetinaTrackHead(AnchorHead):
         self.retina_cls = nn.Conv2d(
             self.feat_channels,
             self.cls_out_channels,
-            3,
+            3 if self.use_3x3 else 1,
             padding=1)
         self.retina_reg = nn.Conv2d(
-            self.feat_channels, 4, 3, padding=1)
+            self.feat_channels, 4, 3 if self.use_3x3 else 1, padding=1)
 
         if self.freeze_all:
             def _freeze_conv(m):
