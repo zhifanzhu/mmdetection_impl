@@ -51,7 +51,7 @@ model = dict(
         norm_eval=True,
         ),
     twin=twin,
-    twin_load_from='./workpairs/retina_track_MV2_6anchor_group/epoch_12.pth',
+    twin_load_from='./workvids/retina_track_MV2_6anchor_group/epoch_12.pth',
     neck=dict(
         type='FPN',
         in_channels=[24, 32, 96, 1280],
