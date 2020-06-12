@@ -118,13 +118,15 @@ class RetinaTrackHead(AnchorHead):
                     conv_cfg=self.conv_cfg,
                     norm_cfg=self.norm_cfg))
 
+        kernel = 3 if self.use_3x3 else 1
+        padding = 1 if self.use_3x3 else 0
         self.retina_cls = nn.Conv2d(
             self.feat_channels,
             self.cls_out_channels,
-            3 if self.use_3x3 else 1,
-            padding=1)
+            kernel,
+            padding=padding)
         self.retina_reg = nn.Conv2d(
-            self.feat_channels, 4, 3 if self.use_3x3 else 1, padding=1)
+            self.feat_channels, 4, kernel, padding=padding)
 
         if self.freeze_all:
             def _freeze_conv(m):
