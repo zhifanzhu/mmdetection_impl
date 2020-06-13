@@ -24,6 +24,7 @@ class PairVIDDataset(Dataset):
     def __init__(self,
                  ann_file,
                  pipeline,
+                 match_flip=False,
                  min_offset=-9,
                  max_offset=9,
                  min_size=None,
@@ -40,6 +41,7 @@ class PairVIDDataset(Dataset):
         self.test_mode = test_mode
         self.min_offset = min_offset
         self.max_offset = max_offset
+        self.match_flip = match_flip
 
         # join paths if data_root is specified
         if self.data_root is not None:
@@ -284,7 +286,10 @@ class PairVIDDataset(Dataset):
         ref_results = dict(img_info=img_info, ann_info=ref_ann_info)
 
         self.pre_pipeline(ref_results)
-        ref_results['flip'] = flip
+        if self.match_flip:
+            # Matched flip training cause poor results,
+            # This is unknown...
+            ref_results['flip'] = flip
         ref_results = self.pipeline(ref_results)
 
         results['ref_img'] = ref_results['img']
