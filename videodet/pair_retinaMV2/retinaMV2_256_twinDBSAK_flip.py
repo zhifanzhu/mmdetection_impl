@@ -173,7 +173,6 @@ data = dict(
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,
             pipeline=train_pipeline,
-            match_flip=True,
             twin_pipeline=twin_train_pipeline),
     ],
     val=dict(
