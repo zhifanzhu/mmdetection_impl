@@ -17,7 +17,7 @@ See Also retina_track_head.py.
 
 Naming convention (hopefully):
     `embed` is associated to features and loss
-    `triplet` is for specific loss function 
+    `triplet` is for specific loss function
     `contrastive` is for Class name
 """
 
@@ -200,7 +200,9 @@ class RetinaContrastiveHead(AnchorHead):
                 pos_ind_inds = neg_ind_inds.new_zeros(
                     neg_ind_inds.shape, dtype=torch.long)
 
-                assert len(anc_ind_inds) >= 2
+                # We need `pos` distinct from `anc`
+                if anc_ind_inds.size(0) < 2:
+                    continue
                 for k in range(num_triplets_per_track):
                     anc_ind_ind = anc_ind_inds[k]
                     pos_ind_ind = torch.randint(0, num_all_pos, (1, ))  # [int]

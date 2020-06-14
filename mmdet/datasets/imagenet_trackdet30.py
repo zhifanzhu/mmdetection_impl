@@ -2,6 +2,7 @@ from mmcv.parallel import DataContainer as DC
 
 from .registry import DATASETS
 from mmdet.datasets import PairDET30Dataset
+from mmdet.datasets.pipelines import to_tensor
 
 
 @DATASETS.register_module
@@ -27,15 +28,16 @@ class TrackDET30Dataset(PairDET30Dataset):
         results = self.pipeline(results)
 
         results['ref_img'] = DC(results['img'].data.clone(), stack=True)
-        results['ref_img_metas'] = results['img_metas']  # Is it read-only ?
-        results['ref_bboxes'] = DC(results['gt_bboxes'].data.clone(), stack=True)
-        results['ref_labels'] = DC(results['gt_labels'].data.clone(), stack=True)
+        results['ref_img_meta'] = results['img_meta']  # Is it read-only ?
+        results['ref_bboxes'] = DC(results['gt_bboxes'].data.clone())
+        results['ref_labels'] = DC(results['gt_labels'].data.clone())
 
         # We generate 'trackids' field manually
         num_gts = len(results['gt_labels'].data)
         _data = [i + 1 for i in range(num_gts)]  # note we leave 0 for negative/background
-        trackids = results['gt_labels'].new_tensor(_data)
-        results['ref_trackids'] = DC(trackids, stack=True)
+        trackids = results['gt_labels'].data.new_tensor(_data)
+        results['gt_trackids'] = DC(to_tensor(trackids))
+        results['ref_trackids'] = DC(to_tensor(trackids))
 
         if len(results['gt_bboxes'].data) == 0:
             return None

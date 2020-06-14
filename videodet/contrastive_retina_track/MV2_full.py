@@ -1,4 +1,5 @@
 # same lr, full epoch, loss weight 1.0, no VID pretrain
+import copy
 
 # model settings
 model = dict(
@@ -65,7 +66,7 @@ vid_dataset_type = 'TrackVIDDataset'
 det_dataset_type = 'TrackDET30Dataset'
 data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
-train_pipeline = [
+vid_train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotationsWithTrack', with_bbox=True, skip_img_without_anno=False),
     dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
@@ -75,6 +76,10 @@ train_pipeline = [
     dict(type='DefaultFormatBundleWithTrack'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_trackids']),
 ]
+det_train_pipeline = copy.deepcopy(vid_train_pipeline)
+det_train_pipeline[1] = dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False)
+det_train_pipeline[-2] = dict(type='DefaultFormatBundle')
+det_train_pipeline[-1] = dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels'])
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(
@@ -98,12 +103,12 @@ data = dict(
             type=vid_dataset_type,
             ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
             img_prefix=data_root,
-            pipeline=train_pipeline),
+            pipeline=vid_train_pipeline),
         dict(
             type=det_dataset_type,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,
-            pipeline=train_pipeline),
+            pipeline=det_train_pipeline),
     ],
     val=dict(
         type=vid_dataset_type,
