@@ -118,12 +118,12 @@ data = dict(
     ],
     val=dict(
         type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
         type=vid_dataset_type,
-        ann_file=data_root + 'ImageSets/VID/VID_val_frames.txt',
+        ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
