@@ -3,6 +3,11 @@ import torch
 from ..bbox import PseudoSampler, assign_and_sample, build_assigner
 from ..utils import multi_apply
 
+"""
+2019.09.21
+This was created for D&T
+"""
+
 
 def anchor_target_tracking(anchor_list,
                            valid_flag_list,
