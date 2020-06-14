@@ -52,6 +52,12 @@ train_cfg = dict(
         neg_iou_thr=0.4,
         min_pos_iou=0,
         ignore_iof_thr=-1),
+    track_assigner=dict(
+        type='MaxIoUAssigner',
+        pos_iou_thr=0.7,
+        neg_iou_thr=0.3,  # or 0.7 , or 0.4?
+        min_pos_iou=0,
+        ignore_iof_thr=-1),
     allowed_border=-1,
     pos_weight=-1,
     debug=False)
@@ -68,7 +74,7 @@ data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 vid_train_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='LoadAnnotationsWithTrack', with_bbox=True, skip_img_without_anno=False),
+    dict(type='LoadAnnotationsWithTrack', with_bbox=True, skip_img_without_anno=True),
     dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
@@ -77,7 +83,7 @@ vid_train_pipeline = [
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_trackids']),
 ]
 det_train_pipeline = copy.deepcopy(vid_train_pipeline)
-det_train_pipeline[1] = dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False)
+det_train_pipeline[1] = dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=True)
 det_train_pipeline[-2] = dict(type='DefaultFormatBundle')
 det_train_pipeline[-1] = dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels'])
 test_pipeline = [

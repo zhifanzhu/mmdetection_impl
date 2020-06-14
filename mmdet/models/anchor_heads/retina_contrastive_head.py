@@ -246,6 +246,7 @@ class RetinaContrastiveHead(AnchorHead):
         anchor_list, valid_flag_list = self.get_anchors(
             featmap_sizes, img_metas, device=device)
         label_channels = self.cls_out_channels if self.use_sigmoid_cls else 1
+        cfg.assigner = cfg.pop('track_assigner')
         embed_targets = anchor_target(
             anchor_list,
             valid_flag_list,
