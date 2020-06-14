@@ -1,11 +1,11 @@
 from mmcv.parallel import DataContainer as DC
-from torch.utils.data import Dataset
 
 from .registry import DATASETS
+from mmdet.datasets import PairDET30Dataset
 
 
 @DATASETS.register_module
-class TrackDET30Dataset(Dataset):
+class TrackDET30Dataset(PairDET30Dataset):
 
     CLASSES = ('n02691156', 'n02419796', 'n02131653', 'n02834778', 'n01503061', 'n02924116',
                'n02958343', 'n02402425', 'n02084071', 'n02121808', 'n02503517', 'n02118333',
