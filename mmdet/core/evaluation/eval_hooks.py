@@ -416,7 +416,7 @@ class NonDistPairEvalmAPHook(NonDistEvalHook):
     def __init__(self, dataset, interval=1, num_evals=-1, shuffle=False):
         super(NonDistPairEvalmAPHook, self).__init__(
                 dataset, interval, num_evals, shuffle)
-        assert self.shuffle is False, "Shuffle must be true in Pair mode"
+        assert self.shuffle is False, "Shuffle must be false in Pair mode"
 
     def evaluate(self, runner, results, range_idxs=None):
         gt_bboxes = []
