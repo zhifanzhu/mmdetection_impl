@@ -246,7 +246,8 @@ class RetinaContrastiveHead(AnchorHead):
         anchor_list, valid_flag_list = self.get_anchors(
             featmap_sizes, img_metas, device=device)
         label_channels = self.cls_out_channels if self.use_sigmoid_cls else 1
-        cfg.assigner = cfg.pop('track_assigner')
+        cache_assigner = cfg.assigner
+        cfg.assigner = cfg.track_assigner
         embed_targets = anchor_target(
             anchor_list,
             valid_flag_list,
@@ -259,6 +260,7 @@ class RetinaContrastiveHead(AnchorHead):
             gt_labels_list=gt_trackids,
             label_channels=label_channels,
             sampling=self.sampling)
+        cfg.assigner = cache_assigner
         if embed_targets is None:
             return None
         (track_targets, track_targets_weights_list, bbox_targets_list,

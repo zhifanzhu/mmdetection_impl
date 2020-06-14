@@ -83,7 +83,7 @@ vid_train_pipeline = [
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_trackids']),
 ]
 det_train_pipeline = copy.deepcopy(vid_train_pipeline)
-det_train_pipeline[1] = dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=True)
+det_train_pipeline[1] = dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False)
 det_train_pipeline[-2] = dict(type='DefaultFormatBundle')
 det_train_pipeline[-1] = dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels'])
 test_pipeline = [

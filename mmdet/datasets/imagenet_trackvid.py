@@ -48,6 +48,9 @@ class TrackVIDDataset(PairVIDDataset):
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
         results = self.pipeline(results)
+        if results is None:
+            return None
+
         flip = results['img_meta'].data['flip']
 
         ref_frame_ind = max(
@@ -63,6 +66,8 @@ class TrackVIDDataset(PairVIDDataset):
             # See Parent class discussion
             ref_results['flip'] = flip
         ref_results = self.pipeline(ref_results)
+        if ref_results is None:
+            return None
 
         results['ref_img'] = ref_results['img']
         results['ref_img_meta'] = ref_results['img_meta']
