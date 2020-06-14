@@ -27,6 +27,9 @@ from .pair_retina import PairRetinaNet
 from .twin_single_stage import TwinSingleStageDetector
 from .twin_retina import TwinRetinaNet
 
+from .track_base import TrackBaseDetector
+from .track_single_stage import TrackSingleStageDetector
+
 
 from .rfcn import RFCN
 
@@ -40,4 +43,5 @@ __all__ = [
     'PairBaseDetector', 'PairSingleStageDetector', 'PairRetinaNet',
     'RFCN',
     'TwinSingleStageDetector', 'TwinRetinaNet',
+    'TrackBaseDetector', 'TrackSingleStageDetector'
 ]

@@ -12,10 +12,12 @@ from .retina_rpn import RetinaRPN
 from .ssdlite_head import SSDLiteHead
 from .tracking_head import TrackingHead
 from .retina_track_head import RetinaTrackHead
+from .retina_contrastive_head import RetinaContrastiveHead
 
 __all__ = [
     'AnchorHead', 'GuidedAnchorHead', 'FeatureAdaption', 'RPNHead',
     'GARPNHead', 'RetinaHead', 'GARetinaHead', 'SSDHead', 'FCOSHead',
     'RepPointsHead', 'FoveaHead',
-    'RetinaRPN', 'SSDLiteHead', 'TrackingHead', 'RetinaTrackHead'
+    'RetinaRPN', 'SSDLiteHead', 'TrackingHead',
+    'RetinaTrackHead', 'RetinaContrastiveHead'
 ]

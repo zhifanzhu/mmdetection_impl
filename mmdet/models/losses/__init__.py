@@ -9,6 +9,7 @@ from .mse_loss import MSELoss, mse_loss
 from .smooth_l1_loss import SmoothL1Loss, smooth_l1_loss
 from .bootstrapped_sigmoid_classification_loss import BootstrappedSigmoidClassificationLoss
 from .utils import reduce_loss, weight_reduce_loss, weighted_loss
+from .triplet_loss import TripletMarginLoss
 
 __all__ = [
     'accuracy', 'Accuracy', 'cross_entropy', 'binary_cross_entropy',
@@ -18,4 +19,5 @@ __all__ = [
     'IoULoss', 'BoundedIoULoss', 'GHMC', 'GHMR', 'reduce_loss',
     'weight_reduce_loss', 'weighted_loss',
     'BootstrappedSigmoidClassificationLoss',
+    'TripletMarginLoss'
 ]
