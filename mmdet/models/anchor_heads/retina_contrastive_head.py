@@ -6,7 +6,7 @@ from mmcv.cnn import normal_init
 from ..registry import HEADS
 from ..utils import ConvModule, bias_init_with_prob
 from mmdet.core import (delta2bbox, force_fp32, anchor_target,
-                        multiclass_nms_with_feat, multi_apply)
+                        multiclass_nms_with_feat)
 from ..builder import build_loss
 from .anchor_head import AnchorHead
 
