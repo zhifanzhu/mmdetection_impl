@@ -27,9 +27,6 @@ from .pair_retina import PairRetinaNet
 from .twin_single_stage import TwinSingleStageDetector
 from .twin_retina import TwinRetinaNet
 
-from .triple_base import TripleBaseDetector
-from .triple_single_stage import TripleSingleStageDetector
-from .triple_retina import TripleRetinaNet
 
 from .rfcn import RFCN
 
@@ -41,7 +38,6 @@ __all__ = [
     'SeqBaseDetector', 'SeqSingleStageDetector', 'SeqRetinaNet',
     'SeqSSDDnT', 'SeqRNNSSDMobileNet',
     'PairBaseDetector', 'PairSingleStageDetector', 'PairRetinaNet',
-    'TripleBaseDetector', 'TripleSingleStageDetector', 'TripleRetinaNet',
     'RFCN',
     'TwinSingleStageDetector', 'TwinRetinaNet',
 ]
