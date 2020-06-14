@@ -6,7 +6,6 @@ from .. import builder
 from ..registry import DETECTORS
 from .pair_base import PairBaseDetector
 
-from mmcv.parallel import MMDataParallel
 from mmdet.models import build_detector
 from mmcv.runner.checkpoint import load_checkpoint
 

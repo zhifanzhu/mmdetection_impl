@@ -168,7 +168,8 @@ class PairVIDDataset(Dataset):
         labels_ignore = []
         for obj in root.findall('object'):
             name = obj.find('name').text
-            trackid = obj.find('trackid').text
+            # Track offset by 1, as we leave 0 for negatives
+            trackid = int(obj.find('trackid').text) + 1
             label = self.cat2label[name]
             bnd_box = obj.find('bndbox')
             bbox = [
