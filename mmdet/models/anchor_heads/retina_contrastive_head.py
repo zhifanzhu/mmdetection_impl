@@ -9,7 +9,6 @@ from mmdet.core import (delta2bbox, force_fp32, anchor_target,
                         multiclass_nms_with_feat)
 from ..builder import build_loss
 from .anchor_head import AnchorHead
-from time import time
 
 """
 This is the complete implementation of RetinaTrack with embed feature and support
@@ -169,7 +168,6 @@ class RetinaContrastiveHead(AnchorHead):
 
         Note some FPN level has ZERO of tracks.
         """
-        dbg_time_start = time()
         batch_size = len(track_targets) // 2
         embed_feats = embed_feats.permute(0, 1, 3, 4, 2).reshape(
             2 * batch_size, -1, self.feat_channels)
@@ -177,16 +175,7 @@ class RetinaContrastiveHead(AnchorHead):
         ancs = []
         poss = []
         negs = []
-
-        dbg_ntriplets = []
-        dbg_pre = time() - dbg_time_start
-        dbg_part_1 = 0
-        dbg_part_2 = 0
-        dbg_part_3 = 0
-        dbg_part_4 = 0
-
         for i in range(batch_size):
-            _a = time()
             num_tracks = max(track_targets[i].max(), track_targets[i + batch_size].max())
             if num_tracks == 0:
                 continue
@@ -197,10 +186,8 @@ class RetinaContrastiveHead(AnchorHead):
             track_target = torch.cat(
                 [track_targets[i], track_targets[i + batch_size]], 0)  # [2*H*W*#Anchor]
 
-            dbg_part_1 += (time() - _a)
             # index 0 is for background, which we clearly don't want to index into
             for j in range(1, num_tracks + 1):
-                _b = time()
                 all_pos_inds = (track_target == j).nonzero()
                 all_neg_inds = (track_target != j).nonzero()
                 num_all_pos = all_pos_inds.size(0)
@@ -213,8 +200,6 @@ class RetinaContrastiveHead(AnchorHead):
                 pos_ind_inds = neg_ind_inds.new_zeros(
                     neg_ind_inds.shape, dtype=torch.long)
 
-                _b_end = time()
-                dbg_part_2 += (_b_end - _b)
                 # We need `pos` distinct from `anc`
                 if anc_ind_inds.size(0) < 2:
                     continue
@@ -226,8 +211,6 @@ class RetinaContrastiveHead(AnchorHead):
                         pos_ind_ind = torch.randint(0, num_all_pos, (1, ))
                     pos_ind_inds[k] = pos_ind_ind
 
-                _c = time()
-                dbg_part_3 += (_c - _b_end)
                 anc_inds = all_pos_inds[anc_ind_inds]
                 pos_inds = all_pos_inds[pos_ind_inds]
                 neg_inds = all_neg_inds[neg_ind_inds]
@@ -237,11 +220,6 @@ class RetinaContrastiveHead(AnchorHead):
                 ancs.append(anc)
                 poss.append(pos)
                 negs.append(neg)
-                _c_end = time()
-                dbg_part_4 += (_c_end - _c)
-            dbg_ntriplets.append(len(anc))
-        print(dbg_ntriplets)
-        print(dbg_pre, dbg_part_1, dbg_part_2, dbg_part_3, dbg_part_4, time() - dbg_time_start)
 
         if len(ancs) == 0:
             return embed_feats.new_zeros([])
