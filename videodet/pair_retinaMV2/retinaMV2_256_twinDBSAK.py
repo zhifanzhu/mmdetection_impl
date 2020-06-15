@@ -1,43 +1,7 @@
-twin = dict(
+import copy
+
+common = dict(
     type='SingleStageDetector',
-    pretrained='zoo/mobilenet_v2.pth.tar',
-    backbone=dict(
-        type='SSDMobileNetV2',
-        input_size=-1,
-        frozen_stages=18,
-        out_layers=('layer4', 'layer7', 'layer14', 'layer19'),
-        with_extra=False,
-        norm_eval=True,
-        ),
-    neck=dict(
-        type='FPN',
-        in_channels=[24, 32, 96, 1280],
-        out_channels=256,
-        start_level=1,
-        add_extra_convs=True,
-        num_outs=5),
-    bbox_head=dict(
-        type='RetinaHead',
-        num_classes=31,
-        in_channels=256,
-        stacked_convs=4,
-        feat_channels=256,
-        octave_base_scale=4,
-        scales_per_octave=3,
-        anchor_ratios=[0.5, 1.0, 2.0],
-        anchor_strides=[8, 16, 32, 64, 128],
-        target_means=[.0, .0, .0, .0],
-        target_stds=[1.0, 1.0, 1.0, 1.0],
-        loss_cls=dict(
-            type='FocalLoss',
-            use_sigmoid=True,
-            gamma=2.0,
-            alpha=0.25,
-            loss_weight=1.0),
-        loss_bbox=dict(type='SmoothL1Loss', beta=0.11, loss_weight=1.0)))
-# model settings
-model = dict(
-    type='TwinRetinaNet',
     pretrained='zoo/mobilenet_v2.pth.tar',
     backbone=dict(
         type='SSDMobileNetV2',
@@ -47,8 +11,6 @@ model = dict(
         with_extra=False,
         norm_eval=True,
         ),
-    twin=twin,
-    twin_load_from='./workvids/retinaMV2/epoch_12.pth',
     neck=dict(
         type='FPN',
         in_channels=[24, 32, 96, 1280],
@@ -56,12 +18,6 @@ model = dict(
         start_level=1,
         add_extra_convs=True,
         num_outs=5),
-    pair_module=dict(
-        type='TwinDirect',
-        use_skip=True,
-        bare=True,
-        top_conv=True,
-        shared=True),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -81,6 +37,21 @@ model = dict(
             alpha=0.25,
             loss_weight=1.0),
         loss_bbox=dict(type='SmoothL1Loss', beta=0.11, loss_weight=1.0)))
+
+twin = copy.deepcopy(common)
+twin['backbone']['frozen_stages'] = 18
+
+model = copy.deepcopy(common)
+model['type'] = 'TwinSingleStageDetector'
+model['twin'] = twin
+model['twin_load_from'] = './workvids/retinaMV2/epoch_12.pth'
+model['pair_module'] = dict(
+    type='TwinDirect',
+    use_skip=True,
+    bare=True,
+    top_conv=True,
+    shared=True)
+
 # training and testing settings
 train_cfg = dict(
     assigner=dict(
@@ -97,7 +68,7 @@ test_cfg = dict(
     min_bbox_size=0,
     score_thr=0.05,
     nms=dict(type='nms', iou_thr=0.5),
-    max_per_img=-1)
+    max_per_img=100)
 # dataset settings
 vid_dataset_type = 'TwinVIDDataset'
 det_dataset_type = 'TwinDET30Dataset'
@@ -130,33 +101,12 @@ test_pipeline = [
                             'scale_factor', 'flip', 'img_norm_cfg', 'is_key')),
         ])
 ]
-twin_train_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
-    dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
-    dict(type='RandomFlip', flip_ratio=0.5),
-    dict(type='Normalize', **img_norm_cfg),
-    dict(type='Pad', size_divisor=32),
-    dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
-]
-twin_test_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(
-        type='MultiScaleFlipAug',
-        img_scale=(512, 512),
-        flip=False,
-        transforms=[
-            dict(type='Resize', keep_ratio=False),
-            dict(type='RandomFlip'),
-            dict(type='Normalize', **img_norm_cfg),
-            dict(type='Pad', size_divisor=32),
-            dict(type='ImageToTensor', keys=['img']),
-            dict(type='Collect', keys=['img'],
-                 meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_key')),
-        ])
-]
+twin_train_pipeline = copy.deepcopy(train_pipeline)
+twin_train_pipeline[2]['img_scale'] = (512, 512)
+
+twin_test_pipeline = copy.deepcopy(test_pipeline)
+twin_test_pipeline[1]['img_scale'] = (512, 512)
+
 data = dict(
     imgs_per_gpu=16,
     workers_per_gpu=2,
