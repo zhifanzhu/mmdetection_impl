@@ -5,24 +5,55 @@ import glob
 import re
 import numpy as np
 import pickle
+import copy
+from functools import reduce
 
 import mmcv
 import torch
-from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
+from mmcv.parallel import MMDataParallel
 from mmcv.runner import get_dist_info, load_checkpoint
 
 from mmdet.apis import init_dist
 from mmdet.core import eval_map, results2json, wrap_fp16_model
 from mmdet.datasets import build_dataloader, build_dataset
 from mmdet.models import build_detector
-from .test_pascalstyle import single_gpu_test
 
 
-def get_pascal_gts(dataset, num_evals):
+"""
+test_video for specific video, or first n videos.
+
+To test for ALL videos, please use test_video.py
+"""
+
+
+def single_gpu_test(model, data_loader, bgn, end, show=False):
+    model.eval()
+    results = []
+    dataset = data_loader.dataset
+    prog_bar = mmcv.ProgressBar(end - bgn)
+    for i, data in enumerate(data_loader):
+        if i < bgn:
+            continue
+        if i >= end:
+            break
+        with torch.no_grad():
+            result = model(return_loss=False, rescale=not show, **data)
+        results.append(result)
+
+        if show:
+            model.module.show_result(data, result, dataset.img_norm_cfg)
+
+        batch_size = data['img'][0].size(0)
+        for _ in range(batch_size):
+            prog_bar.update()
+    return results
+
+
+def get_pascal_gts(dataset, bgn, end):
     gt_bboxes = []
     gt_labels = []
     gt_ignore = []
-    for i in range(num_evals):
+    for i in range(bgn, end):
         img_info = dataset.img_infos[i]
         frame_ind = img_info['frame_ind']
         ann = dataset.get_ann_info(i, frame_ind)
@@ -66,7 +97,9 @@ def parse_args():
     parser.add_argument('--checkpoint', help='checkpoint file')
     parser.add_argument('--out', help='output result file')
     parser.add_argument(
-        '--num-evals', type=int, default=-1, help='number of images to eval')
+        '--start', type=int, default=0, help='index from 0')
+    parser.add_argument(
+        '--num-videos', type=int, default=1, help='number of video to eval')
     parser.add_argument(
         '--shuffle', type=_str2bool, default=False,
         help='whether shuffle eval dataset')
@@ -94,6 +127,25 @@ def parse_args():
     return args
 
 
+def get_split_inds():
+    #  Get split point, e.g. [0,0,0,1,1,2] -> [0,3,5,6]
+    val_txt = 'data/ILSVRC2015/ImageSets/VID/VID_val_frames.txt'
+    with open(val_txt) as fp:
+        vids = fp.readlines()
+    vids = ['/'.join(v.split(' ')[0].split('/')[:-1]) for v in vids]
+
+    last_v = vids[0]
+    split_ind = [0]
+    for i in range(1, len(vids)):
+        v = vids[i]
+        if v != last_v:
+            split_ind.append(i)
+            last_v = v
+    split_ind.append(len(vids))
+    assert len(split_ind) == 556   # num val = 555
+    return split_ind
+
+
 def main():
     args = parse_args()
 
@@ -106,6 +158,7 @@ def main():
 
     cfg = mmcv.Config.fromfile(args.config)
 
+    """ Retrieve Checkpoint file """
     checkpoint_file = args.checkpoint
     if not checkpoint_file:
         def _epoch_num(name):
@@ -125,6 +178,7 @@ def main():
     cfg.model.pretrained = None
     cfg.data.test.test_mode = True
 
+
     # init distributed env first, since logger depends on the dist info.
     if args.launcher == 'none':
         distributed = False
@@ -132,7 +186,7 @@ def main():
         distributed = True
         init_dist(args.launcher, **cfg.dist_params)
 
-    # build the dataloader
+    # Build the dataloader
     # TODO: support multiple images per gpu (only minor changes are needed)
     dataset = build_dataset(cfg.data.test)
     data_loader = build_dataloader(
@@ -142,7 +196,7 @@ def main():
         dist=distributed,
         shuffle=args.shuffle)  # TODO: hack shuffle True
 
-    # build the model and load checkpoint
+    # Build the model and load checkpoint
     model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
     fp16_cfg = cfg.get('fp16', None)
     if fp16_cfg is not None:
@@ -156,20 +210,23 @@ def main():
     else:
         model.CLASSES = dataset.CLASSES
 
-    num_evals = args.num_evals
-    if num_evals < 0:
-        num_evals = len(data_loader)
+
+    split_inds = get_split_inds()
+    bgn = split_inds[args.start]
+    end = split_inds[args.start + args.num_videos]
     if not distributed:
         model = MMDataParallel(model, device_ids=[0])
-        outputs = single_gpu_test(model, data_loader, num_evals, args.show)
+        outputs = single_gpu_test(model, data_loader, bgn, end, args.show)
 
     rank, _ = get_dist_info()
     if rank == 0:
-        gt_bboxes, gt_labels, gt_ignore, dataset_name = get_pascal_gts(dataset, num_evals)
+        gt_bboxes, gt_labels, gt_ignore, dataset_name = get_pascal_gts(
+            dataset, bgn, end)
         print('\nStarting evaluate {}'.format(dataset_name))
         eval_map(outputs, gt_bboxes, gt_labels, gt_ignore,
                  scale_ranges=None, iou_thr=0.5, dataset=dataset_name,
                  print_summary=True)
+
 
     # Always output to pkl for analysing.
     if args.out is None:

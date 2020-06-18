@@ -19,6 +19,11 @@ from mmdet.datasets import build_dataloader, build_dataset
 from mmdet.models import build_detector
 
 
+"""
+For RNN style dataset/detector.
+"""
+
+
 def single_gpu_test(model, data_loader, num_evals, show=False):
     model.eval()
     results = []
