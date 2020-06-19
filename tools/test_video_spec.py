@@ -5,8 +5,6 @@ import glob
 import re
 import numpy as np
 import pickle
-import copy
-from functools import reduce
 
 import mmcv
 import torch

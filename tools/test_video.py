@@ -15,7 +15,27 @@ from mmdet.apis import init_dist
 from mmdet.core import eval_map, results2json, wrap_fp16_model
 from mmdet.datasets import build_dataloader, build_dataset
 from mmdet.models import build_detector
-from .test_pascalstyle import single_gpu_test
+
+
+def single_gpu_test(model, data_loader, num_evals, show=False):
+    model.eval()
+    results = []
+    dataset = data_loader.dataset
+    prog_bar = mmcv.ProgressBar(num_evals)
+    for i, data in enumerate(data_loader):
+        if i == num_evals:
+            break
+        with torch.no_grad():
+            result = model(return_loss=False, rescale=not show, **data)
+        results.append(result)
+
+        if show:
+            model.module.show_result(data, result, dataset.img_norm_cfg)
+
+        batch_size = data['img'][0].size(0)
+        for _ in range(batch_size):
+            prog_bar.update()
+    return results
 
 
 def get_pascal_gts(dataset, num_evals):
