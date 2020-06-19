@@ -1,5 +1,4 @@
-# 0.1x lr; half epoch; loss weight 0.5; with pretrain;
-# frozen 18
+# same lr, full epoch, *loss weight 0.3*, no VID pretrain
 import copy
 
 # model settings
@@ -9,7 +8,7 @@ model = dict(
     backbone=dict(
         type='SSDMobileNetV2',
         input_size=-1,
-        frozen_stages=18,
+        frozen_stages=3,
         out_layers=('layer4', 'layer7', 'layer14', 'layer19'),
         with_extra=False,
         norm_eval=True,
@@ -44,7 +43,7 @@ model = dict(
             alpha=0.25,
             loss_weight=1.0),
         loss_bbox=dict(type='SmoothL1Loss', beta=0.11, loss_weight=1.0),
-        loss_embed=dict(type='TripletMarginLoss', loss_weight=0.5)))
+        loss_embed=dict(type='TripletMarginLoss', loss_weight=0.3)))
 # training and testing settings
 train_cfg = dict(
     assigner=dict(
@@ -99,9 +98,7 @@ test_pipeline = [
             dict(type='Normalize', **img_norm_cfg),
             dict(type='Pad', size_divisor=32),
             dict(type='ImageToTensor', keys=['img']),
-            dict(type='Collect', keys=['img'],
-                 meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
+            dict(type='Collect', keys=['img']),
         ])
 ]
 data = dict(
@@ -130,7 +127,7 @@ data = dict(
         img_prefix=data_root,
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=0.0001, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -138,7 +135,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[3, 5])
+    step=[8, 11])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -148,13 +145,13 @@ log_config = dict(
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=6, num_evals=5000*4, shuffle=False)
+evaluation = dict(interval=12, num_evals=5000*4, shuffle=False)
 # runtime settings
-total_epochs = 6
+total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_contrastive/MV2_pretrain_6ep_half_frozen'
-load_from = './workvids/retina_track_MV2_6anchor_group/epoch_12.pth'
+work_dir = './work_contrastive/MV2_03weight'
+load_from = None
 resume_from = None
 workflow = [('train', 1)]
