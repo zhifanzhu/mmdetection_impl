@@ -10,6 +10,9 @@ from torch.utils.data import Dataset
 from .pipelines import Compose
 from .registry import DATASETS
 
+from mmdet.datasets.pipelines import LoadImageFromFile
+import cv2
+
 
 @DATASETS.register_module
 class PairVIDDataset(Dataset):
@@ -338,5 +341,13 @@ class PairVIDDataset(Dataset):
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
         results['is_first'] = is_first
-        results = self.pipeline(results)
+        # results = self.pipeline(results)
+        for t in self.pipeline.transforms:
+            results = t(results)
+            if isinstance(t, LoadImageFromFile):
+                raw_img = results['img'].copy()
+                raw_gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
+                results['raw_gray'] = raw_gray
+            if results is None:
+                return None
         return results
