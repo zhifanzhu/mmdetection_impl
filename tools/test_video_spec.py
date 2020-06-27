@@ -227,12 +227,12 @@ def main():
 
 
     # Always output to pkl for analysing.
-    if args.out is None:
-        args.out = osp.join(
-            cfg.work_dir,
-            args.config.split('/')[-1].replace('.py', '_results.pkl'))
-    with open(args.out, 'wb') as f:
-        pickle.dump(outputs, f, pickle.HIGHEST_PROTOCOL)
+    if args.out:
+        with open(args.out, 'wb') as f:
+            pickle.dump(outputs, f, pickle.HIGHEST_PROTOCOL)
+    #     args.out = osp.join(
+    #         cfg.work_dir,
+    #         args.config.split('/')[-1].replace('.py', '_results.pkl'))
     # Save predictions in the COCO json format
     if args.json_out and rank == 0:
         if not isinstance(outputs[0], dict):

@@ -23,6 +23,7 @@ def multiclass_nms_with_feat(multi_bboxes,
     """
     num_classes = multi_scores.shape[1]
     bboxes, labels, ret_feats = [], [], []
+    ret_feat_channs = multi_feats.size(1)
     nms_cfg_ = nms_cfg.copy()
     nms_type = nms_cfg_.pop('type', 'nms')
     nms_op = getattr(nms_wrapper, nms_type)
@@ -60,6 +61,7 @@ def multiclass_nms_with_feat(multi_bboxes,
     else:
         bboxes = multi_bboxes.new_zeros((0, 5))
         labels = multi_bboxes.new_zeros((0, ), dtype=torch.long)
-        ret_feats = multi_bboxes.new_zeros((0, ), dtype=torch.long)
+        ret_feats = multi_bboxes.new_zeros(
+            (0, ret_feat_channs), dtype=torch.long)
 
     return bboxes, labels, ret_feats
