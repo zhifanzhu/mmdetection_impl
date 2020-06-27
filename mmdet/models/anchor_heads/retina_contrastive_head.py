@@ -159,6 +159,9 @@ class RetinaContrastiveHead(AnchorHead):
             bsize, self.cls_out_channels * self.num_anchors, height, width)
         bbox_pred = self.retina_reg(reg_feat).view(
             bsize, 4 * self.num_anchors, height, width)
+        score_vec = cls_score.clone().reshape(
+            bsize, self.num_anchors, self.cls_out_channels, height, width)
+        # return cls_score, bbox_pred, score_vec
         return cls_score, bbox_pred, task_shared_feat.view(*embed_feat_shape)
 
     def embed_loss_single(self, embed_feats, track_targets):
@@ -315,6 +318,7 @@ class RetinaContrastiveHead(AnchorHead):
         mlvl_bboxes = []
         mlvl_scores = []
         mlvl_feats = []
+        feat_chans = embed_feats_list[0].size(1)
         for cls_score, bbox_pred, feat, anchors in zip(cls_score_list,
                                                        bbox_pred_list,
                                                        embed_feats_list, mlvl_anchors):
@@ -327,7 +331,7 @@ class RetinaContrastiveHead(AnchorHead):
                 scores = cls_score.softmax(-1)
             bbox_pred = bbox_pred.permute(1, 2, 0).reshape(-1, 4)
             # Feat: [#A, C, H, W] -> [#A*H*W, C]
-            feat = feat.permute(0, 2, 3, 1).reshape(-1, self.feat_channels)
+            feat = feat.permute(0, 2, 3, 1).reshape(-1, feat_chans)
             nms_pre = cfg.get('nms_pre', -1)
             if nms_pre > 0 and scores.shape[0] > nms_pre:
                 # Get maximum scores for foreground classes.
