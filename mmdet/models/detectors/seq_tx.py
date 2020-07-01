@@ -17,27 +17,31 @@ Design:
 1. Batch is 1
 2. TWO heads?
 3. Currenty, use topk for good box, no threshold used
-4. Loss need ...
-1. Random Sampler, random sampler should be sufficient? 100 < 256
 
 Documents:
 1. Rescale set to True or False, may cause different iou, hence lead to 
     different # of boxes.
 2. Didn't write batching since it need to handling padding.
+3. Pseudo Sampler use all available boxes
 
 First try:
 1.不加pos_enc
 2.用MultiHeadAtt
 4.Dataset分两步: i)先用val, 然后iden, 看test结果; ii) 再val过拟合 iii)再train
 
+Transformer's Dataset:
+1. Input always consecutive (1,2,3,4), no jumps.
+
 TODO
-1. WRite Test time: 只取Score/或者前4个 (skip connection?)
+1. Write Test time: 只取Score/或者前4个 (skip connection?)
 2. Run with no modification, see test results.
 2. Last frame use N, should use ALL? if fast, use ALL
 4. RoIAlign to RoIPool?
 
-Transformer's Dataset:
-1. Input always consecutive (1,2,3,4), no jumps.
+Hyper parameter tuning:
+1. MHA vs Transformer
+2. skip vs no skip
+3. seq length
 """
 
 

@@ -8,7 +8,7 @@ from ..builder import build_loss
 from ..losses import accuracy
 from ..registry import HEADS
 
-from mmdet.models.roi_extractors import SingleRoIExtractor
+from mmdet.models import builder
 from mmdet.core import bbox2roi, build_assigner
 from mmdet.core.bbox import PseudoSampler
 
@@ -43,12 +43,15 @@ def get_top_n_boxes(box_list, num):
 class TxHead(nn.Module):
 
     def __init__(self,
-                 num_classes=31,
+                 num_classes,
+                 roi_extractor,
+                 seq_model_type='MHA',  # {'MHA', 'TX'}
+                 use_skip_score=False,
                  target_means=[0., 0., 0., 0.],
                  target_stds=[0.1, 0.1, 0.2, 0.2],
                  loss_cls=dict(
                      type='CrossEntropyLoss',
-                     use_sigmoid=False,
+                     use_sigmoid=True,
                      loss_weight=1.0),
                  loss_bbox=dict(
                      type='SmoothL1Loss', beta=1.0, loss_weight=1.0)):
@@ -58,23 +61,25 @@ class TxHead(nn.Module):
         self.target_stds = target_stds
         self.fp16_enabled = False
 
-        self.use_sigmoid_cls = loss_cls.get('use_sigmoid', False)
+        self.use_sigmoid_cls = loss_cls.get('use_sigmoid', True)  # Was False
         self.loss_cls = build_loss(loss_cls)
         self.loss_bbox = build_loss(loss_bbox)
 
-        self.feat_channels = 256
-        self.num_box_per_frame  = 64
+        self.feat_channels = roi_extractor.get('out_channels', 256)
+        self.num_box_per_frame = 64
 
+        self.use_skip_score = use_skip_score
         self.seq_channels = self.feat_channels + (self.num_classes - 1) + 4
 
-        self.seq_model = nn.MultiheadAttention(self.seq_channels, 2)
-
-        self.roi_extractor = SingleRoIExtractor(
-            roi_layer=dict(type='RoIAlign', out_size=7, sample_num=2),
-            out_channels=self.feat_channels,
-            featmap_strides=[8, 16, 32, 64])
-
-        self.debug_imgs = None
+        self.roi_extractor = builder.build_roi_extractor(roi_extractor)
+        self.seq_model_type = seq_model_type
+        if self.seq_model_type == 'MHA':
+            self.seq_model = nn.MultiheadAttention(self.seq_channels, 2)
+        elif self.seq_model_type == 'TX':
+            self.seq_model = nn.Transformer(
+                d_model=290, nhead=2)
+        else:
+            raise ValueError
 
     def init_weights(self):
         # TODO init weight
@@ -127,12 +132,19 @@ class TxHead(nn.Module):
 
         return src_feat, ind_list
 
-    @staticmethod
-    def remap_scores(cur_feats, last_box_inds, target_out):
-        # TODO use skip?
-        # cur_feats[last_box_inds, :] += target_out[:, 0, 4:4+30]
-        cur_feats[last_box_inds, :] = target_out[:, 0, 4:4+30]
+    def remap_scores(self, cur_feats, last_box_inds, target_out):
+        if self.use_skip_score:
+            cur_feats[last_box_inds, :] += target_out[:, 0, 4:4+30]
+        else:
+            cur_feats[last_box_inds, :] = target_out[:, 0, 4:4+30]
         return cur_feats
+
+    def forward_seq_model(self, tgt_feat, src_feat):
+        if self.seq_model_type == 'MHA':
+            tgt_out, _ = self.seq_model(tgt_feat, src_feat, src_feat)
+            return tgt_out
+        elif self.seq_model_type == 'TX':
+            return self.seq_model(src_feat, tgt_feat)
 
     def forward_loss(self,
                      fpn,
@@ -150,7 +162,7 @@ class TxHead(nn.Module):
         num_tgt = len(ind_list[-1])
         tgt_feat = src_feat[-num_tgt:]
 
-        tgt_out, _ = self.seq_model(tgt_feat, src_feat, src_feat)  # [N, 1, 256]
+        tgt_out = self.forward_seq_model(tgt_feat, src_feat)  # [N, 1, 256]
         cur_score_vec = self.remap_scores(cur_score_vec, ind_list[-1], tgt_out)
 
         #######################
@@ -160,7 +172,6 @@ class TxHead(nn.Module):
         gt_labels = gt_labels[-1]
         gt_bboxes_ignore = gt_bboxes_ignore[-1] if gt_bboxes_ignore is not None else None
         bbox_assigner = build_assigner(train_cfg.assigner)
-        # TODO inspect sampler
 
         assign_result = bbox_assigner.assign(cur_bbox,
                                              gt_bboxes,
