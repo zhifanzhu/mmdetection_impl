@@ -30,6 +30,8 @@ from .twin_retina import TwinRetinaNet
 from .track_base import TrackBaseDetector
 from .track_single_stage import TrackSingleStageDetector
 
+from .seq_tx import SeqTxSingleStage
+
 
 from .rfcn import RFCN
 
@@ -43,5 +45,6 @@ __all__ = [
     'PairBaseDetector', 'PairSingleStageDetector', 'PairRetinaNet',
     'RFCN',
     'TwinSingleStageDetector', 'TwinRetinaNet',
-    'TrackBaseDetector', 'TrackSingleStageDetector'
+    'TrackBaseDetector', 'TrackSingleStageDetector',
+    'SeqTxSingleStage',
 ]

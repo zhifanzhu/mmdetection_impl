@@ -34,6 +34,7 @@ class SeqVIDDataset(Dataset):
                  ann_file,
                  pipeline,
                  seq_len,
+                 sync_state=True,
                  skip=None,
                  min_size=None,
                  data_root=None,
@@ -49,6 +50,7 @@ class SeqVIDDataset(Dataset):
         self.test_mode = test_mode
         self.skip = skip
         self.seq_len = seq_len
+        self.sync_state = sync_state
 
         # join paths if data_root is specified
         if self.data_root is not None:
@@ -312,13 +314,16 @@ class SeqVIDDataset(Dataset):
         for i, (img_info, ann_info) in enumerate(zip(img_infos, ann_infos)):
             results = dict(img_info=img_info, ann_info=ann_info)
             self.pre_pipeline(results)
-            if i == 0:
-                results_dict, trans_states = self.pipeline_with_state(
-                    results, None)
+            if not self.sync_state:
+                results_dict = self.pipeline(results)
             else:
-                results_dict = self.pipeline_with_state(results, trans_states)
-            if results_dict is None:
-                return None
+                if i == 0:
+                    results_dict, trans_states = self.pipeline_with_state(
+                        results, None)
+                else:
+                    results_dict = self.pipeline_with_state(results, trans_states)
+                if results_dict is None:
+                    return None
             seq_results.append(results_dict)
         seq_results_collated = seq_collate(seq_results)
 

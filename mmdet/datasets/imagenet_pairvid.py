@@ -338,5 +338,6 @@ class PairVIDDataset(Dataset):
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
         results['is_first'] = is_first
+        results['frame_ind'] = frame_ind
         results = self.pipeline(results)
         return results

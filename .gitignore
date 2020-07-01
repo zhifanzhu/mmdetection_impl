@@ -121,6 +121,7 @@ work_dirs
 workvids
 workpairs
 work_contrastive
+work_tx
 
 # Pytorch
 *.pth
