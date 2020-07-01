@@ -8,6 +8,36 @@ from ..builder import build_loss
 from ..losses import accuracy
 from ..registry import HEADS
 
+from mmdet.models.roi_extractors import SingleRoIExtractor
+from mmdet.core import bbox2roi, build_assigner
+from mmdet.core.bbox import PseudoSampler
+
+
+def get_top_n_boxes(box_list, num):
+    """
+    Args:
+        box_list: ([N_i,5],[N_,],[N, C]) x T*1
+        num: number of box for each in T*1
+
+    Returns:
+        1. [[N_j, 5] x T*1]
+        2. [[N_j, C] x T*1]
+        3. [[N_j,] x T*1]
+         where N_j <= num
+    """
+    good_box_list = []
+    feat_seq = []
+    ind_list = []
+    for boxes, labels, feat in box_list:
+        num_boxes = min(num, len(boxes))
+        _, ind = boxes[:, -1].topk(num_boxes)
+        good_box_list.append(boxes[ind])
+        feat_seq.append(feat[ind])
+        ind_list.append(ind)
+    feat_seq = torch.cat(feat_seq, 0)
+
+    return good_box_list, feat_seq, ind_list
+
 
 @HEADS.register_module
 class TxHead(nn.Module):
@@ -32,15 +62,127 @@ class TxHead(nn.Module):
         self.loss_cls = build_loss(loss_cls)
         self.loss_bbox = build_loss(loss_bbox)
 
+        self.feat_channels = 256
+        self.num_box_per_frame  = 64
+
+        self.seq_channels = self.feat_channels + (self.num_classes - 1) + 4
+
+        self.seq_model = nn.MultiheadAttention(self.seq_channels, 2)
+
+        self.roi_extractor = SingleRoIExtractor(
+            roi_layer=dict(type='RoIAlign', out_size=7, sample_num=2),
+            out_channels=self.feat_channels,
+            featmap_strides=[8, 16, 32, 64])
+
         self.debug_imgs = None
 
     def init_weights(self):
-        if self.with_cls:
-            nn.init.normal_(self.fc_cls.weight, 0, 0.01)
-            nn.init.constant_(self.fc_cls.bias, 0)
-        if self.with_reg:
-            nn.init.normal_(self.fc_reg.weight, 0, 0.001)
-            nn.init.constant_(self.fc_reg.bias, 0)
+        # TODO init weight
+        pass
+
+    def get_seq_feat(self, fpn, box_box_list, feat_seq):
+        """
+
+        Args:
+            fpn: [ [T*1, C, H, W] * 5]
+            box_box_list: [N_i,5] x T*B
+            feat_seq: [T*1, N_i, C]
+
+        Returns:
+            1: [T*M*1, 4 + 30 + 256]
+            where M = self.num_box_per_frame,
+            select top M for each of T*1
+            if N < M, pad with zeros
+        """
+        rois = bbox2roi(box_box_list)
+        roi_feat = self.roi_extractor(fpn, rois)
+        roi_feat = nn.functional.avg_pool2d(
+            roi_feat, (7, 7)).view(-1, self.feat_channels)
+
+        loc_vec = torch.cat(
+            [b[:, :4] for b in box_box_list], dim=0)
+        src_feat = torch.cat(
+            [feat_seq, loc_vec], dim=-1)
+        src_feat = torch.cat([src_feat, roi_feat], dim=-1)
+
+        return src_feat
+
+    def get_src_feat(self, fpn, box_list):
+        """
+
+        Args:
+            fpn: [ [T*1, C, H, W] * 5]
+            box_list: ([N_i,5],[N_,], [N, C]) x T*1
+
+        Returns:
+            1: [T*N_j, 1, 4 + 30 + 256]
+            2: [[N_i, ] x T]
+            where N_j <= self.num_box_per_frame,
+            select top M for each of T*1
+        """
+        good_box_list, feat_seq, ind_list = get_top_n_boxes(
+            box_list, self.num_box_per_frame)
+        src_feat = self.get_seq_feat(fpn, good_box_list, feat_seq)
+        src_feat = src_feat.view(-1, 1, self.seq_channels)
+
+        return src_feat, ind_list
+
+    @staticmethod
+    def remap_scores(cur_feats, last_box_inds, target_out):
+        # TODO use skip?
+        # cur_feats[last_box_inds, :] += target_out[:, 0, 4:4+30]
+        cur_feats[last_box_inds, :] = target_out[:, 0, 4:4+30]
+        return cur_feats
+
+    def forward_loss(self,
+                     fpn,
+                     bbox_list,
+                     gt_bboxes,
+                     gt_labels,
+                     gt_bboxes_ignore,
+                     train_cfg):
+        cur_bbox, cur_labels, cur_score_vec = bbox_list[-1]
+
+        #####
+        # Transformer!
+        #####
+        src_feat, ind_list = self.get_src_feat(fpn, bbox_list)  # [T*N_i, 1, 256]
+        num_tgt = len(ind_list[-1])
+        tgt_feat = src_feat[-num_tgt:]
+
+        tgt_out, _ = self.seq_model(tgt_feat, src_feat, src_feat)  # [N, 1, 256]
+        cur_score_vec = self.remap_scores(cur_score_vec, ind_list[-1], tgt_out)
+
+        #######################
+        # Loss Part
+        #######################
+        gt_bboxes = gt_bboxes[-1]
+        gt_labels = gt_labels[-1]
+        gt_bboxes_ignore = gt_bboxes_ignore[-1] if gt_bboxes_ignore is not None else None
+        bbox_assigner = build_assigner(train_cfg.assigner)
+        # TODO inspect sampler
+
+        assign_result = bbox_assigner.assign(cur_bbox,
+                                             gt_bboxes,
+                                             gt_bboxes_ignore,
+                                             gt_labels)
+        sampling_result = PseudoSampler().sample(
+            assign_result, cur_bbox[:, :4], gt_bboxes)
+        # Sample according to sampling result
+        cur_score_vec = torch.cat([
+            cur_score_vec[sampling_result.pos_inds],
+            cur_score_vec[sampling_result.neg_inds]], dim=0)
+
+        losses = dict()
+        bbox_targets = self.get_target(
+            [sampling_result], gt_bboxes, gt_labels, train_cfg)
+        loss_score = self.loss(cur_score_vec, None,
+                                       *bbox_targets)
+        losses.update(loss_score)
+        #######################
+        # End of loss Part
+        #######################
+        return losses
 
     def get_target(self, sampling_results, gt_bboxes, gt_labels,
                    train_cfg):
