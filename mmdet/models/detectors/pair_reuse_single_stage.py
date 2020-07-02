@@ -7,7 +7,7 @@ from .pair_base import PairBaseDetector
 
 
 @DETECTORS.register_module
-class PairSingleStageDetector(PairBaseDetector):
+class PairReuseSingleStageDetector(PairBaseDetector):
 
     def __init__(self,
                  backbone,
@@ -17,7 +17,7 @@ class PairSingleStageDetector(PairBaseDetector):
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None):
-        super(PairSingleStageDetector, self).__init__()
+        super(PairReuseSingleStageDetector, self).__init__()
         self.backbone = builder.build_backbone(backbone)
         if neck is not None:
             self.neck = builder.build_neck(neck)
@@ -33,11 +33,13 @@ class PairSingleStageDetector(PairBaseDetector):
         self.init_weights(pretrained=pretrained)
 
         self.mem_from_raw = test_cfg.get('mem_from_raw', True)
+        self.test_interval = test_cfg.get('test_interval', 10)
         # memory cache for testing
         self.prev_memory = None
+        self.prev_pw = None
 
     def init_weights(self, pretrained=None):
-        super(PairSingleStageDetector, self).init_weights(pretrained)
+        super(PairReuseSingleStageDetector, self).init_weights(pretrained)
         self.backbone.init_weights(pretrained=pretrained)
         if self.with_neck:
             if isinstance(self.neck, nn.Sequential):
@@ -56,7 +58,6 @@ class PairSingleStageDetector(PairBaseDetector):
         return x
 
     def forward_dummy(self, img):
-        # TODO zhifan, for mmdetection/tools/get_flops.py
         x = self.extract_feat(img)
         outs = self.bbox_head(x)
         return outs
@@ -84,10 +85,12 @@ class PairSingleStageDetector(PairBaseDetector):
         x = self.extract_feat(img)
         x_cache = x
         frame_ind = img_meta[0]['frame_ind']
-        if frame_ind:
+        if frame_ind % self.test_interval == 0:
             x = x
+        elif (frame_ind - 1) % self.test_interval == 0:
+            x, self.prev_pw = self.pair_module(x, self.prev_memory, None, is_train=False)
         else:
-            x = self.pair_module(x, self.prev_memory, is_train=False)
+            x, _ = self.pair_module(x, self.prev_memory, self.prev_pw, is_train=False)
 
         if self.with_neck and not self.neck_first:
             x = self.neck(x)

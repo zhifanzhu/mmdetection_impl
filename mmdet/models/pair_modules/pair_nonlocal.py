@@ -121,7 +121,7 @@ class NonLocal2D(nn.Module):
         pairwise_weight /= pairwise_weight.shape[-1]
         return pairwise_weight
 
-    def forward(self, x, x_ref):
+    def forward(self, x, x_ref, pairwise_weight=None):
         """ g is ref value, phi is ref key, theta is current(query)"""
         n, _, h, w = x.shape
 
@@ -129,16 +129,17 @@ class NonLocal2D(nn.Module):
         g_x = self.g(x_ref).view(n, self.inter_channels, -1)
         g_x = g_x.permute(0, 2, 1)
 
-        # theta_x: [N, HxW, C]
-        theta_x = self.theta(x).view(n, self.inter_channels, -1)
-        theta_x = theta_x.permute(0, 2, 1)
+        if pairwise_weight is None:
+            # theta_x: [N, HxW, C]
+            theta_x = self.theta(x).view(n, self.inter_channels, -1)
+            theta_x = theta_x.permute(0, 2, 1)
 
-        # phi_x: [N, C, HxW]
-        phi_x = self.phi(x_ref).view(n, self.inter_channels, -1)
+            # phi_x: [N, C, HxW]
+            phi_x = self.phi(x_ref).view(n, self.inter_channels, -1)
 
-        pairwise_func = getattr(self, self.mode)
-        # pairwise_weight: [N, HxW, HxW]
-        pairwise_weight = pairwise_func(theta_x, phi_x)
+            pairwise_func = getattr(self, self.mode)
+            # pairwise_weight: [N, HxW, HxW]
+            pairwise_weight = pairwise_func(theta_x, phi_x)
 
         # y: [N, HxW, C]
         y = torch.matmul(pairwise_weight, g_x)
@@ -152,7 +153,7 @@ class NonLocal2D(nn.Module):
         else:
             output = x + self.conv_out(y)
 
-        return output
+        return output, pairwise_weight
 
 
 @PAIR_MODULE.register_module
@@ -175,10 +176,39 @@ class PairNonLocal(nn.Module):
 
     def forward(self, feat, feat_ref, is_train=False):
         outs = [
-            self.nl_blocks[0](x=feat[0], x_ref=feat_ref[0]),
-            self.nl_blocks[1](x=feat[1], x_ref=feat_ref[1]),
-            self.nl_blocks[2](x=feat[2], x_ref=feat_ref[2]),
-            self.nl_blocks[3](x=feat[3], x_ref=feat_ref[3]),
-            self.nl_blocks[4](x=feat[4], x_ref=feat_ref[4]),
+            self.nl_blocks[0](x=feat[0], x_ref=feat_ref[0])[0],
+            self.nl_blocks[1](x=feat[1], x_ref=feat_ref[1])[0],
+            self.nl_blocks[2](x=feat[2], x_ref=feat_ref[2])[0],
+            self.nl_blocks[3](x=feat[3], x_ref=feat_ref[3])[0],
+            self.nl_blocks[4](x=feat[4], x_ref=feat_ref[4])[0],
         ]
         return outs
+
+
+@PAIR_MODULE.register_module
+class PairReuseWeight(nn.Module):
+
+    def __init__(self, channels=256, reduction=2, conv_final=False):
+        super(PairReuseWeight, self).__init__()
+        self.nl_blocks = nn.ModuleList([
+            NonLocal2D(
+                in_channels=channels,
+                reduction=reduction,
+                use_scale=True,
+                mode='embedded_gaussian',
+                conv_final=conv_final)
+            for _ in range(5)])
+
+    def init_weights(self):
+        for g in self.nl_blocks:
+            g.init_weights()
+
+    def forward(self, feat, feat_ref, pw_list=None, is_train=False):
+        if pw_list is None:
+            pw_list = [None for _ in range(len(feat))]
+        outs, pws = [], []
+        for i in range(len(feat)):
+            out, pw = self.nl_blocks[i](feat[i], feat_ref[i], pw_list[i])
+            outs.append(out)
+            pws.append(pw)
+        return outs, pws
