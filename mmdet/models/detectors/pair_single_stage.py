@@ -11,7 +11,6 @@ class PairSingleStageDetector(PairBaseDetector):
 
     def __init__(self,
                  backbone,
-                 mem_from_raw=True,
                  neck=None,
                  bbox_head=None,
                  pair_module=None,
@@ -33,7 +32,7 @@ class PairSingleStageDetector(PairBaseDetector):
         self.test_cfg = test_cfg
         self.init_weights(pretrained=pretrained)
 
-        self.mem_from_raw = mem_from_raw
+        self.mem_from_raw = test_cfg.get('mem_from_raw', True)
         # memory cache for testing
         self.prev_memory = None
 
