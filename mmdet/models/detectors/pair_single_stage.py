@@ -84,7 +84,7 @@ class PairSingleStageDetector(PairBaseDetector):
         x = self.extract_feat(img)
         x_cache = x
         frame_ind = img_meta[0]['frame_ind']
-        if frame_ind:
+        if frame_ind == 0:
             x = x
         else:
             x = self.pair_module(x, self.prev_memory, is_train=False)
