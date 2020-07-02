@@ -132,6 +132,7 @@ class TwinVIDDataset(PairVIDDataset):
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
         results['is_key'] = is_key
+        results['frame_ind'] = frame_ind
         if is_key:
             results = self.twin_pipeline(results)
         else:

@@ -27,6 +27,7 @@ from .pair_retina import PairRetinaNet
 from .twin_single_stage import TwinSingleStageDetector
 from .twin_retina import TwinRetinaNet
 from .pair_reuse_single_stage import PairReuseSingleStageDetector
+from .twin_single_stage_v2 import TwinV2SingleStageDetector
 
 from .track_base import TrackBaseDetector
 from .track_single_stage import TrackSingleStageDetector
@@ -48,5 +49,5 @@ __all__ = [
     'TwinSingleStageDetector', 'TwinRetinaNet',
     'TrackBaseDetector', 'TrackSingleStageDetector',
     'SeqTxSingleStage',
-    'PairReuseSingleStageDetector',
+    'PairReuseSingleStageDetector', 'TwinV2SingleStageDetector',
 ]
