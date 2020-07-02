@@ -325,6 +325,8 @@ class SeqVIDDataset(Dataset):
                 if results_dict is None:
                     return None
             seq_results.append(results_dict)
+        if len(seq_results[-1]['gt_bboxes'].data) == 0:
+            return None
         seq_results_collated = seq_collate(seq_results)
 
         # Check at least one frame has annotation, since we did not use _filter_imgs()
