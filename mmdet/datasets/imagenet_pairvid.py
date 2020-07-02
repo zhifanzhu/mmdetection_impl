@@ -330,14 +330,12 @@ class PairVIDDataset(Dataset):
         """
         img_info = self.img_infos[idx]
         frame_ind = img_info['frame_ind']
-        is_first = (frame_ind == 0)
         foldername = img_info['foldername']
         ann_info = self.get_ann_info(idx, frame_ind)
         filename = osp.join(foldername, f"{frame_ind:06d}.JPEG")
         img_info['filename'] = filename
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
-        results['is_first'] = is_first
         results['frame_ind'] = frame_ind
         results = self.pipeline(results)
         return results

@@ -1,6 +1,6 @@
 # model settings
 model = dict(
-    type='PairRetinaNet',
+    type='PairReuseSingleStageDetector',
     pretrained='zoo/mobilenet_v2.pth.tar',
     backbone=dict(
         type='SSDMobileNetV2',
@@ -18,7 +18,7 @@ model = dict(
         add_extra_convs=True,
         num_outs=5),
     pair_module=dict(
-        type='PairNonLocal',
+        type='PairReuseWeight',
         conv_final=True),
     bbox_head=dict(
         type='RetinaHead',
@@ -51,6 +51,8 @@ train_cfg = dict(
     pos_weight=-1,
     debug=False)
 test_cfg = dict(
+    mem_from_raw=True,
+    test_interval=10,
     nms_pre=1000,
     min_bbox_size=0,
     score_thr=0.05,
