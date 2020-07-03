@@ -177,7 +177,7 @@ class ThreeWay(nn.Module):
         nn.init.constant_(self.atten_conv_final[-1].bias, 0.0)
         self.atten.init_weights()
 
-    def forward(self, f, f_h):
+    def forward_base(self, f, f_h):
         cat_feat = torch.cat([f, f_h], dim=1)
         way_1 = self.conv_final(cat_feat) * f_h
 
@@ -185,18 +185,132 @@ class ThreeWay(nn.Module):
         way_2 = self.atten_conv_final(
             torch.cat([f, attened], dim=1)) * attened
 
-        out = f + way_1 + way_2
+        return way_1, way_2
 
-        return out
+    def forward(self, f, f_h):
+        way_1, way_2 = self.forward_base(f, f_h)
+        return f + way_1 + way_2
+
+
+class ThreeWayPixelSelect(nn.Module):
+
+    def __init__(self, channels=256):
+        super(ThreeWayPixelSelect, self).__init__()
+        self.base = ThreeWay(channels)
+
+        self.channels = channels
+        chans = [256, 16, 3, 2]
+        self.select_net = nn.Sequential(
+            ConvModule(
+                in_channels=2*self.channels,
+                out_channels=chans[0],
+                kernel_size=1,
+                padding=0,
+                stride=1,
+                activation='relu'),
+            ConvModule(
+                in_channels=chans[0],
+                out_channels=chans[1],
+                kernel_size=3,
+                padding=1,
+                stride=1,
+                activation='relu'),
+            ConvModule(
+                in_channels=chans[1],
+                out_channels=chans[2],
+                kernel_size=3,
+                padding=1,
+                stride=1),
+            nn.Conv2d(
+                in_channels=chans[2],
+                out_channels=chans[3],
+                kernel_size=3,
+                padding=1,
+                stride=1))
+
+    def init_weights(self):
+        self.base.init_weights()
+        nn.init.constant_(self.select_net[-1].bias[0], 0.5)
+        nn.init.constant_(self.select_net[-1].bias[1], 0.5)
+
+    def forward(self, f, f_h):
+        way_1, way_2 = self.base.forward_base(f, f_h)
+        score = torch.softmax(torch.cat([way_1, way_2], dim=1), dim=1)
+        way_merge = score[:, 0, :, :].unsqueeze(1) * way_1 + \
+                    score[:, 1, :, :].unsqueeze(1) * way_2
+
+        return f + way_merge
+
+
+class ThreeWayChannelSelect(nn.Module):
+
+    def __init__(self, channels=256):
+        super(ThreeWayChannelSelect, self).__init__()
+        self.base = ThreeWay(channels)
+        self.channels = channels
+        self.select_net = nn.Sequential(
+            ConvModule(
+                in_channels=2*self.channels,
+                out_channels=self.channels,
+                kernel_size=1,
+                padding=0,
+                stride=1,
+                activation='relu'),
+            ConvModule(
+                in_channels=self.channels,
+                out_channels=self.channels,
+                kernel_size=3,
+                padding=1,
+                stride=1,
+                activation='relu'),
+            nn.AdaptiveAvgPool2d((1, 1)),
+            ConvModule(
+                in_channels=self.channels,
+                out_channels=self.channels,
+                kernel_size=1,
+                padding=0,
+                stride=1,
+                activation='relu'),
+            nn.Conv2d(
+                in_channels=self.channels,
+                out_channels=self.channels,
+                kernel_size=1,
+                padding=0,
+                stride=1),
+            nn.Sigmoid())
+
+    def init_weights(self):
+        self.base.init_weights()
+
+    def forward(self, f, f_h):
+        way_1, way_2 = self.base.forward_base(f, f_h)
+        score = self.select_net(torch.cat([way_1, way_2], dim=1))
+        way_merge = score * way_1 + (1 - score) * way_2
+        return f + way_merge
 
 
 @PAIR_MODULE.register_module
 class TwinThreeWay(nn.Module):
 
     def __init__(self,
-                 channels=256):
+                 channels=256,
+                 select='none'):
+        """
+
+        Args:
+            channels:
+            select:  'none', 'pixel', 'channel'
+        """
         super(TwinThreeWay, self).__init__()
-        self.grab = ThreeWay(channels=channels)
+        if select == 'none':
+            self.grab = ThreeWay(channels)
+        elif select == 'pixel':
+            self.grab = ThreeWayPixelSelect(channels)
+        elif select == 'channel':
+            self.grab = ThreeWayChannelSelect(channels)
+        else:
+            raise ValueError('select not understood.')
+
         self.conv_extra = ConvModule(
                 in_channels=channels,
                 out_channels=channels,
