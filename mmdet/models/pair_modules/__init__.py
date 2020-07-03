@@ -14,6 +14,7 @@ from .twin_embed_ca import TwinEmbedCA
 from .embed_64 import Embed64
 from .twin_interp import TwinInterp
 from .twin_direct_k1 import TwinDirectK1
+from .twin_threeway import TwinThreeWay
 
 __all__ = [
     'Identity',
@@ -21,5 +22,5 @@ __all__ = [
     'PyCorrAssemble', 'Embed64', 'PairNonLocal', 'EmbedCA',
     'TwinGrab', 'TwinDirect', 'TwinNonLocal', 'TwinEmbedCA',
     'PairDirect', 'TwinInterp', 'TwinSharedLow', 'TwinDirectK1',
-    'PairReuseWeight',
+    'PairReuseWeight', 'TwinThreeWay',
 ]

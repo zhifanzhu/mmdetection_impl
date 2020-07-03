@@ -39,22 +39,14 @@ common = dict(
         loss_bbox=dict(type='SmoothL1Loss', beta=0.11, loss_weight=1.0)))
 
 twin = copy.deepcopy(common)
-twin['type'] = 'PairRetinaNet'
 twin['backbone']['frozen_stages'] = 18
-twin['pair_module']=dict(
-    type='PairNonLocal',
-    conv_final=True)
 
 model = copy.deepcopy(common)
-model['type'] = 'TwinV2SingleStageDetector'
+model['type'] = 'TwinSingleStageDetector'
 model['twin'] = twin
-model['twin_load_from'] = './workpairs/retinaMV2_nl/epoch_12.pth'
+model['twin_load_from'] = './workpairs/retinaMV2_iden/epoch_12.pth'
 model['pair_module'] = dict(
-    type='TwinDirect',
-    use_skip=True,
-    bare=True,
-    top_conv=True,
-    shared=True)
+    type='TwinThreeWay')
 
 # training and testing settings
 train_cfg = dict(
@@ -102,8 +94,7 @@ test_pipeline = [
             dict(type='ImageToTensor', keys=['img']),
             dict(type='Collect', keys=['img'],
                  meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_key',
-                            'frame_ind')),
+                            'scale_factor', 'flip', 'img_norm_cfg', 'is_key')),
         ])
 ]
 twin_train_pipeline = copy.deepcopy(train_pipeline)
@@ -170,7 +161,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workpairs/retinaMV2_256_twinDBSAK_trainNL'
+work_dir = './workpairs/retinaMV2_256_threeway'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
