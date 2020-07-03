@@ -43,6 +43,7 @@ class TwinV2SingleStageDetector(PairBaseDetector):
         self.twin = build_detector(twin, train_cfg=self.train_cfg, test_cfg=self.test_cfg)
         # self.twin = MMDataParallel(twin, device_ids=[0]).cuda()  # TODO check device id?
         load_checkpoint(self.twin, twin_load_from, map_location='cpu', strict=False, logger=None)
+        print(" Finished loading twin's weight. ")
         self.twin.eval()
 
         # memory cache for testing
