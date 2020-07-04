@@ -17,8 +17,10 @@ from .imagenet_pairvid import PairVIDDataset
 from .imagenet_twinvid import TwinVIDDataset
 from .imagenet_pairdet30 import PairDET30Dataset
 from .imagenet_twindet30 import TwinDET30Dataset
+from .imagenet_twintridet30 import TwinTriDET30Dataset
 from .imagenet_trackvid import TrackVIDDataset
 from .imagenet_trackdet30 import TrackDET30Dataset
+from .imagenet_twintrivid import TwinTriVIDDataset
 
 __all__ = [
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'VOCDataset',
@@ -29,4 +31,5 @@ __all__ = [
     'FixFramesVIDDataset', 'PairVIDDataset', 'PairDET30Dataset',
     'TwinVIDDataset', 'TwinDET30Dataset',
     'TrackVIDDataset', 'TrackDET30Dataset',
+    'TwinTriVIDDataset', 'TwinTriDET30Dataset',
 ]
