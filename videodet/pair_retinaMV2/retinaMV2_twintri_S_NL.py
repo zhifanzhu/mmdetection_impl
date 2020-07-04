@@ -132,6 +132,7 @@ data = dict(
         dict(
             type=det_dataset_type,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
+            middle='S',
             img_prefix=data_root,
             pipeline=train_pipeline,
             twin_pipeline=twin_train_pipeline),
