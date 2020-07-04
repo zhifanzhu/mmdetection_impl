@@ -19,10 +19,12 @@ class TwinTriDET30Dataset(PairDET30Dataset):
                  ann_file,
                  pipeline,
                  twin_pipeline,
+                 middle='B',
                  **kwargs):
         super(TwinTriDET30Dataset, self).__init__(
             ann_file, pipeline, **kwargs)
         self.twin_pipeline = Compose(twin_pipeline)
+        self.middle = middle
 
     def prepare_train_img(self, idx):
         """ Pipelines:
@@ -43,9 +45,13 @@ class TwinTriDET30Dataset(PairDET30Dataset):
 
         ref_results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(ref_results)
-        twin_results = self.twin_pipeline(ref_results)
-        results['first_img'] = DC(twin_results['img'].data.clone(), stack=True)
-        results['second_img'] = DC(twin_results['img'].data.clone(), stack=True)
+        big_results = self.twin_pipeline(ref_results)
+        results['first_img'] = DC(big_results['img'].data.clone(), stack=True)
+        if self.middle == 'B':
+            results['second_img'] = DC(big_results['img'].data.clone(), stack=True)
+        elif self.middle == 'S':
+            results['second_img'] = DC(results['img'].data.clone(), stack=True)
+
         if len(results['gt_bboxes'].data) == 0:
             return None
         return results
