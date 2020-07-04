@@ -121,7 +121,7 @@ class TwinTriSingleStageDetector(PairBaseDetector):
             x_first = self.twin.extract_feat(first_img)
 
         x_second = self.twin.extract_feat(second_img)
-        x_second = self.pair_module(x_first, x_second)
+        x_second = self.pair_module(x_second, x_first)
         x = self.pair_module2(x, x_second)
 
         outs = self.bbox_head(x)
@@ -130,11 +130,11 @@ class TwinTriSingleStageDetector(PairBaseDetector):
             *loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
         return losses
 
-    def simple_test(self, **kwargs):
+    def simple_test(self, img, img_meta, **kwargs):
         if self.middle == 'B':
-            return self.simple_test_b(**kwargs)
+            return self.simple_test_b(img, img_meta, **kwargs)
         elif self.middle == 'S':
-            return self.simple_test_s(**kwargs)
+            return self.simple_test_s(img, img_meta, **kwargs)
         else:
             raise ValueError
 
@@ -198,7 +198,7 @@ class TwinTriSingleStageDetector(PairBaseDetector):
 
         else:
             x = self.extract_feat(img)
-            x = self.pair_module(x, self.key_feat_post, is_train=False)
+            x = self.pair_module2(x, self.key_feat_post, is_train=False)
             outs = self.bbox_head(x)
             bbox_inputs = outs + (img_meta, self.test_cfg, rescale)
             bbox_list = self.bbox_head.get_bboxes(*bbox_inputs)
