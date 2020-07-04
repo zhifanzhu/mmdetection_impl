@@ -44,13 +44,9 @@ twin['backbone']['frozen_stages'] = 18
 model = copy.deepcopy(common)
 model['type'] = 'TwinSingleStageDetector'
 model['twin'] = twin
-model['twin_load_from'] = './workvids/retinaMV2/epoch_12.pth'
+model['twin_load_from'] = './workpairs/retinaMV2_iden/epoch_12.pth'
 model['pair_module'] = dict(
-    type='TwinDirect',
-    use_skip=True,
-    bare=True,
-    top_conv=True,
-    shared=True)
+    type='TwinThreeWay')
 
 # training and testing settings
 train_cfg = dict(
@@ -167,7 +163,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workpairs/retinaMV2_256_twinDBSAK_flip'
+work_dir = './workpairs/retinaMV2_256_threeway_flip'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

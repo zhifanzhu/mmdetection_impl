@@ -1,7 +1,9 @@
+# same lr, full epoch, loss weight 1.0, no VID pretrain
 import copy
 
-common = dict(
-    type='SingleStageDetector',
+# model settings
+model = dict(
+    type='TrackSingleStageDetector',
     pretrained='zoo/mobilenet_v2.pth.tar',
     backbone=dict(
         type='SSDMobileNetV2',
@@ -19,13 +21,17 @@ common = dict(
         add_extra_convs=True,
         num_outs=5),
     bbox_head=dict(
-        type='RetinaHead',
+        type='RetinaContrastiveHead',
+        m1=2,
+        m2=2,
+        m3=2,
         num_classes=31,
         in_channels=256,
+        num_triplets=64,
         stacked_convs=4,
         feat_channels=256,
         octave_base_scale=4,
-        scales_per_octave=3,
+        scales_per_octave=2,
         anchor_ratios=[0.5, 1.0, 2.0],
         anchor_strides=[8, 16, 32, 64, 128],
         target_means=[.0, .0, .0, .0],
@@ -36,28 +42,20 @@ common = dict(
             gamma=2.0,
             alpha=0.25,
             loss_weight=1.0),
-        loss_bbox=dict(type='SmoothL1Loss', beta=0.11, loss_weight=1.0)))
-
-twin = copy.deepcopy(common)
-twin['backbone']['frozen_stages'] = 18
-
-model = copy.deepcopy(common)
-model['type'] = 'TwinSingleStageDetector'
-model['twin'] = twin
-model['twin_load_from'] = './workvids/retinaMV2/epoch_12.pth'
-model['pair_module'] = dict(
-    type='TwinDirect',
-    use_skip=True,
-    bare=True,
-    top_conv=True,
-    shared=True)
-
+        loss_bbox=dict(type='SmoothL1Loss', beta=0.11, loss_weight=1.0),
+        loss_embed=dict(type='TripletMarginLoss', loss_weight=1.0)))
 # training and testing settings
 train_cfg = dict(
     assigner=dict(
         type='MaxIoUAssigner',
         pos_iou_thr=0.5,
         neg_iou_thr=0.4,
+        min_pos_iou=0,
+        ignore_iof_thr=-1),
+    track_assigner=dict(
+        type='MaxIoUAssigner',
+        pos_iou_thr=0.7,
+        neg_iou_thr=0.3,  # or 0.7 , or 0.4?
         min_pos_iou=0,
         ignore_iof_thr=-1),
     allowed_border=-1,
@@ -70,25 +68,29 @@ test_cfg = dict(
     nms=dict(type='nms', iou_thr=0.5),
     max_per_img=100)
 # dataset settings
-vid_dataset_type = 'TwinVIDDataset'
-det_dataset_type = 'TwinDET30Dataset'
+vid_dataset_type = 'TrackVIDDataset'
+det_dataset_type = 'TrackDET30Dataset'
 data_root = 'data/ILSVRC2015/'
 img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
-train_pipeline = [
+vid_train_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
-    dict(type='Resize', img_scale=(256, 256), keep_ratio=False),
+    dict(type='LoadAnnotationsWithTrack', with_bbox=True, skip_img_without_anno=True),
+    dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
-    dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
+    dict(type='DefaultFormatBundleWithTrack'),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_trackids']),
 ]
+det_train_pipeline = copy.deepcopy(vid_train_pipeline)
+det_train_pipeline[1] = dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False)
+det_train_pipeline[-2] = dict(type='DefaultFormatBundle')
+det_train_pipeline[-1] = dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels'])
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(
         type='MultiScaleFlipAug',
-        img_scale=(256, 256),
+        img_scale=(512, 512),
         flip=False,
         transforms=[
             dict(type='Resize', keep_ratio=False),
@@ -96,52 +98,34 @@ test_pipeline = [
             dict(type='Normalize', **img_norm_cfg),
             dict(type='Pad', size_divisor=32),
             dict(type='ImageToTensor', keys=['img']),
-            dict(type='Collect', keys=['img'],
-                 meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_key')),
+            dict(type='Collect', keys=['img']),
         ])
 ]
-twin_train_pipeline = copy.deepcopy(train_pipeline)
-twin_train_pipeline[2]['img_scale'] = (512, 512)
-
-twin_test_pipeline = copy.deepcopy(test_pipeline)
-twin_test_pipeline[1]['img_scale'] = (512, 512)
-
 data = dict(
-    imgs_per_gpu=16,
+    imgs_per_gpu=8,
     workers_per_gpu=2,
     train=[
         dict(
             type=vid_dataset_type,
             ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
             img_prefix=data_root,
-            pipeline=train_pipeline,
-            match_flip=True,
-            twin_pipeline=twin_train_pipeline),
+            pipeline=vid_train_pipeline),
         dict(
             type=det_dataset_type,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,
-            pipeline=train_pipeline,
-            match_flip=True,
-            twin_pipeline=twin_train_pipeline),
+            pipeline=det_train_pipeline),
     ],
     val=dict(
         type=vid_dataset_type,
         ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
-        pipeline=test_pipeline,
-        twin_pipeline=twin_test_pipeline,
-        test_sampling_style='key',
-        key_interval=10),
+        pipeline=test_pipeline),
     test=dict(
         type=vid_dataset_type,
         ann_file=data_root + 'ImageSets/VID/VID_val_videos.txt',
         img_prefix=data_root,
-        pipeline=test_pipeline,
-        twin_pipeline=twin_test_pipeline,
-        test_sampling_style='key',
-        key_interval=10))
+        pipeline=test_pipeline))
 # optimizer
 optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
@@ -155,19 +139,19 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=100,
+    interval=1,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-evaluation = dict(interval=12, num_evals=5000, shuffle=False)
+evaluation = dict(interval=12, num_evals=5000*4, shuffle=False)
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workpairs/retinaMV2_256_twinDBSAK_flip'
+work_dir = './work_contrastive/debug/MV2_opt'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
