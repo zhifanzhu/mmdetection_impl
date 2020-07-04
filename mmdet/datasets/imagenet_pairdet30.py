@@ -24,6 +24,7 @@ class PairDET30Dataset(Dataset):
     def __init__(self,
                  ann_file,
                  pipeline,
+                 match_flip=False,
                  min_offset=-9,
                  max_offset=9,
                  min_size=None,
@@ -40,6 +41,7 @@ class PairDET30Dataset(Dataset):
         self.test_mode = test_mode
         self.min_offset = min_offset
         self.max_offset = max_offset
+        self.match_flip = match_flip
 
         # join paths if data_root is specified
         if self.data_root is not None:
@@ -207,6 +209,10 @@ class PairDET30Dataset(Dataset):
         ann_info = self.get_ann_info(idx)
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
+        if self.match_flip:
+            # Matched flip training cause poor results,
+            # This is unknown...
+            ref_results['flip'] = flip
         results = self.pipeline(results)
         results['ref_img'] = DC(results['img'].data.clone(), stack=True)
         if len(results['gt_bboxes'].data) == 0:
