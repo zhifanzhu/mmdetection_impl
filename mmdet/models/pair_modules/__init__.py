@@ -3,7 +3,7 @@ from .corr_assemble import CorrAssemble, MultiCorrAssemble
 from .pycorr_assemble import PyCorrAssemble
 from .pair_nonlocal import PairNonLocal, PairSharedNonLocal, PairReuseWeight
 from .embed_ca import EmbedCA
-from .pair_direct import PairDirect
+from .pair_direct import PairDirect, PairSharedDirect
 
 from .twin_grab import TwinGrab
 from .twin_direct import TwinDirect, TwinSharedLow
@@ -23,4 +23,5 @@ __all__ = [
     'TwinGrab', 'TwinDirect', 'TwinNonLocal', 'TwinEmbedCA',
     'PairDirect', 'TwinInterp', 'TwinSharedLow', 'TwinDirectK1',
     'PairReuseWeight', 'TwinThreeWay', 'PairSharedNonLocal',
+    'PairSharedDirect',
 ]

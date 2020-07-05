@@ -118,3 +118,27 @@ class PairDirect(nn.Module):
             self.grabs[4](f=feat[4], f_ref=feat_ref[4]),
         ]
         return outs
+
+
+@PAIR_MODULE.register_module
+class PairSharedDirect(nn.Module):
+
+    def __init__(self, use_skip=False, channels=256, bare=False):
+        super(PairSharedDirect, self).__init__()
+        self.grab = Direct(
+            use_skip=use_skip,
+            channels=channels,
+            bare=bare)
+
+    def init_weights(self):
+        self.grab.init_weights()
+
+    def forward(self, feat, feat_ref, is_train=False):
+        outs = [
+            self.grab(f=feat[0], f_ref=feat_ref[0]),
+            self.grab(f=feat[1], f_ref=feat_ref[1]),
+            self.grab(f=feat[2], f_ref=feat_ref[2]),
+            self.grab(f=feat[3], f_ref=feat_ref[3]),
+            self.grab(f=feat[4], f_ref=feat_ref[4]),
+        ]
+        return outs
