@@ -86,7 +86,7 @@ test_pipeline = [
             dict(type='ImageToTensor', keys=['img']),
             dict(type='Collect', keys=['img'],
                  meta_keys=('filename', 'ori_shape', 'img_shape', 'pad_shape',
-                            'scale_factor', 'flip', 'img_norm_cfg', 'is_first')),
+                            'scale_factor', 'flip', 'img_norm_cfg', 'frame_ind')),
         ])
 ]
 data = dict(
@@ -97,11 +97,13 @@ data = dict(
             type=vid_dataset_type,
             ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
             img_prefix=data_root,
+            match_flip=True,
             pipeline=train_pipeline),
         dict(
             type=det_dataset_type,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,
+            match_flip=True,
             pipeline=train_pipeline),
     ],
     val=dict(
