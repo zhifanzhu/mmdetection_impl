@@ -155,6 +155,40 @@ class NonLocal2D(nn.Module):
 
         return output, pairwise_weight
 
+    def forward_test(self, x, x_ref_list):
+        """ Since `g` `phi` is kernel size 1, we can cat along Spatial dim. """
+        n, _, h, w = x.shape
+        x_ref = torch.cat(x_ref_list, -1)
+
+        # g_x: [1, HxW*n, C]
+        g_x = self.g(x_ref).view(n, self.inter_channels, -1)
+        g_x = g_x.permute(0, 2, 1)
+
+        # theta_x: [1, HxW, C]
+        theta_x = self.theta(x).view(n, self.inter_channels, -1)
+        theta_x = theta_x.permute(0, 2, 1)
+
+        # phi_x: [1, C, HxW*n]
+        phi_x = self.phi(x_ref).view(n, self.inter_channels, -1)
+
+        pairwise_func = getattr(self, self.mode)
+        # pairwise_weight: [N, HxW, HxW*n]
+        pairwise_weight = pairwise_func(theta_x, phi_x)
+
+        # y: [N, HxW, C]
+        y = torch.matmul(pairwise_weight, g_x)
+        # y: [N, C, H, W]
+        y = y.permute(0, 2, 1).reshape(n, self.inter_channels, h, w)
+
+        if hasattr(self, 'conv_final'):
+            y = self.conv_out(y)
+            cat_feat = torch.cat([x, y], dim=1)
+            output = x + self.conv_final(cat_feat) * y
+        else:
+            output = x + self.conv_out(y)
+
+        return output, pairwise_weight
+
 
 @PAIR_MODULE.register_module
 class PairNonLocal(nn.Module):
@@ -181,6 +215,17 @@ class PairNonLocal(nn.Module):
             self.nl_blocks[2](x=feat[2], x_ref=feat_ref[2])[0],
             self.nl_blocks[3](x=feat[3], x_ref=feat_ref[3])[0],
             self.nl_blocks[4](x=feat[4], x_ref=feat_ref[4])[0],
+        ]
+        return outs
+
+    def forward_test(self, feat, feat_ref_list):
+        feat_ref = list(map(list, zip(*feat_ref_list)))
+        outs = [
+            self.nl_blocks[0].forward_test(x=feat[0], x_ref_list=feat_ref[0])[0],
+            self.nl_blocks[1].forward_test(x=feat[1], x_ref_list=feat_ref[1])[0],
+            self.nl_blocks[2].forward_test(x=feat[2], x_ref_list=feat_ref[2])[0],
+            self.nl_blocks[3].forward_test(x=feat[3], x_ref_list=feat_ref[3])[0],
+            self.nl_blocks[4].forward_test(x=feat[4], x_ref_list=feat_ref[4])[0],
         ]
         return outs
 

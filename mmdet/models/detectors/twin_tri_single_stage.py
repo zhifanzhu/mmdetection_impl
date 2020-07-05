@@ -51,6 +51,7 @@ class TwinTriSingleStageDetector(PairBaseDetector):
 
         # memory cache for testing
         self.test_interval = test_cfg.get('test_interval', 10)
+        self.memory_size = test_cfg.get('memory_size', 1)
         self.key_feat_pre = None
         self.key_feat_post = None
 
@@ -148,20 +149,11 @@ class TwinTriSingleStageDetector(PairBaseDetector):
             bbox_inputs = outs + (img_meta, twin.test_cfg, rescale)
             bbox_list = twin.bbox_head.get_bboxes(*bbox_inputs)
 
-            self.key_feat_pre = x_cache
+            self.key_feat_pre = [x_cache]
             self.key_feat_post = x_cache
 
         elif (frame_ind % self.test_interval) == 0:
-            twin = self.twin
-            x = twin.extract_feat(img)
-            x_cache = x
-            x = self.twin.pair_module(x, self.key_feat_pre)
-            outs = twin.bbox_head(x)
-            bbox_inputs = outs + (img_meta, twin.test_cfg, rescale)
-            bbox_list = twin.bbox_head.get_bboxes(*bbox_inputs)
-
-            self.key_feat_pre = x_cache
-            self.key_feat_post = x
+            bbox_list = self.simple_test_b_list(img, img_meta, rescale)
 
         else:
             x = self.extract_feat(img)
@@ -175,6 +167,31 @@ class TwinTriSingleStageDetector(PairBaseDetector):
             for det_bboxes, det_labels in bbox_list
         ]
         return bbox_results[0]
+
+    def simple_test_b_list(self, img, img_meta, rescale):
+        """
+        Handles Non-first keyframe.
+        self.key_feat_pre and self.key_feat_post are automatically
+        managed.
+        """
+        twin = self.twin
+        x = twin.extract_feat(img)
+        x_cache = x
+        if hasattr(twin.pair_module, 'forward_test'):
+            x = twin.pair_module.forward_test(x, self.key_feat_pre)
+        else:
+            x = twin.pair_module(x, self.key_feat_pre[0])
+        outs = twin.bbox_head(x)
+        bbox_inputs = outs + (img_meta, twin.test_cfg, rescale)
+        bbox_list = twin.bbox_head.get_bboxes(*bbox_inputs)
+
+        self.key_feat_pre.append(x_cache)
+        if len(self.key_feat_pre) > self.memory_size:
+            self.key_feat_pre.pop(0)
+
+        self.key_feat_post = x
+
+        return bbox_list
 
     def simple_test_s(self, img, img_meta, rescale=False):
         frame_ind = img_meta[0]['frame_ind']
