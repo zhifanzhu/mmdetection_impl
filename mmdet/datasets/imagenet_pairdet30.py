@@ -209,10 +209,6 @@ class PairDET30Dataset(Dataset):
         ann_info = self.get_ann_info(idx)
         results = dict(img_info=img_info, ann_info=ann_info)
         self.pre_pipeline(results)
-        if self.match_flip:
-            # Matched flip training cause poor results,
-            # This is unknown...
-            ref_results['flip'] = flip
         results = self.pipeline(results)
         results['ref_img'] = DC(results['img'].data.clone(), stack=True)
         if len(results['gt_bboxes'].data) == 0:
