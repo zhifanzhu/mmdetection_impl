@@ -231,6 +231,43 @@ class PairNonLocal(nn.Module):
 
 
 @PAIR_MODULE.register_module
+class PairSharedNonLocal(nn.Module):
+
+    def __init__(self, channels=256, reduction=2, conv_final=False):
+        super(PairSharedNonLocal, self).__init__()
+        self.nl = NonLocal2D(
+            in_channels=channels,
+            reduction=reduction,
+            use_scale=True,
+            mode='embedded_gaussian',
+            conv_final=conv_final)
+
+    def init_weights(self):
+        self.nl.init_weights()
+
+    def forward(self, feat, feat_ref, is_train=False):
+        outs = [
+            self.nl(x=feat[0], x_ref=feat_ref[0])[0],
+            self.nl(x=feat[1], x_ref=feat_ref[1])[0],
+            self.nl(x=feat[2], x_ref=feat_ref[2])[0],
+            self.nl(x=feat[3], x_ref=feat_ref[3])[0],
+            self.nl(x=feat[4], x_ref=feat_ref[4])[0],
+        ]
+        return outs
+
+    def forward_test(self, feat, feat_ref_list):
+        feat_ref = list(map(list, zip(*feat_ref_list)))
+        outs = [
+            self.nlrforward_test(x=feat[0], x_ref_list=feat_ref[0])[0],
+            self.nl.forward_test(x=feat[1], x_ref_list=feat_ref[1])[0],
+            self.nl.forward_test(x=feat[2], x_ref_list=feat_ref[2])[0],
+            self.nl.forward_test(x=feat[3], x_ref_list=feat_ref[3])[0],
+            self.nl.forward_test(x=feat[4], x_ref_list=feat_ref[4])[0],
+        ]
+        return outs
+
+
+@PAIR_MODULE.register_module
 class PairReuseWeight(nn.Module):
 
     def __init__(self, channels=256, reduction=2, conv_final=False):
