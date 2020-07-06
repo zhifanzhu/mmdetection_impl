@@ -258,7 +258,7 @@ class PairSharedNonLocal(nn.Module):
     def forward_test(self, feat, feat_ref_list):
         feat_ref = list(map(list, zip(*feat_ref_list)))
         outs = [
-            self.nlrforward_test(x=feat[0], x_ref_list=feat_ref[0])[0],
+            self.nl.forward_test(x=feat[0], x_ref_list=feat_ref[0])[0],
             self.nl.forward_test(x=feat[1], x_ref_list=feat_ref[1])[0],
             self.nl.forward_test(x=feat[2], x_ref_list=feat_ref[2])[0],
             self.nl.forward_test(x=feat[3], x_ref_list=feat_ref[3])[0],
