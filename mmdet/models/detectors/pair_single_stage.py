@@ -33,8 +33,9 @@ class PairSingleStageDetector(PairBaseDetector):
         self.init_weights(pretrained=pretrained)
 
         self.mem_from_raw = test_cfg.get('mem_from_raw', True)
+        self.memory_size = test_cfg.get('memory_size', 1)
         # memory cache for testing
-        self.prev_memory = None
+        self.prev_memory = []
 
     def init_weights(self, pretrained=None):
         super(PairSingleStageDetector, self).init_weights(pretrained)
@@ -87,12 +88,21 @@ class PairSingleStageDetector(PairBaseDetector):
         if frame_ind == 0:
             x = x
         else:
-            x = self.pair_module(x, self.prev_memory, is_train=False)
+            if hasattr(self.pair_module, 'forward_test'):
+                x = self.pair_module.forward_test(
+                    x, self.prev_memory)
+            else:
+                x = self.pair_module(x, self.prev_memory[-1], is_train=False)
 
         if self.with_neck and not self.neck_first:
             x = self.neck(x)
 
-        self.prev_memory = x_cache if self.mem_from_raw else x
+        if self.mem_from_raw:
+            self.prev_memory.append(x_cache)
+        else:
+            self.prev_memory.append(x)
+        if len(self.prev_memory) > self.memory_size:
+            self.prev_memory.pop(0)
 
         outs = self.bbox_head(x)
         bbox_inputs = outs + (img_meta, self.test_cfg, rescale)

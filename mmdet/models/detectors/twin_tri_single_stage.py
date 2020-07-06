@@ -180,7 +180,7 @@ class TwinTriSingleStageDetector(PairBaseDetector):
         if hasattr(twin.pair_module, 'forward_test'):
             x = twin.pair_module.forward_test(x, self.key_feat_pre)
         else:
-            x = twin.pair_module(x, self.key_feat_pre[0])
+            x = twin.pair_module(x, self.key_feat_pre[-1])
         outs = twin.bbox_head(x)
         bbox_inputs = outs + (img_meta, twin.test_cfg, rescale)
         bbox_list = twin.bbox_head.get_bboxes(*bbox_inputs)
