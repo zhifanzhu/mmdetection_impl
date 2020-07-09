@@ -16,11 +16,12 @@ class DirectAssemble(nn.Module):
         super(DirectAssemble, self).__init__()
         self.use_skip = use_skip
         self.disp = displacement
+        self.radius = 2 * displacement + 1
 
         self.atten_net = None
         self.assemble = None
         if self.disp != 0:
-            atten_chans = [256, 128, 64, self.disp * self.disp]
+            atten_chans = [256, 128, self.radius * self.radius]
             self.atten_net = nn.Sequential(
                 ConvModule(
                     in_channels=2*channels,
@@ -39,12 +40,6 @@ class DirectAssemble(nn.Module):
                 ConvModule(
                     in_channels=atten_chans[1],
                     out_channels=atten_chans[2],
-                    kernel_size=3,
-                    padding=1,
-                    stride=1),
-                nn.Conv2d(
-                    in_channels=atten_chans[2],
-                    out_channels=atten_chans[3],
                     kernel_size=3,
                     padding=1,
                     stride=1))
