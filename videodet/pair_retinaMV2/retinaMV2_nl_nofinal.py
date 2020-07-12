@@ -18,7 +18,8 @@ model = dict(
         add_extra_convs=True,
         num_outs=5),
     pair_module=dict(
-        type='Identity'),
+        type='PairNonLocal',
+        conv_final=True),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -63,7 +64,7 @@ img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rg
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True, skip_img_without_anno=False),
-    dict(type='Resize', img_scale=(256, 256), keep_ratio=False),
+    dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
@@ -74,7 +75,7 @@ test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(
         type='MultiScaleFlipAug',
-        img_scale=(256, 256),
+        img_scale=(512, 512),
         flip=False,
         transforms=[
             dict(type='Resize', keep_ratio=False),
@@ -137,7 +138,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workpairs/retinaMV2_256_iden'
+work_dir = './workpairs/retinaMV2_nl_nofinal'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
