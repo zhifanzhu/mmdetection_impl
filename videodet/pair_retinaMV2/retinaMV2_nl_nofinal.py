@@ -19,7 +19,7 @@ model = dict(
         num_outs=5),
     pair_module=dict(
         type='PairNonLocal',
-        conv_final=True),
+        conv_final=False),
     bbox_head=dict(
         type='RetinaHead',
         num_classes=31,
@@ -96,11 +96,13 @@ data = dict(
             type=vid_dataset_type,
             ann_file=data_root + 'ImageSets/VID/VID_train_15frames.txt',
             img_prefix=data_root,
+            match_flip=True,
             pipeline=train_pipeline),
         dict(
             type=det_dataset_type,
             ann_file=data_root + 'ImageSets/VID/DET_train_30classes.txt',
             img_prefix=data_root,
+            match_flip=True,
             pipeline=train_pipeline),
     ],
     val=dict(
