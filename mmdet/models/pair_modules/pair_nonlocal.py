@@ -62,6 +62,7 @@ class NonLocal2D(nn.Module):
             conv_cfg=conv_cfg,
             norm_cfg=norm_cfg,
             activation=None)
+        self.conv_final = None
         if conv_final:
             self.conv_final = nn.Sequential(
                 ConvModule(
@@ -146,7 +147,7 @@ class NonLocal2D(nn.Module):
         # y: [N, C, H, W]
         y = y.permute(0, 2, 1).reshape(n, self.inter_channels, h, w)
 
-        if hasattr(self, 'conv_final'):
+        if self.conv_final is not None:
             y = self.conv_out(y)
             cat_feat = torch.cat([x, y], dim=1)
             output = x + self.conv_final(cat_feat) * y
