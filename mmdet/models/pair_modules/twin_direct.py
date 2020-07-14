@@ -101,7 +101,7 @@ class Direct(nn.Module):
             else:
                 out = f + self.conv_final(cat_feat) * f_prev
         else:
-            score = torch.softmax(self.conv_2(cat_feat), dim=1)
+            score = torch.softmax(self.conv_final(cat_feat), dim=1)
             out = score[:, 0, :, :].unsqueeze(1) * f + \
                     score[:, 1, :, :].unsqueeze(1) * f_prev
         return out
