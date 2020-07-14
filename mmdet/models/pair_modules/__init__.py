@@ -6,7 +6,7 @@ from .embed_ca import EmbedCA
 from .pair_direct import PairDirect, PairSharedDirect
 
 from .twin_grab import TwinGrab
-from .twin_direct import TwinDirect, TwinSharedLow
+from .twin_direct import TwinDirect, TwinSharedLow, TwinUseAdd
 from .twin_nonlocal import TwinNonLocal
 from .twin_embed_ca import TwinEmbedCA
 from .twin_direct_assemble import TwinDirectAssemble
@@ -24,5 +24,5 @@ __all__ = [
     'TwinGrab', 'TwinDirect', 'TwinNonLocal', 'TwinEmbedCA',
     'PairDirect', 'TwinInterp', 'TwinSharedLow', 'TwinDirectK1',
     'PairReuseWeight', 'TwinThreeWay', 'PairSharedNonLocal',
-    'PairSharedDirect', 'TwinDirectAssemble',
+    'PairSharedDirect', 'TwinDirectAssemble', 'TwinUseAdd',
 ]

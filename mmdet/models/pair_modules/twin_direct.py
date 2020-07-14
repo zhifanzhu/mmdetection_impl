@@ -108,6 +108,36 @@ class Direct(nn.Module):
 
 
 @PAIR_MODULE.register_module
+class TwinUseAdd(nn.Module):
+
+    def __init__(self):
+        super(TwinUseAdd, self).__init__()
+        self.conv_extra = ConvModule(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=3,
+            padding=1,
+            stride=2,
+            activation='relu')
+
+    def init_weights(self):
+        for m in self.conv_extra.modules():
+            if isinstance(m, nn.Conv2d):
+                xavier_init(m, distribution='uniform')
+
+    def forward(self, feat, feat_ref, is_train=False):
+        outs = [
+            feat[0] + feat_ref[1],
+            feat[1] + feat_ref[2],
+            feat[2] + feat_ref[3],
+            feat[3] + feat_ref[4],
+            feat[4] + self.conv_extra(feat_ref[4]),
+        ]
+
+        return outs
+
+
+@PAIR_MODULE.register_module
 class TwinDirect(nn.Module):
 
     def __init__(self,

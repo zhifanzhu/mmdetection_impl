@@ -139,16 +139,18 @@ class RFU(nn.Module):
         if use_mx_corr:
             self.corr = MxCorrelation(corr_disp, kernel_size=1,
                                       max_displacement=corr_disp, stride1=1, stride2=1)
-        else:
+        elif not (use_add or use_max):
             raise NotImplementedError
-        if assemble_type == 'fast':
-            raise NotImplementedError
-        elif assemble_type == 'naive':
-            raise NotImplementedError
-        elif assemble_type == 'mx':
-            self.assemble = MxAssemble(k=corr_disp)
-        else:
-            raise ValueError("assemble_type not understood.")
+        self.assemble = None
+        if not (use_add or use_max):
+            if assemble_type == 'fast':
+                raise NotImplementedError
+            elif assemble_type == 'naive':
+                raise NotImplementedError
+            elif assemble_type == 'mx':
+                self.assemble = MxAssemble(k=corr_disp)
+            else:
+                raise ValueError("assemble_type not understood.")
         if use_concat_skip:
             self.update_net = ConcatSkip(in_channels)
         else:
