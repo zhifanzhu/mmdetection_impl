@@ -24,7 +24,7 @@ class PairDET30Dataset(Dataset):
     def __init__(self,
                  ann_file,
                  pipeline,
-                 match_flip=False,
+                 match_flip=True,
                  min_offset=-9,
                  max_offset=9,
                  min_size=None,
@@ -41,7 +41,7 @@ class PairDET30Dataset(Dataset):
         self.test_mode = test_mode
         self.min_offset = min_offset
         self.max_offset = max_offset
-        self.match_flip = match_flip
+        self.match_flip = match_flip  # Has no effects
 
         # join paths if data_root is specified
         if self.data_root is not None:
