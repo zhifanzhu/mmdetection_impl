@@ -47,7 +47,7 @@ model['twin'] = twin
 model['twin_load_from'] = './workpairs/retinaMV2_iden/epoch_12.pth'
 model['pair_module'] = dict(
     type='TwinDirect',
-    use_skip=False,
+    use_skip=True,
     bare=True,
     top_conv=True,
     shared=True)
@@ -165,7 +165,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './workpairs/retinaMV2_256_twinDBSA'
+work_dir = './workpairs/retinaMV2_256_twinDBSAK'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
