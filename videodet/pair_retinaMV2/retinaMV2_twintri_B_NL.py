@@ -58,6 +58,7 @@ model['pair_module'] = dict(
     shared=True)
 
 # training and testing settings
+memory_size = 1
 test_interval = 10
 
 train_cfg = dict(
@@ -71,6 +72,7 @@ train_cfg = dict(
     pos_weight=-1,
     debug=False)
 test_cfg = dict(
+    memory_size=2,
     test_interval=test_interval,
     nms_pre=1000,
     min_bbox_size=0,
