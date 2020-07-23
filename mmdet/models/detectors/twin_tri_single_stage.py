@@ -52,8 +52,12 @@ class TwinTriSingleStageDetector(PairBaseDetector):
         # memory cache for testing
         self.test_interval = test_cfg.get('test_interval', 10)
         self.memory_size = test_cfg.get('memory_size', 1)
-        self.key_feat_pre = None
+
+        self.key_feat_pre = None  # This would not be used in simple_test_b
         self.key_feat_post = None
+        # I'm sorry I have to be explicit
+        self.g_ref_list_list = None
+        self.phi_ref_list_list = None
 
     def init_weights(self, pretrained=None):
         super(TwinTriSingleStageDetector, self).init_weights(pretrained)
@@ -144,13 +148,14 @@ class TwinTriSingleStageDetector(PairBaseDetector):
         if frame_ind == 0:
             twin = self.twin
             x = twin.extract_feat(img)
-            x_cache = x
+            g_x, phi_x = twin.pair_module.extract_intermediates(x)
             outs = twin.bbox_head(x)
             bbox_inputs = outs + (img_meta, twin.test_cfg, rescale)
             bbox_list = twin.bbox_head.get_bboxes(*bbox_inputs)
 
-            self.key_feat_pre = [x_cache]
-            self.key_feat_post = x_cache
+            self.g_ref_list_list = [g_x]
+            self.phi_ref_list_list = [phi_x]
+            self.key_feat_post = x
 
         elif (frame_ind % self.test_interval) == 0:
             bbox_list = self.simple_test_b_list(img, img_meta, rescale)
@@ -171,23 +176,20 @@ class TwinTriSingleStageDetector(PairBaseDetector):
     def simple_test_b_list(self, img, img_meta, rescale):
         """
         Handles Non-first keyframe.
-        self.key_feat_pre and self.key_feat_post are automatically
-        managed.
         """
         twin = self.twin
         x = twin.extract_feat(img)
-        x_cache = x
-        if hasattr(twin.pair_module, 'forward_test'):
-            x = twin.pair_module.forward_test(x, self.key_feat_pre)
-        else:
-            x = twin.pair_module(x, self.key_feat_pre[-1])
+        x, g_x, phi_x = twin.pair_module.forward_test(
+            x, self.g_ref_list_list, self.phi_ref_list_list)
         outs = twin.bbox_head(x)
         bbox_inputs = outs + (img_meta, twin.test_cfg, rescale)
         bbox_list = twin.bbox_head.get_bboxes(*bbox_inputs)
 
-        self.key_feat_pre.append(x_cache)
-        if len(self.key_feat_pre) > self.memory_size:
-            self.key_feat_pre.pop(0)
+        self.g_ref_list_list.append(g_x)
+        self.phi_ref_list_list.append(phi_x)
+        if len(self.g_ref_list_list) > self.memory_size:
+            self.g_ref_list_list.pop(0)
+            self.phi_ref_list_list.pop(0)
 
         self.key_feat_post = x
 
