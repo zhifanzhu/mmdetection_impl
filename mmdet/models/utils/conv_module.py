@@ -1,7 +1,7 @@
 import warnings
 
 import torch.nn as nn
-from mmcv.cnn import constant_init, kaiming_init
+from mmcv.cnn import constant_init, kaiming_init, xavier_init
 
 from .conv_ws import ConvWS2d
 from .norm import build_norm_layer
@@ -150,6 +150,118 @@ class ConvModule(nn.Module):
     def init_weights(self):
         nonlinearity = 'relu' if self.activation is None else self.activation
         kaiming_init(self.conv, nonlinearity=nonlinearity)
+        if self.with_norm:
+            constant_init(self.norm, 1, bias=0)
+
+    def forward(self, x, activate=True, norm=True):
+        for layer in self.order:
+            if layer == 'conv':
+                x = self.conv(x)
+            elif layer == 'norm' and norm and self.with_norm:
+                x = self.norm(x)
+            elif layer == 'act' and activate and self.with_activatation:
+                x = self.activate(x)
+        return x
+
+
+class ConvModuleLite(nn.Module):
+    """A ConvModule but replace 3x3 conv with separable-convolution
+
+    Args:
+        in_channels (int): Same as nn.Conv2d.
+        out_channels (int): Same as nn.Conv2d.
+        kernel_size (int or tuple[int]): must be 3
+        stride (int or tuple[int]): Same as nn.Conv2d.
+        bias (bool or str): If specified as `auto`, it will be decided by the
+            norm_cfg. Bias will be set as True if norm_cfg is None, otherwise
+            False.
+        norm_cfg (dict): Config dict for normalization layer.
+        activation (str or None): Activation type, "ReLU" by default.
+        inplace (bool): Whether to use inplace mode for activation.
+        order (tuple[str]): The order of conv/norm/activation layers. It is a
+            sequence of "conv", "norm" and "act". Examples are
+            ("conv", "norm", "act") and ("act", "conv", "norm").
+        init_method: 'xavier' or 'kaiming'
+    """
+
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 kernel_size,
+                 stride=1,
+                 bias='auto',
+                 norm_cfg=None,
+                 activation='relu6',
+                 inplace=True,
+                 order=('conv', 'norm', 'act'),
+                 init_method='xavier'):
+        super(ConvModuleLite, self).__init__()
+        assert norm_cfg is None or isinstance(norm_cfg, dict)
+        assert kernel_size == 3
+        self.norm_cfg = norm_cfg
+        self.activation = activation
+        self.inplace = inplace
+        self.order = order
+        assert isinstance(self.order, tuple) and len(self.order) == 3
+        assert set(order) == set(['conv', 'norm', 'act'])
+
+        self.with_norm = norm_cfg is not None
+        self.with_activatation = activation is not None
+        # if the conv layer is before a norm layer, bias is unnecessary.
+        if bias == 'auto':
+            bias = False if self.with_norm else True
+        self.with_bias = bias
+
+        if self.with_norm and self.with_bias:
+            warnings.warn('ConvModule has norm and bias at the same time')
+
+        # build separable convolution layer
+        self.conv = nn.Sequential(
+            # dw
+            nn.Conv2d(in_channels, in_channels, 3, stride, 1, groups=in_channels, bias=False),
+            # pw-linear
+            nn.Conv2d(in_channels, out_channels, 1, 1, 0, bias=False))
+        # export the attributes of self.conv to a higher level for convenience
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.init_method = init_method
+
+        # build normalization layers
+        if self.with_norm:
+            # norm layer is after conv layer
+            if order.index('norm') > order.index('conv'):
+                norm_channels = out_channels
+            else:
+                norm_channels = in_channels
+            self.norm_name, norm = build_norm_layer(norm_cfg, norm_channels)
+            self.add_module(self.norm_name, norm)
+
+        # build activation layer
+        if self.with_activatation:
+            if self.activation not in ['relu6']:
+                raise ValueError('{} is currently not supported.'.format(
+                    self.activation))
+            if self.activation == 'relu6':
+                self.activate = nn.ReLU6(inplace=inplace)
+
+        # Use msra init by default
+        self.init_weights()
+
+    @property
+    def norm(self):
+        return getattr(self, self.norm_name)
+
+    def init_weights(self):
+        if self.init_method == 'xavier':
+            xavier_init(self.conv[0])
+            xavier_init(self.conv[1])
+        elif self.init_method == 'kaiming':
+            kaiming_init(self.conv[0], nonlinearity='relu')
+            kaiming_init(self.conv[1], nonlinearity='relu')
+        else:
+            raise ValueError(f"Unkonw init method {self.init_method}")
         if self.with_norm:
             constant_init(self.norm, 1, bias=0)
 
