@@ -139,6 +139,7 @@ class RetinaHeadLite(RetinaHead):
                     self.feat_channels,
                     3,
                     stride=1,
+                    activation='relu',
                     norm_cfg=self.norm_cfg))
             self.reg_convs.append(
                 ConvModuleLite(
@@ -146,6 +147,7 @@ class RetinaHeadLite(RetinaHead):
                     self.feat_channels,
                     3,
                     stride=1,
+                    activation='relu',
                     norm_cfg=self.norm_cfg))
         if self.separable_final:
             self.retina_cls = nn.Sequential(
@@ -197,21 +199,22 @@ class RetinaHeadLite(RetinaHead):
             self.apply(_freeze_conv)
 
     def init_weights(self):
+        def _init_conv_normal(m):
+            classname = m.__class__.__name__
+            if classname.find('Conv') != -1:
+                normal_init(m, std=0.01)
+
+        def _init_conv_xavier(m):
+            classname = m.__class__.__name__
+            if classname.find('Conv') != -1:
+                xavier_init(m)
 
         if self.init_method == 'normal':
-            for m in self.cls_convs.modules():
-                if isinstance(m, nn.Conv2d):
-                    normal_init(m, std=0.01)
-            for m in self.reg_convs.modules():
-                if isinstance(m, nn.Conv2d):
-                    normal_init(m, std=0.01)
+            self.cls_convs.apply(_init_conv_normal)
+            self.reg_convs.apply(_init_conv_normal)
         elif self.init_method == 'xavier':
-            for m in self.cls_convs.modules():
-                if isinstance(m, nn.Conv2d):
-                    xavier_init(m, gain=0.01)
-            for m in self.reg_convs.modules():
-                if isinstance(m, nn.Conv2d):
-                    xavier_init(m, gain=0.01)
+            self.cls_convs.apply(_init_conv_xavier)
+            self.reg_convs.apply(_init_conv_xavier)
         else:
             raise ValueError(
                 f"Unsupported init_method: {self.init_method}")

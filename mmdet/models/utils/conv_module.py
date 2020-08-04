@@ -191,7 +191,7 @@ class ConvModuleLite(nn.Module):
                  stride=1,
                  bias='auto',
                  norm_cfg=None,
-                 activation='relu6',
+                 activation='relu',
                  inplace=True,
                  order=('conv', 'norm', 'act'),
                  init_method='xavier'):
@@ -220,7 +220,7 @@ class ConvModuleLite(nn.Module):
             # dw
             nn.Conv2d(in_channels, in_channels, 3, stride, 1, groups=in_channels, bias=False),
             # pw-linear
-            nn.Conv2d(in_channels, out_channels, 1, 1, 0, bias=False))
+            nn.Conv2d(in_channels, out_channels, 1, 1, 0, bias=True))
         # export the attributes of self.conv to a higher level for convenience
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -240,11 +240,11 @@ class ConvModuleLite(nn.Module):
 
         # build activation layer
         if self.with_activatation:
-            if self.activation not in ['relu6']:
+            if self.activation not in ['relu']:
                 raise ValueError('{} is currently not supported.'.format(
                     self.activation))
-            if self.activation == 'relu6':
-                self.activate = nn.ReLU6(inplace=inplace)
+            if self.activation == 'relu':
+                self.activate = nn.ReLU(inplace=inplace)
 
         # Use msra init by default
         self.init_weights()
