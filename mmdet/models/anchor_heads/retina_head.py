@@ -201,12 +201,15 @@ class RetinaHeadLite(RetinaHead):
     def init_weights(self):
         def _init_conv_normal(m):
             classname = m.__class__.__name__
-            if classname.find('Conv') != -1:
+            # Make sure it finds real nn.Conv2d
+            if classname.find('Conv') != -1 and \
+                    classname != 'ConvModuleLite':
                 normal_init(m, std=0.01)
 
         def _init_conv_xavier(m):
             classname = m.__class__.__name__
-            if classname.find('Conv') != -1:
+            if classname.find('Conv') != -1 and \
+                    classname != 'ConvModuleLite':
                 xavier_init(m)
 
         if self.init_method == 'normal':
