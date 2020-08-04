@@ -120,9 +120,11 @@ class RetinaHeadLite(RetinaHead):
     """
 
     def __init__(self,
+                 dummy=False,
                  separable_final='false',
                  init_method='normal',
                  **kwargs):
+        self.dummy = dummy
         self.separable_final = separable_final
         self.init_method = init_method
         super(RetinaHeadLite, self).__init__(**kwargs)
@@ -131,24 +133,46 @@ class RetinaHeadLite(RetinaHead):
         self.relu = nn.ReLU6(inplace=True)
         self.cls_convs = nn.ModuleList()
         self.reg_convs = nn.ModuleList()
-        for i in range(self.stacked_convs):
-            chn = self.in_channels if i == 0 else self.feat_channels
-            self.cls_convs.append(
-                ConvModuleLite(
-                    chn,
-                    self.feat_channels,
-                    3,
-                    stride=1,
-                    activation='relu',
-                    norm_cfg=self.norm_cfg))
-            self.reg_convs.append(
-                ConvModuleLite(
-                    chn,
-                    self.feat_channels,
-                    3,
-                    stride=1,
-                    activation='relu',
-                    norm_cfg=self.norm_cfg))
+        if self.dummy:
+            for i in range(self.stacked_convs):
+                chn = self.in_channels if i == 0 else self.feat_channels
+                self.cls_convs.append(
+                    ConvModule(
+                        chn,
+                        self.feat_channels,
+                        3,
+                        stride=1,
+                        padding=1,
+                        conv_cfg=self.conv_cfg,
+                        norm_cfg=self.norm_cfg))
+                self.reg_convs.append(
+                    ConvModule(
+                        chn,
+                        self.feat_channels,
+                        3,
+                        stride=1,
+                        padding=1,
+                        conv_cfg=self.conv_cfg,
+                        norm_cfg=self.norm_cfg))
+        else:
+            for i in range(self.stacked_convs):
+                chn = self.in_channels if i == 0 else self.feat_channels
+                self.cls_convs.append(
+                    ConvModuleLite(
+                        chn,
+                        self.feat_channels,
+                        3,
+                        stride=1,
+                        activation='relu',
+                        norm_cfg=self.norm_cfg))
+                self.reg_convs.append(
+                    ConvModuleLite(
+                        chn,
+                        self.feat_channels,
+                        3,
+                        stride=1,
+                        activation='relu',
+                        norm_cfg=self.norm_cfg))
         if self.separable_final:
             self.retina_cls = nn.Sequential(
                 # dw
@@ -199,28 +223,34 @@ class RetinaHeadLite(RetinaHead):
             self.apply(_freeze_conv)
 
     def init_weights(self):
-        def _init_conv_normal(m):
-            classname = m.__class__.__name__
-            # Make sure it finds real nn.Conv2d
-            if classname.find('Conv') != -1 and \
-                    classname != 'ConvModuleLite':
-                normal_init(m, std=0.01)
-
-        def _init_conv_xavier(m):
-            classname = m.__class__.__name__
-            if classname.find('Conv') != -1 and \
-                    classname != 'ConvModuleLite':
-                xavier_init(m)
-
-        if self.init_method == 'normal':
-            self.cls_convs.apply(_init_conv_normal)
-            self.reg_convs.apply(_init_conv_normal)
-        elif self.init_method == 'xavier':
-            self.cls_convs.apply(_init_conv_xavier)
-            self.reg_convs.apply(_init_conv_xavier)
+        if self.dummy:
+            for m in self.cls_convs:
+                normal_init(m.conv, std=0.01)
+            for m in self.reg_convs:
+                normal_init(m.conv, std=0.01)
         else:
-            raise ValueError(
-                f"Unsupported init_method: {self.init_method}")
+            def _init_conv_normal(m):
+                classname = m.__class__.__name__
+                # Make sure it finds real nn.Conv2d
+                if classname.find('Conv') != -1 and \
+                        classname != 'ConvModuleLite':
+                    normal_init(m, std=0.01)
+
+            def _init_conv_xavier(m):
+                classname = m.__class__.__name__
+                if classname.find('Conv') != -1 and \
+                        classname != 'ConvModuleLite':
+                    xavier_init(m)
+
+            if self.init_method == 'normal':
+                self.cls_convs.apply(_init_conv_normal)
+                self.reg_convs.apply(_init_conv_normal)
+            elif self.init_method == 'xavier':
+                self.cls_convs.apply(_init_conv_xavier)
+                self.reg_convs.apply(_init_conv_xavier)
+            else:
+                raise ValueError(
+                    f"Unsupported init_method: {self.init_method}")
         bias_cls = bias_init_with_prob(0.01)
         if self.separable_final:
             normal_init(self.retina_cls[0], std=0.01)
