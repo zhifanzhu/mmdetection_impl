@@ -88,11 +88,12 @@ class PairSingleStageDetector(PairBaseDetector):
         if frame_ind == 0:
             x = x
         else:
-            if hasattr(self.pair_module, 'forward_test'):
-                x = self.pair_module.forward_test(
-                    x, self.prev_memory)
-            else:
-                x = self.pair_module(x, self.prev_memory[-1], is_train=False)
+            # Remove in favor of pair_nonlocal's
+            # if hasattr(self.pair_module, 'forward_test'):
+            #     x = self.pair_module.forward_test(
+            #         x, self.prev_memory)
+            # else:
+            x = self.pair_module(x, self.prev_memory[-1])
 
         if self.with_neck and not self.neck_first:
             x = self.neck(x)
